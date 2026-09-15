@@ -32,6 +32,7 @@ test('PvP adapter only exposes the confirmed Sally ranking projection', async ()
   try {
     const response = await route.GET(new Request('https://review.example/api/pvp?month=2026-09&character=u1631e-sally'));
     assert.equal(response.status, 200);
+    assert.equal(response.headers.get('cache-control'), 'private, no-store');
     const data = await response.json();
     assert.equal(data.character.unitCode, 'u1631e-sally');
     assert.equal(data.character.name, 'かに座 サリー');

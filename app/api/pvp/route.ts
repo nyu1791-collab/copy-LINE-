@@ -43,7 +43,7 @@ function compactSnapshot(raw:unknown,month:string,topic:{id:string;name:string;i
  const collectionQuality=typeof quality==='number'&&Number.isFinite(quality)?quality:null;
  return {status:'fresh',source:'pvp_character_usage',month,character:{unitCode:topic.id,name:topic.name,image:topic.image,rank:integer(record.rank),occurrenceCount:integer(record.occurrence_count),playerCount:integer(record.player_count),adoptionRate:number(record.adoption_rate),slotRate:number(record.slot_rate),equipmentRankings:compactEquipment(record.equipment_rankings)},snapshot:{updatedAt:typeof root.updated_at==='string'?root.updated_at:'',targetPlayers:integer(root.target_players),sampledPlayers:integer(root.sampled_players),completeTarget:root.complete_target===true,collectionQuality}};
 }
-function json(data:unknown,status=200,cacheControl='public, max-age=60, stale-while-revalidate=300'){
+function json(data:unknown,status=200,cacheControl='private, no-store'){
  return Response.json(data,{status,headers:{'Cache-Control':cacheControl,'X-Content-Type-Options':'nosniff','Vary':'Accept-Encoding'}});
 }
 export async function GET(request:Request){
