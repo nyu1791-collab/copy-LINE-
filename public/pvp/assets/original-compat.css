@@ -1,4 +1,5 @@
 /* Compatibility layer for the original pre-maintenance PvP interaction contract. */
+[hidden]{display:none!important}
 .character-button{display:inline-flex;min-height:0;padding:0;cursor:pointer;border:0;color:inherit;background:transparent;touch-action:pan-y pinch-zoom;-webkit-tap-highlight-color:transparent;vertical-align:middle}
 .character-button:focus-visible{outline:3px solid rgb(50 213 131 / 55%);outline-offset:3px}
 .character-image-frame{position:relative;display:inline-flex;align-items:center;justify-content:center}
