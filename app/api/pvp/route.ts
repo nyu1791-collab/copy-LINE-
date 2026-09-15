@@ -2,11 +2,13 @@ import {confirmedCharactersForMonth,monthJST,validMonth} from '@/lib/rules';
 
 export const dynamic='force-dynamic';
 
-// The canonical PvP repository is private while this Owner-review copy is being
-// assembled. Try the canonical snapshot first, but never turn an inaccessible
-// private raw URL into a broken board. A verified read-only snapshot copied from
-// the canonical data is kept below as the temporary fallback.
-const SOURCE_URL='https://raw.githubusercontent.com/line-rangers-fan/line-rangers-pvp/main/docs/data/character_usage.json';
+// Read the same published snapshot used by the original PvP ranking. The raw
+// GitHub URL is retained only as a secondary source for environments where it
+// is reachable. Community failures never mutate the canonical PvP data.
+const SOURCE_URLS=[
+ 'https://line-rangers-fan.github.io/line-rangers-pvp/data/character_usage.json',
+ 'https://raw.githubusercontent.com/line-rangers-fan/line-rangers-pvp/main/docs/data/character_usage.json'
+];
 const CACHE_TTL_MS=60_000;
 const STALE_TTL_MS=5*60_000;
 const cache=new Map<string,{data:PvpResponse;expires:number;staleUntil:number}>();
@@ -16,11 +18,6 @@ type EquipmentGroup={equippedOccurrenceCount:number;equippedPlayerCount:number;i
 type PvpResponse={status:'fresh'|'stale';source:'pvp_character_usage';month:string;character:{unitCode:string;name:string;image:string;rank:number;occurrenceCount:number;playerCount:number;adoptionRate:number;slotRate:number;equipmentRankings:Record<string,EquipmentGroup>};snapshot:{updatedAt:string;targetPlayers:number;sampledPlayers:number;completeTarget:boolean;collectionQuality:number|null}};
 type JsonRecord=Record<string,unknown>;
 
-// Verified from line-rangers-fan/line-rangers-pvp docs/data/character_usage.json
-// at 2026-09-15T03:01:07.466207+00:00. Rank is deliberately left unknown
-// instead of fabricating a number because the canonical JSON orders rows rather
-// than storing a top-level character rank. Equipment stays empty in the fallback
-// rather than publishing incomplete or guessed equipment data.
 const COPIED_SALLY_SNAPSHOT:PvpResponse={
  status:'stale',source:'pvp_character_usage',month:'2026-09',
  character:{
@@ -57,18 +54,22 @@ function compactSnapshot(raw:unknown,month:string,topic:{id:string;name:string;i
  if(!record)return null;
  const quality=root.collection_quality&&typeof root.collection_quality==='object'&&!Array.isArray(root.collection_quality)?(root.collection_quality as JsonRecord).sample_coverage:null;
  const collectionQuality=typeof quality==='number'&&Number.isFinite(quality)?quality:null;
- // Canonical character rank is the row order when no explicit top-level rank is
- // stored. This keeps live reads accurate without inventing a fallback rank.
  const rowIndex=characters.findIndex(item=>item===record);
  const explicitRank=integer(record.rank);
  const rank=explicitRank>0?explicitRank:(rowIndex>=0?rowIndex+1:0);
  return {status:'fresh',source:'pvp_character_usage',month,character:{unitCode:topic.id,name:topic.name,image:safeHttpsImage(record.image)||topic.image,rank,occurrenceCount:integer(record.occurrence_count),playerCount:integer(record.player_count),adoptionRate:number(record.adoption_rate),slotRate:number(record.slot_rate),equipmentRankings:compactEquipment(record.equipment_rankings)},snapshot:{updatedAt:typeof root.updated_at==='string'?root.updated_at:'',targetPlayers:integer(root.target_players),sampledPlayers:integer(root.sampled_players),completeTarget:root.complete_target===true,collectionQuality}};
 }
 function json(data:unknown,status=200,cacheControl='private, no-store'){
- return Response.json(data,{status,headers:{'Cache-Control':cacheControl,'X-Content-Type-Options':'nosniff','Vary':'Accept-Encoding'}});
+ return Response.json(data,{status,headers:{'Cache-Control':cacheControl,'X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow, noarchive','Vary':'Accept-Encoding'}});
 }
 function copiedFallback(month:string,character:string){
  if(month===COPIED_SALLY_SNAPSHOT.month&&character===COPIED_SALLY_SNAPSHOT.character.unitCode)return COPIED_SALLY_SNAPSHOT;
+ return null;
+}
+async function loadSnapshot(month:string,topic:{id:string;name:string;image:string}){
+ for(const source of SOURCE_URLS){
+  try{const upstream=await fetch(source,{headers:{accept:'application/json'},cache:'no-store',signal:AbortSignal.timeout(2500)});if(!upstream.ok)continue;const result=compactSnapshot(await upstream.json(),month,topic);if(result)return result;}catch{}
+ }
  return null;
 }
 export async function GET(request:Request){
@@ -78,16 +79,10 @@ export async function GET(request:Request){
  if(!topic)return json({error:'not_found'},404,'no-store');
  const key=`${month}:${topic.id}`;const now=Date.now();const existing=cache.get(key);
  if(existing&&existing.expires>now)return json(existing.data);
- try{
-  const upstream=await fetch(SOURCE_URL,{headers:{accept:'application/json'},signal:AbortSignal.timeout(1500)});
-  if(!upstream.ok)throw new Error('upstream');
-  const result=compactSnapshot(await upstream.json(),month,topic);if(!result)throw new Error('invalid_snapshot');
-  const fresh={data:result,expires:now+CACHE_TTL_MS,staleUntil:now+STALE_TTL_MS};cache.set(key,fresh);return json(result);
- }catch{
-  if(existing&&existing.staleUntil>now)return json({...existing.data,status:'stale'});
-  const copied=copiedFallback(month,topic.id);
-  if(copied)return json(copied,200,'private, no-store');
-  // Never manufacture zero-valued ranking data for an unknown character/month.
-  return json({status:'unavailable',error:'unavailable'},503,'no-store');
- }
+ const result=await loadSnapshot(month,topic);
+ if(result){const fresh={data:result,expires:now+CACHE_TTL_MS,staleUntil:now+STALE_TTL_MS};cache.set(key,fresh);return json(result);}
+ if(existing&&existing.staleUntil>now)return json({...existing.data,status:'stale'});
+ const copied=copiedFallback(month,topic.id);
+ if(copied)return json(copied,200,'private, no-store');
+ return json({status:'unavailable',error:'unavailable'},503,'no-store');
 }
