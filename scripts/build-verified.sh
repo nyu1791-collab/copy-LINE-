@@ -18,13 +18,22 @@ if [[ ! -x "${vinext}" ]]; then
   exit 69
 fi
 
-# The canonical PvP repository is private and GitHub Pages is intentionally
-# disabled while the production site is under maintenance. Do not make an
-# unauthenticated codeload/raw request during CI: GitHub correctly returns 404
-# and that used to make every verification build fail before application tests
-# could run. The review application is self-contained and reads PvP data only
-# through its bounded read-only adapters/fallbacks.
-echo "Building board-first Owner review application..."
+# The primary PvP repository stays private and its Pages site stays disabled.
+# The review build must therefore use the tracked public/pvp surface and its
+# validated same-origin snapshot. Never reintroduce anonymous codeload/raw
+# access to the private primary repository as a build dependency.
+for required in \
+  "${SITES_PROJECT_ROOT}/public/pvp/index.html" \
+  "${SITES_PROJECT_ROOT}/public/pvp/assets/style.css" \
+  "${SITES_PROJECT_ROOT}/public/pvp/assets/app.js" \
+  "${SITES_PROJECT_ROOT}/public/pvp/data/character_usage.json"; do
+  if [[ ! -s "${required}" ]]; then
+    echo "Required PvP review asset is missing: ${required}" >&2
+    exit 66
+  fi
+done
+
+echo "Building PvP-first Owner review application..."
 timeout \
   --signal=TERM \
   --kill-after="${SITES_BUILD_KILL_AFTER:-10s}" \
