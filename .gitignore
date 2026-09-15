@@ -17,8 +17,7 @@
 /.next/
 /out/
 
-# generated original PvP review copy
-/public/pvp/
+# public/pvp is intentionally tracked: it is the restored review surface and validated snapshot.
 
 # misc
 .DS_Store
