@@ -12,15 +12,15 @@ test('Owner review build copies the last complete original PvP UI, not the maint
  assert.match(sync,/SOURCE_REPO="line-rangers-fan\/line-rangers-pvp"/);
  assert.match(sync,/maintenance-mode/);
  assert.match(sync,/maintenance-screen/);
- assert.match(sync,/id=\\"ranking-section\\"/);
+ assert.ok(sync.includes('id="ranking-section"'));
 });
 
 test('the copied ranking gets a same-site community board entry without replacing ranking markup',()=>{
- assert.match(sync,/href=\\"\/boards\\"/);
+ assert.ok(sync.includes('href="/boards"'));
  assert.match(sync,/新キャラ情報掲示板/);
  assert.match(sync,/u1631e-sally/);
  assert.match(sync,/crab-sally-ultimate-fallback\.jpg/);
- assert.match(sync,/target=\\"_top\\"/);
+ assert.ok(sync.includes('target="_top"'));
 });
 
 test('home opens the exact static copy and canonical ranking data stays read-only upstream',()=>{
