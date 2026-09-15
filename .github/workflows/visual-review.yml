@@ -23,8 +23,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p visual-review
-          npx -y playwright@1.55.0 screenshot --device='iPhone 13' --full-page --wait-for-timeout=5000 "$REVIEW_URL" visual-review/pvp-mobile.png
-          npx -y playwright@1.55.0 screenshot --viewport-size='1024,1366' --full-page --wait-for-timeout=5000 "$REVIEW_URL" visual-review/pvp-tablet.png
+          npx -y playwright@1.55.0 screenshot --browser=chromium --device='iPhone 13' --full-page --wait-for-timeout=5000 "$REVIEW_URL" visual-review/pvp-mobile.png
+          npx -y playwright@1.55.0 screenshot --browser=chromium --viewport-size='1024,1366' --full-page --wait-for-timeout=5000 "$REVIEW_URL" visual-review/pvp-tablet.png
           test -s visual-review/pvp-mobile.png
           test -s visual-review/pvp-tablet.png
       - name: Verify live PvP and board entry contract
