@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/collect-pvp.mjs'
+      - 'scripts/patch-pvp-metadata.mjs'
       - '.github/workflows/refresh-pvp-data.yml'
 permissions:
   contents: write
@@ -24,6 +25,8 @@ jobs:
           node-version: '22.13.0'
       - name: Collect and validate Legend top 200
         run: node scripts/collect-pvp.mjs
+      - name: Apply trusted display metadata
+        run: node scripts/patch-pvp-metadata.mjs
       - name: Commit only validated snapshot changes
         run: |
           git config user.name 'github-actions[bot]'
