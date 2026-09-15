@@ -18,6 +18,9 @@ if [[ ! -x "${vinext}" ]]; then
   exit 69
 fi
 
+echo "Preparing exact original PvP site copy..."
+bash "${script_dir}/sync-original-pvp.sh"
+
 echo "Running bounded vinext build..."
 timeout \
   --signal=TERM \
