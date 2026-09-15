@@ -6,8 +6,6 @@ import {readFile} from 'node:fs/promises';
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
 const gitBlobSha=text=>createHash('sha1').update(`blob ${Buffer.byteLength(text)}\0`).update(text).digest('hex');
 
-const SOURCE_COMMIT='d6664b75502a73896b9d5b0c31667a2d4a0de95b';
-const SOURCE_INDEX_BLOB='68bf23323b166102ab968481c1ddea1e98b84adf';
 const SOURCE_STYLE_BLOB='60679caa61a9a440856ee068601048df4783ae13';
 
 test('root still launches the restored PvP surface',async()=>{
@@ -16,12 +14,22 @@ test('root still launches the restored PvP surface',async()=>{
   assert.match(launcher,/\/pvp\/index\.html/);
 });
 
-test('PvP shell and stylesheet are byte-for-byte copies of the pre-maintenance source',async()=>{
-  const [html,css]=await Promise.all([read('public/pvp/index.html'),read('public/pvp/assets/style.css')]);
-  assert.equal(gitBlobSha(html),SOURCE_INDEX_BLOB,`index.html must remain exact source ${SOURCE_COMMIT}`);
-  assert.equal(gitBlobSha(css),SOURCE_STYLE_BLOB,`style.css must remain exact source ${SOURCE_COMMIT}`);
+test('PvP shell mirrors the current Owner Preview while preserving the original stylesheet',async()=>{
+  const [html,css,communityCss,communityJs]=await Promise.all([
+    read('public/pvp/index.html'),
+    read('public/pvp/assets/style.css'),
+    read('public/pvp/assets/community-entry.css'),
+    read('public/pvp/assets/community-entry.js'),
+  ]);
+  assert.equal(gitBlobSha(css),SOURCE_STYLE_BLOB,'style.css must remain the original PvP stylesheet');
   assert.match(html,/UNOFFICIAL STATISTICS/);
   assert.match(html,/レジェンド帯 キャラ集計/);
+  assert.match(html,/id="community-board-entry-slot"/);
+  assert.match(html,/community-entry\.css/);
+  assert.match(html,/community-entry\.js/);
+  assert.doesNotMatch(html,/maintenance-mode/);
+  assert.doesNotMatch(html,/maintenance-screen/);
+  assert.doesNotMatch(html,/maintenance\.css/);
   assert.match(html,/id="summary"/);
   assert.match(html,/id="ranking-body"/);
   assert.match(html,/id="equipment-dialog"/);
@@ -29,9 +37,14 @@ test('PvP shell and stylesheet are byte-for-byte copies of the pre-maintenance s
   assert.match(html,/data-rank-period="day"/);
   assert.match(html,/data-rank-period="week"/);
   assert.match(html,/data-rank-period="month"/);
+  assert.match(communityCss,/community-board-entry-card/);
+  assert.match(communityCss,/community-bridge-link\s*\{\s*display:none !important/);
+  assert.match(communityJs,/u1631e-sally/);
+  assert.match(communityJs,/href = url/);
+  assert.match(communityJs,/\/boards/);
 });
 
-test('runtime preserves original image-first table and adds board without changing source layout files',async()=>{
+test('runtime preserves original image-first table and keeps the local board route available',async()=>{
   const js=await read('public/pvp/assets/app.js');
   assert.match(js,/Faithful runtime for the pre-maintenance PvP surface/);
   assert.match(js,/className = "character-button"/);
@@ -41,7 +54,6 @@ test('runtime preserves original image-first table and adds board without changi
   assert.match(js,/showModal\(\)/);
   assert.match(js,/community-bridge-link/);
   assert.match(js,/href = "\/boards"/);
-  assert.match(js,/position:fixed/);
 });
 
 test('ranking browser reads only the isolated local validated snapshot',async()=>{
