@@ -35,3 +35,4 @@ jobs:
           git add public/pvp/data/character_usage.json public/pvp/data/character_usage_history.json
           git commit -m 'Refresh validated PvP snapshot'
           git push
+# Initial bootstrap is triggered by the push that installs this workflow.
