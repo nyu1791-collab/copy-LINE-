@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import "./community.css";
 import "./pvp-ranking.css";
+import CommentDraftSuccessGuard from "./comment-draft-success-guard";
 
 export const metadata: Metadata = {
   title: "LINEレンジャー レジェンド帯キャラ集計＋新キャラ情報掲示板",
@@ -17,7 +18,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className="dark">
-      <body className="antialiased">{children}</body>
+      <body className="antialiased"><CommentDraftSuccessGuard />{children}</body>
     </html>
   );
 }
