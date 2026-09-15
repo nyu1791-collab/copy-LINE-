@@ -29,6 +29,17 @@ function bytes(value:string){const normalized=value.replaceAll('-','+').replaceA
 async function key(){return crypto.subtle.importKey('raw',encoder.encode(configuredSecret()),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);}
 async function issue(sub:string,issuedAt:number){const payload=`${tokenVersion}|${sub}|${issuedAt}`;const signature=await crypto.subtle.sign('HMAC',await key(),encoder.encode(payload));return `${tokenVersion}.${sub}.${issuedAt}.${base64url(new Uint8Array(signature))}`;}
 async function issueOwner(issuedAt:number){const payload=`${ownerTokenVersion}|${issuedAt}`;const signature=await crypto.subtle.sign('HMAC',await key(),encoder.encode(payload));return `${ownerTokenVersion}.${issuedAt}.${base64url(new Uint8Array(signature))}`;}
+async function constantTimeTokenEqual(candidate:string,expected:string){
+ // Hash both inputs first so comparison work is fixed-size and does not reveal
+ // the configured token length through an early string inequality branch.
+ const [candidateHash,expectedHash]=await Promise.all([
+  crypto.subtle.digest('SHA-256',encoder.encode(candidate)),
+  crypto.subtle.digest('SHA-256',encoder.encode(expected)),
+ ]);
+ const a=new Uint8Array(candidateHash),b=new Uint8Array(expectedHash);let diff=0;
+ for(let i=0;i<a.length;i++)diff|=a[i]^b[i];
+ return diff===0;
+}
 async function verify(token:string){
  const parts=token.split('.');if(parts.length!==4||parts[0]!==tokenVersion)return null;
  const [,sub,issuedText,signature]=parts;
@@ -71,7 +82,8 @@ export type AnonymousSession={sub:string;anonymous:boolean;owner?:boolean;displa
 export async function activateOwner(accessToken:string){
  const configuredToken=(env as unknown as Record<string,unknown>).BOARD_OWNER_ACCESS_TOKEN;
  const configuredSubject=(env as unknown as Record<string,unknown>).BOARD_OWNER_SUBJECT;
- if(typeof configuredToken!=='string'||typeof configuredSubject!=='string'||!configuredToken||!configuredSubject||accessToken!==configuredToken)return null;
+ if(typeof configuredToken!=='string'||typeof configuredSubject!=='string'||!configuredToken||!configuredSubject)return null;
+ if(!(await constantTimeTokenEqual(accessToken,configuredToken)))return null;
  return {sub:configuredSubject,setCookie:await ownerCookie()};
 }
 
