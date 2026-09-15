@@ -1,0 +1,166 @@
+name: deploy-cloudflare-review
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "app/**"
+      - "build/**"
+      - "components/**"
+      - "db/**"
+      - "drizzle/**"
+      - "lib/**"
+      - "public/**"
+      - "scripts/**"
+      - "worker/**"
+      - "package.json"
+      - "package-lock.json"
+      - "vite.config.ts"
+      - "wrangler.jsonc"
+      - ".github/workflows/deploy-cloudflare-review.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: line-rangers-copy-cloudflare-review
+  cancel-in-progress: false
+
+env:
+  WORKER_NAME: line-rangers-pvp-community-review
+  D1_NAME: line-rangers-copy-review-db
+  R2_BUCKET: line-rangers-copy-review-media
+  REVIEW_BASE_URL: https://line-rangers-pvp-community-review.n-yu1791.workers.dev
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm run install:ci
+
+      - name: Resolve Cloudflare account
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "CLOUDFLARE_API_TOKEN is not configured for copy-LINE-."
+            exit 78
+          fi
+          response="$(curl --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 --retry 3 --retry-all-errors --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts?per_page=50")"
+          account_id="$(printf '%s' "$response" | jq -er '.result | if length == 1 then .[0].id else error("Token must access exactly one Cloudflare account") end')"
+          if ! [[ "$account_id" =~ ^[A-Fa-f0-9]{32}$ ]]; then
+            echo "Cloudflare returned an invalid account ID."
+            exit 1
+          fi
+          echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
+
+      - name: Provision isolated D1 and R2 resources
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          db_list="$(npx wrangler d1 list --json)"
+          db_id="$(printf '%s' "$db_list" | jq -r --arg name "$D1_NAME" '[.[] | select(.name == $name) | .uuid][0] // empty')"
+          if [ -z "$db_id" ]; then
+            npx wrangler d1 create "$D1_NAME" --location apac
+            db_list="$(npx wrangler d1 list --json)"
+            db_id="$(printf '%s' "$db_list" | jq -r --arg name "$D1_NAME" '[.[] | select(.name == $name) | .uuid][0] // empty')"
+          fi
+          if ! [[ "$db_id" =~ ^[A-Fa-f0-9-]{36}$ ]]; then
+            echo "Unable to resolve the isolated D1 database ID."
+            exit 1
+          fi
+
+          if ! npx wrangler r2 bucket info "$R2_BUCKET" --json >/dev/null 2>&1; then
+            npx wrangler r2 bucket create "$R2_BUCKET"
+          fi
+
+          tmp="$(mktemp)"
+          jq --arg id "$db_id" '(.d1_databases[] | select(.binding == "DB").database_id) = $id' wrangler.jsonc > "$tmp"
+          mv "$tmp" wrangler.jsonc
+          grep -q "$db_id" wrangler.jsonc
+
+      - name: Build and run regression tests
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: npm test
+
+      - name: Apply D1 migrations
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          npx wrangler d1 migrations apply DB --remote --config wrangler.jsonc
+
+      - name: Deploy isolated public review Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          output_config="$(find dist -type f -name wrangler.json -print -quit)"
+          if [ -z "$output_config" ]; then
+            echo "Cloudflare Vite output config was not generated."
+            find dist -maxdepth 3 -type f -print || true
+            exit 1
+          fi
+          echo "Deploying generated config: $output_config"
+          npx wrangler deploy --config "$output_config"
+
+      - name: Preserve or initialize anonymous signing secret
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          secrets_json="$(npx wrangler secret list --name "$WORKER_NAME" --format json)"
+          if ! printf '%s' "$secrets_json" | jq -e '.[] | select(.name == "BOARD_ANON_COOKIE_SECRET")' >/dev/null; then
+            openssl rand -hex 48 | npx wrangler secret put BOARD_ANON_COOKIE_SECRET --name "$WORKER_NAME"
+          fi
+
+      - name: Apply optional Owner secrets without exposing them
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          BOARD_OWNER_ACCESS_TOKEN: ${{ secrets.BOARD_OWNER_ACCESS_TOKEN }}
+          BOARD_OWNER_SUBJECT: ${{ secrets.BOARD_OWNER_SUBJECT }}
+        run: |
+          set -euo pipefail
+          if [ -n "${BOARD_OWNER_ACCESS_TOKEN:-}" ] && [ -n "${BOARD_OWNER_SUBJECT:-}" ]; then
+            printf '%s' "$BOARD_OWNER_ACCESS_TOKEN" | npx wrangler secret put BOARD_OWNER_ACCESS_TOKEN --name "$WORKER_NAME"
+            printf '%s' "$BOARD_OWNER_SUBJECT" | npx wrangler secret put BOARD_OWNER_SUBJECT --name "$WORKER_NAME"
+          else
+            echo "Owner bootstrap secrets are not configured; public/anonymous review remains available."
+          fi
+
+      - name: Verify deployed ranking and board
+        run: |
+          set -euo pipefail
+          pvp="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 "$REVIEW_BASE_URL/pvp/index.html")"
+          board="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 "$REVIEW_BASE_URL/boards")"
+          snapshot="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 "$REVIEW_BASE_URL/pvp/data/character_usage.json")"
+          api_headers="$(mktemp)"
+          api_body="$(mktemp)"
+          curl --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 -D "$api_headers" -o "$api_body" "$REVIEW_BASE_URL/api/board"
+
+          grep -q 'レジェンド帯 キャラ集計' <<< "$pvp"
+          grep -q '新キャラ情報掲示板' <<< "$board"
+          printf '%s' "$snapshot" | jq -e '.player_count == 200 and (.characters | length > 0)' >/dev/null
+          grep -qi '^x-content-type-options: nosniff' "$api_headers"
+          grep -qi '^set-cookie: __Host-lr_guest=' "$api_headers"
+          if grep -q '現在、サイトを改修しています。' <<< "$pvp"; then
+            echo "Review Worker unexpectedly returned maintenance mode."
+            exit 1
+          fi
+
+          echo "Cloudflare review verified: $REVIEW_BASE_URL"
