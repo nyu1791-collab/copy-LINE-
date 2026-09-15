@@ -12,17 +12,36 @@ test('root still launches the restored PvP surface',async()=>{
 
 test('static PvP surface exists and keeps community co-located',async()=>{
   const html=await read('public/pvp/index.html');
+  assert.match(html,/UNOFFICIAL STATISTICS/);
   assert.match(html,/レジェンド帯 キャラ集計/);
+  assert.match(html,/id="summary" class="summary-grid"/);
   assert.match(html,/id="ranking-body"/);
+  assert.match(html,/id="equipment-dialog"/);
   assert.match(html,/data-rank-period="hour"/);
   assert.match(html,/data-rank-period="day"/);
   assert.match(html,/data-rank-period="week"/);
   assert.match(html,/data-rank-period="month"/);
   assert.match(html,/href="\/boards"/);
+  assert.match(html,/コミュニティを見る/);
   assert.match(html,/u1631e-sally/);
   assert.match(html,/かに座 サリー/);
   assert.match(html,/究極進化/);
+  assert.match(html,/original-compat\.css/);
   assert.match(html,/noindex,nofollow,noarchive,nosnippet/);
+});
+
+test('ranking interaction keeps the original image-first table contract',async()=>{
+  const [js,css]=await Promise.all([read('public/pvp/assets/app.js'),read('public/pvp/assets/original-compat.css')]);
+  assert.match(js,/className = "character-button"/);
+  assert.match(js,/className = "rank-number"/);
+  assert.match(js,/className = "rate-track"/);
+  assert.match(js,/className = "rate-bar"/);
+  assert.match(js,/showModal\(\)/);
+  assert.match(css,/\.character-button/);
+  assert.match(css,/\.character-image-frame/);
+  assert.match(css,/\.rank-period-changes/);
+  assert.match(css,/\.equipment-tabs/);
+  assert.match(css,/@media\(max-width:720px\)/);
 });
 
 test('ranking browser reads only the local validated snapshot',async()=>{
@@ -32,6 +51,8 @@ test('ranking browser reads only the local validated snapshot',async()=>{
   assert.match(js,/WEAPON/);
   assert.match(js,/ARMOR/);
   assert.match(js,/ACC/);
+  assert.match(js,/TARGET_PLAYERS = 200/);
+  assert.match(js,/complete_target !== true/);
   assert.doesNotMatch(js,/raw\.githubusercontent\.com/);
   assert.doesNotMatch(js,/line-rangers-fan\.github\.io/);
 });
