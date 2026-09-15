@@ -1,22 +1,29 @@
 # LINEレンジャー PvP統計＋新キャラ情報掲示板 確認版
 
-このRepositoryは、**元のLINEレンジャーPvPランキングサイトを主画面として忠実にコピーし、その同一サイトへ新キャラ情報掲示板を併設する確認版**です。
+このRepositoryは、**PvPランキングを主画面として復元し、同一サイトへ新キャラ情報掲示板を併設するOwner確認版**です。
 
-## 現在の正しい構成
+## 現在の構成
 
-- `/` : 元PvPランキングのコピー `/pvp/index.html` を開く。
-- `/pvp/index.html` : `line-rangers-fan/line-rangers-pvp` の固定snapshot `517291dfa3f9eeaecd8b6c6f1d445da52f0480ac` の `docs/` を元にした忠実コピー。
+- `/` : `/pvp/index.html` のPvPランキングを開く。
+- `/pvp/index.html` : pre-maintenance版の画面構造・操作契約を基準に復元したランキング画面。
 - `/boards` : 新キャラ情報掲示板。投票、コメント、写真/動画、翻訳、Owner/Moderator機能を扱う。
-- 元PvP画面から同一サイトの `/boards` へ移動できる導線を併設する。
-- **掲示板を主画面にしてPvPランキングを小型表示する旧方式は禁止。**
-- 元PvPを近似再制作せず、元の `index.html` / `style.css` / `app.js` をコピーして使用する。
+- PvP画面から同一サイトの `/boards` へ移動できる。
+- 掲示板を主画面にしてPvPランキングを小型表示する旧方式へ戻さない。
 
-## データと分離
+## PvPファイルとデータ
 
-- PvP正本は `line-rangers-fan/line-rangers-pvp`。確認版から正本データを書き換えない。
-- 元PvP RepositoryはPrivate、GitHub Pagesは停止中。unauthenticated codeload/raw取得をBuildで行わない。
-- Work Previewでは接続済みGitHub権限で固定snapshotを読み、必要ファイルを `public/pvp/` にmaterializeしてからBuildする。
-- 掲示板障害でPvPランキングを停止させない。
+- `public/pvp/index.html`
+- `public/pvp/assets/style.css`
+- `public/pvp/assets/app.js`
+- `public/pvp/data/character_usage.json`
+- `public/pvp/data/character_usage_history.json`
+- `scripts/collect-pvp.mjs`
+- `scripts/patch-pvp-metadata.mjs`
+- `.github/workflows/refresh-pvp-data.yml`
+
+PvP正本Repository `line-rangers-fan/line-rangers-pvp` はPrivateのまま読み取り専用とし、確認版BuildはPrivate raw/codeloadへ依存しません。確認版のcollectorが `rangers.lerico.net` の公開APIからLEGEND上位200人を取得し、**200/200の正常検証に成功した場合だけ**snapshotを生成します。部分/異常取得では正常snapshotを上書きしません。
+
+workflowは毎時17分に更新し、ブラウザは同一originの追跡済みsnapshotを読みます。履歴は蓄積式で、基準snapshotがない比較期間は推測せず「履歴待ち」と表示します。
 
 ## 掲示板の重要仕様
 
@@ -33,7 +40,8 @@
 - `npm run build`
 - `npm test`
 - `.github/workflows/verify-owner-copy.yml` はBuild/Test専用でDeployしない。
+- `.github/workflows/refresh-pvp-data.yml` はPvP snapshot更新専用で、サイトDeployは行わない。
 
 ## Workへの正本指示
 
-Previewを作るときは、必ずRepository rootの `WORK_OWNER_PREVIEW_HANDOFF.md` を最優先で読むこと。そこに元PvP完全コピー、掲示板併設、Preview検証条件を固定している。
+Owner Previewを作るときはRepository rootの `WORK_OWNER_PREVIEW_HANDOFF.md` を最優先で読み、**現在mainに追跡済みの `public/pvp/` を上書きせずそのままBuild**すること。
