@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="LINEレンジャーのレジェンド帯キャラクター編成数と採用率を集計する非公式Owner確認版">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+  <meta name="theme-color" content="#07111f">
+  <meta name="color-scheme" content="dark">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https://rangers.lerico.net data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'self';">
+  <title>LINEレンジャー レジェンド帯キャラ集計｜Owner確認版</title>
+  <link rel="stylesheet" href="./assets/style.css?v=20260915-owner-copy-1">
+  <script src="./assets/app.js?v=20260915-owner-copy-1" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="header-inner">
+      <div class="language-switcher" aria-label="Language">
+        <button type="button" data-language="ja">🇯🇵 日本語</button>
+        <button type="button" data-language="en">🇺🇸 English</button>
+        <button type="button" data-language="zh">🇹🇼 繁體中文</button>
+        <button type="button" data-language="th">🇹🇭 ไทย</button>
+        <button type="button" data-language="id">🇮🇩 Indonesia</button>
+        <button type="button" data-language="vi">🇻🇳 Tiếng Việt</button>
+        <button type="button" data-language="ko">🇰🇷 한국어</button>
+      </div>
+      <p class="eyebrow">UNOFFICIAL STATISTICS</p>
+      <h1 id="page-title">レジェンド帯 キャラ集計</h1>
+      <p id="page-description" class="header-description">レジェンド帯プレイヤーの防衛チームから、キャラクターの編成数と採用率を集計しています。</p>
+      <p id="ranking-tap-hint" class="ranking-tap-hint">キャラクターをタップすると、装備ランキングが見れます。</p>
+      <section id="source-status-notice" class="source-status-notice" role="status" aria-live="polite" hidden>
+        <h2 id="source-status-title">お知らせ</h2><p id="source-status-message"></p>
+      </section>
+    </div>
+  </header>
+  <main class="main-content">
+    <noscript><p class="message message-error">表示するにはJavaScriptを有効にしてください。</p></noscript>
+
+    <section class="community-board-entry-card" aria-labelledby="community-entry-title">
+      <div class="community-board-entry-heading">
+        <span class="community-board-entry-marker" aria-hidden="true">●</span>
+        <div><p class="community-board-entry-kicker">COMMUNITY</p><h2 id="community-entry-title">新キャラ情報掲示板</h2></div>
+      </div>
+      <div class="community-board-entry-character">
+        <img src="https://rangers.lerico.net/res/u1631e-sally/u1631e-sally-thum.png" alt="かに座 サリー" width="76" height="76" loading="lazy">
+        <div><span>2026 / 09</span><strong>かに座 サリー</strong><small>究極進化</small></div>
+      </div>
+      <p>投票・コメント・写真/動画投稿を、ランキングとは独立した掲示板で確認できます。</p>
+      <a class="community-board-entry-button" href="/boards">コミュニティを見る</a>
+    </section>
+
+    <section id="status-message" class="message" aria-live="polite">集計データを読み込んでいます。</section>
+    <section id="summary" class="summary-grid" aria-label="集計概要" hidden>
+      <article class="summary-card summary-updated-card">
+        <div class="summary-key-metrics">
+          <div class="summary-key-metric"><span class="summary-label" id="label-league">リーグ</span><strong id="summary-league">-</strong></div>
+          <div class="summary-key-metric"><span class="summary-label" id="label-slots">全編成キャラ数</span><strong id="summary-slots">-</strong></div>
+        </div>
+        <span class="summary-label" id="label-updated">最終更新</span><strong id="summary-updated" class="summary-updated-value">-</strong>
+        <div class="summary-update-meta"><span id="summary-freshness" class="freshness-badge">-</span><span id="summary-health">-</span></div>
+      </article>
+    </section>
+
+    <section id="ranking-section" class="ranking-section" hidden>
+      <div class="table-heading">
+        <div><h2 id="ranking-title">キャラクターランキング</h2><p id="ranking-description">編成数が多い順に表示しています。</p></div>
+        <div id="rank-period-selector" class="rank-period-selector" role="group" aria-label="キャラ数比較の基準時刻">
+          <button type="button" id="rank-period-trigger" class="rank-period-trigger" aria-haspopup="listbox" aria-controls="rank-period-options" aria-expanded="false"><span id="rank-period-current">前日締め</span><span class="rank-period-arrow" aria-hidden="true">⌄</span></button>
+          <span id="rank-period-comparison-label" class="rank-period-comparison-label">選択した基準時点からのキャラ数の増減です。</span>
+          <div id="rank-period-options" class="rank-period-options" role="listbox" hidden>
+            <button type="button" role="option" data-rank-period="hour">1時間前</button>
+            <button type="button" role="option" data-rank-period="day">前日締め</button>
+            <button type="button" role="option" data-rank-period="week">先週締め</button>
+            <button type="button" role="option" data-rank-period="month">先月締め</button>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrapper"><table>
+        <caption class="visually-hidden">レジェンド帯キャラクター集計ランキング</caption>
+        <thead><tr><th scope="col" id="th-rank">順位</th><th scope="col" id="th-character">キャラクター</th><th scope="col" id="th-occurrence">編成数</th><th scope="col" id="th-players">採用人数</th><th scope="col" id="th-rate">採用率</th></tr></thead>
+        <tbody id="ranking-body"></tbody>
+      </table></div>
+      <p id="result-count" class="result-count"></p>
+    </section>
+
+    <dialog id="equipment-dialog" class="equipment-dialog">
+      <button type="button" id="equipment-close" class="equipment-close" aria-label="閉じる">×</button>
+      <h2 id="equipment-title">キャラクター装備ランキング</h2><div id="equipment-content"></div>
+    </dialog>
+
+    <section class="notes"><h2 id="method-title">集計方法</h2><ul>
+      <li>編成数は、各プレイヤーの防衛チームに編成されたキャラクターの総数です。</li>
+      <li>同じプレイヤーが同一キャラクターを複数体使用している場合、編成数には使用された体数分を加算します。</li>
+      <li>採用人数は、そのキャラクターを1体以上使用したプレイヤー数です。</li>
+      <li>同じプレイヤーが同一キャラクターを複数体使用していても、採用人数では1人として計算します。</li>
+      <li>採用率は「採用人数 ÷ 集計人数」で計算します。</li>
+      <li>比較は、保存済みの正常集計を基準にしています。</li>
+      <li>本サイトは非公式サイトであり、ゲーム運営元とは関係ありません。</li>
+    </ul><p>データ出典: <a href="https://rangers.lerico.net/ja/pvp-tracker" target="_blank" rel="noopener noreferrer">LINE Rangers Handbook PvP Tracker</a></p></section>
+  </main>
+  <footer class="site-footer"><p>非公式・ファン作成の統計ページ</p><p>Owner確認用コピー</p></footer>
+</body>
+</html>
