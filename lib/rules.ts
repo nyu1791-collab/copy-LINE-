@@ -45,7 +45,7 @@ export async function validateMedia(file:File, limit=maxMediaBytes){
   if(!validMediaHeader(file.type,bytes))throw new Error('invalid_media');return extension;
 }
 export function validateReply(body: string, attachment: unknown) {
-  // Video-detail replies are deliberately plain text.  Reject both full URLs
+  // Video-detail replies are deliberately plain text. Reject both full URLs
   // and bare domain-like text so a link cannot be smuggled in without a scheme.
   if(attachment || /(?:https?:|ftp:|www\.|youtu\.?be|<[^>]*>|\]\(|(?:^|\s)(?:[a-z0-9-]+\.)+[a-z]{2,63}(?:[/?#:]|\s|$))/i.test(body)) throw new Error('text_only');
 }
@@ -64,7 +64,7 @@ export type CharacterTopic={id:string;name:string;image:string;releaseMonth:stri
 // A topic is shown only after its exact ID, image and JST release month are
 // explicitly verified. A calendar change by itself never switches the board.
 export const characters:readonly CharacterTopic[]=[
- {id:'u1631e-sally',name:'かに座 サリー',image:'https://line-rangers-fan.github.io/line-rangers-pvp/assets/characters/u1631e-sally.png',releaseMonth:'2026-09',confirmed:true},
+ {id:'u1631e-sally',name:'かに座 サリー',image:'https://rangers.lerico.net/res/u1631e-sally/u1631e-sally-thum.png',releaseMonth:'2026-09',confirmed:true},
 ];
 export function confirmedCharactersForMonth(month:string){return characters.filter(character=>character.confirmed&&character.releaseMonth===month);}
 export function isKnownCharacter(id:string){return characters.some(character=>character.id===id);}
