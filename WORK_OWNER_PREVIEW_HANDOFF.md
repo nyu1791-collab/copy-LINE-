@@ -1,34 +1,40 @@
-# ChatGPT Work — 元PvP完全コピー＋掲示板併設 Owner確認版
+# ChatGPT Work — PvPランキング＋掲示板 Owner確認版 最終Preview指示
 
 ## 最優先目的
 
-`nyu1791-collab/copy-LINE-` を、**元のPvPランキングサイトを忠実にコピーした画面を主画面**として完成させ、その同一サイト内へ新キャラ情報掲示板を併設する。
-
-前回の「掲示板を主画面にしてPvPを小さく内包する」構成は誤り。絶対に再利用しない。
+`nyu1791-collab/copy-LINE-` の**現在のmainをそのままBuild**し、Owner確認用Previewで実機確認する。主画面はPvPランキング、`/boards` は新キャラ情報掲示板。掲示板を主画面へ戻さない。
 
 ## Source of Truth
 
-- 確認版Repository: `nyu1791-collab/copy-LINE-`
-- 元PvP Repository: `line-rangers-fan/line-rangers-pvp`
-- 元PvP画面の固定Source snapshot: `517291dfa3f9eeaecd8b6c6f1d445da52f0480ac`
-- 元画面の中心ファイル: `docs/index.html`, `docs/assets/style.css`, `docs/assets/app.js`
-- 新キャラ掲示板: 確認版の既存 `/boards` と `app/community.tsx`
+- Build対象: `nyu1791-collab/copy-LINE-` の最新 `main`
+- 元PvP正本: `line-rangers-fan/line-rangers-pvp` は読み取り専用で、変更・Pages再公開・Production反映をしない。
+- 元画面のpre-maintenance視覚/操作基準: commit `d6664b75502a73896b9d5b0c31667a2d4a0de95b`
+- **実際にBuildするPvPファイルは、すでに確認版Repositoryへ追跡済みの `public/pvp/`。WorkがPrivate正本から再コピーして上書きしてはいけない。**
+- 掲示板: `/boards` / `app/community.tsx`
 
-現在の元PvP `main` のmaintenance-only shellを画面コピー元にしない。見た目・ランキング・比較UI・装備Dialogが残っている上記snapshotを使用する。
+## 現在のPvP実装
 
-## Workが最初に行うこと
+- `/` → `/pvp/index.html`
+- `public/pvp/index.html`
+- `public/pvp/assets/style.css`
+- `public/pvp/assets/app.js`
+- `public/pvp/data/character_usage.json`
+- `public/pvp/data/character_usage_history.json`
+- `scripts/collect-pvp.mjs` が公開API `rangers.lerico.net` からLEGEND上位200人を取得し、200/200が検証できた場合だけsnapshotを生成する。
+- `.github/workflows/refresh-pvp-data.yml` が毎時更新する。部分/異常取得時は失敗させ、正常snapshotを壊さない。
+- BrowserはPrivate GitHub raw/Pagesへ接続せず、同一originの追跡済みsnapshotだけ読む。
 
-1. GitHub接続済み権限で `line-rangers-fan/line-rangers-pvp@517291...` を直接読み取る。
-2. `docs/` の実ファイルを確認版の `public/pvp/` へコピーする。unauthenticated codeload/raw URLでPrivate Repositoryを取得しない。
-3. コピー先だけでmaintenance表示を解除する。元Repositoryは変更しない。
-4. コピー先だけで `frame-ancestors 'none'` 等Previewを妨げる設定を必要最小限調整する。
-5. 元ランキングのDOM/CSS/JSを作り直さない・近似実装しない。**元ファイルをコピーして使う。**
-6. `/` は `/pvp/index.html` の元PvP画面を開く。
-7. 元PvP画面に掲示板への同一サイト導線 `/boards` を併設する。ランキングそのものを掲示板に置き換えない。
+## Workが行うこと
 
-## 完成画面の必須条件
+1. 最新mainを取得し、HEAD SHAを記録する。
+2. `public/pvp/index.html`, `assets/style.css`, `assets/app.js`, `data/character_usage.json` の実在を確認する。
+3. `character_usage.json` が `target_players=200`, `sampled_players=200`, `complete_target=true` であることを確認する。
+4. `npm run install:ci` → `npm run build` → `npm test` を実行する。
+5. Buildが成功したらOwner確認Previewを作る。
+6. 実際のPreviewを開き、下記E2Eを最後まで確認する。
+7. 実サイトを確認していないURL、推測URL、Repositoryに存在しないSHAは報告しない。
 
-主画面は元サイトと同じ以下を保持する。
+## PvP画面の必須条件
 
 - `UNOFFICIAL STATISTICS`
 - `レジェンド帯 キャラ集計`
@@ -36,21 +42,12 @@
 - リーグ / 全編成キャラ数 / 最終更新
 - キャラクターランキング表
 - 順位 / キャラクター / 編成数 / 採用人数 / 採用率
-- 比較基準 `1時間前 / 前日締め / 先週締め / 先月締め`、初期値は `前日締め`
-- キャラクタータップ時の武器・防具・アクセサリー装備ランキング
-- 集計方法とデータ出典
-- 元サイトのダークネイビー＋緑、スマホ表示
-
-その上で、同じサイトから `/boards` の「新キャラ情報掲示板」へ自然に移動できる導線を追加する。掲示板カードや導線は元ランキングを隠したり置換したりしない。
-
-## PvPデータ
-
-- 正本の集計ロジックを書き換えない。
-- 既存 `character_usage.json` / history と元 `app.js` の契約を維持する。
-- Private正本をブラウザから直接raw取得させない。
-- Previewで必要なread-only snapshot/dataをWorkの認証済み取得で `public/pvp/data/` に含めるか、既存の安全なread-only routeへ同一originで接続する。
-- 異常/空データで正常データを上書きしない。
-- 掲示板障害でPvPランキングを停止させない。
+- `1時間前 / 前日締め / 先週締め / 先月締め`、初期値は前日締め
+- キャラクタータップで武器・防具・アクセサリー装備ランキング
+- 集計方法 / データ出典
+- ダークネイビー＋緑、スマホ最優先
+- `/boards` への「新キャラ情報掲示板」導線
+- 比較履歴がまだ蓄積していない期間は、推測値を作らず「履歴待ち」と表示する。
 
 ## 新キャラ掲示板
 
@@ -59,7 +56,7 @@
 - 青色の別進化を混同しない。
 - 投票、コメント、写真/動画、翻訳、並び順、固定/非表示/復元、Owner/Moderatorを維持。
 - コメントは保存成功確認後だけ入力欄とlocalStorage draftを消す。失敗時はdraftを保持。
-- 二重送信を防止しrequest ID/idempotencyを維持。
+- request ID/idempotencyと二重送信防止を維持。
 
 ## 権限・Security
 
@@ -68,37 +65,30 @@
 - OwnerだけがModerator追加/解除可能。
 - Secret/PAT/Owner token/Cookie signing secret/DB・Storage credentialをCommitしない。
 - noindex/nofollow/noarchive/nosnippetを維持。
+- PreviewはOwner確認用。一般公開URLで代用しない。
 
 ## 禁止
 
-- 掲示板を主画面にしてPvPランキングを小型カード化すること。
-- 元PvPをReact等で近似再制作すること。
+- `public/pvp/` をPrivate正本から再materializeして上書きすること。
+- unauthenticated codeload/raw取得をBuildへ戻すこと。
+- 掲示板を主画面にしてPvPを小型カード化すること。
 - 元PvP Repositoryのmain/Pages/Productionを変更すること。
-- GitHub Pagesを有効化すること。
+- copy RepositoryのGitHub Pagesを有効化すること。
 - PR Merge、Production Publish、一般公開Worker、課金開始。
-- Private Repositoryをunauthenticated codeloadして404になる旧処理へ戻すこと。
 
-## Preview作成と最終検証
+## URL返却前のE2E
 
-Build前に `public/pvp/index.html`, `public/pvp/assets/style.css`, `public/pvp/assets/app.js` が実在し、元snapshot由来であることを確認する。存在しない場合はPreviewを成功扱いしない。
-
-URLを返す前にWork自身で実サイトを開き、以下を確認する。
-
-1. `/` を開くと元PvPランキング画面が最初に見える。
-2. maintenance画面や掲示板単体画面から始まらない。
-3. ランキング表が元サイト同様に表示される。
-4. 前日締めが初期選択され、4比較期間を切替できる。
-5. キャラタップで装備ランキングが開く。
-6. 同一サイトの掲示板導線から `/boards` へ移動できる。
-7. `/boards` で投票・コメントが使える。
+1. `/` でPvPランキングが最初に表示される。
+2. maintenance画面や404にならない。
+3. 200/200のsnapshotからランキングが表示される。
+4. 前日締めが初期選択で、4期間を切替できる。
+5. キャラタップで装備ランキングが開き、装備画像が表示される。
+6. `/boards` へ移動でき、戻ってPvPも再表示できる。
+7. 掲示板で投票・コメントが使える。
 8. コメント成功後は入力欄が空、失敗時はdraft保持。
-9. `u1631e-sally` の名前・画像・進化が正しい。
-10. 320/375/390/430pxとiPad幅で横崩れしない。
+9. 掲示板の `u1631e-sally` は `かに座 サリー` / 究極進化画像。
+10. 320/375/390/430pxとiPad幅で致命的な横崩れがない。
 11. 一般UserがOwner/Moderatorを偽装できない。
 12. Secrets/Token/Cookie値がHTML/JS/API error/logに出ない。
 
-## 重要な照合
-
-Workが報告する「検証Commit」は、必ず `nyu1791-collab/copy-LINE-` の実在Commitと照合する。Repositoryに存在しないSHAを検証Commitとして報告しない。
-
-最終報告は、実際に開いて上記を確認した `chatgpt.site` URL、実在するGitHub Commit SHA、CI結果を返す。画面が元PvPと一致しない場合はURLを完成品として返さず、修正→再Build→再確認を続ける。
+最終報告は、**実際に開いて確認したOwner Previewの `chatgpt.site` URL、実在HEAD SHA、Build/Test結果、E2E結果**だけを返す。不具合があればURLを完成品扱いせず、修正→再Build→再確認する。
