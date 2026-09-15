@@ -1,11 +1,9 @@
 name: visual-review
+
+# The live Worker is a public surface, so visual review is manual-only.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'public/pvp/**'
-      - '.github/workflows/visual-review.yml'
   workflow_dispatch:
+
 permissions:
   contents: read
 jobs:
@@ -27,16 +25,14 @@ jobs:
           npx -y playwright@1.55.0 screenshot --browser=chromium --viewport-size='1024,1366' --full-page --wait-for-timeout=5000 "$REVIEW_URL" visual-review/pvp-tablet.png
           test -s visual-review/pvp-mobile.png
           test -s visual-review/pvp-tablet.png
-      - name: Verify live PvP and board entry contract
+      - name: Verify live PvP and board contract
         run: |
           set -euo pipefail
-          html="$(curl --fail --silent --show-error --retry 5 --retry-delay 2 "$REVIEW_URL")"
-          grep -q 'UNOFFICIAL STATISTICS' <<< "$html"
-          grep -q 'レジェンド帯 キャラ集計' <<< "$html"
-          grep -q 'href="/boards"' <<< "$html"
-          grep -q 'かに座 サリー' <<< "$html"
-          grep -q '究極進化' <<< "$html"
-          grep -q 'original-compat.css' <<< "$html"
+          pvp="$(curl --fail --silent --show-error --retry 5 --retry-delay 2 "$REVIEW_URL")"
+          board="$(curl --fail --silent --show-error --retry 5 --retry-delay 2 "${REVIEW_URL%/pvp/index.html}/boards")"
+          grep -q 'UNOFFICIAL STATISTICS' <<< "$pvp"
+          grep -q 'レジェンド帯 キャラ集計' <<< "$pvp"
+          grep -q '新キャラ情報掲示板' <<< "$board"
       - uses: actions/upload-artifact@v4
         with:
           name: pvp-visual-review

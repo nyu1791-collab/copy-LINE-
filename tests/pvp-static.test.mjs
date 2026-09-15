@@ -1,8 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
 import {readFile} from 'node:fs/promises';
 
 const read=path=>readFile(new URL(`../${path}`,import.meta.url),'utf8');
+const gitBlobSha=text=>createHash('sha1').update(`blob ${Buffer.byteLength(text)}\0`).update(text).digest('hex');
+
+const SOURCE_COMMIT='d6664b75502a73896b9d5b0c31667a2d4a0de95b';
+const SOURCE_INDEX_BLOB='68bf23323b166102ab968481c1ddea1e98b84adf';
+const SOURCE_STYLE_BLOB='60679caa61a9a440856ee068601048df4783ae13';
 
 test('root still launches the restored PvP surface',async()=>{
   const [page,launcher]=await Promise.all([read('app/page.tsx'),read('app/original-pvp-launcher.tsx')]);
@@ -10,41 +16,35 @@ test('root still launches the restored PvP surface',async()=>{
   assert.match(launcher,/\/pvp\/index\.html/);
 });
 
-test('static PvP surface exists and keeps community co-located',async()=>{
-  const html=await read('public/pvp/index.html');
+test('PvP shell and stylesheet are byte-for-byte copies of the pre-maintenance source',async()=>{
+  const [html,css]=await Promise.all([read('public/pvp/index.html'),read('public/pvp/assets/style.css')]);
+  assert.equal(gitBlobSha(html),SOURCE_INDEX_BLOB,`index.html must remain exact source ${SOURCE_COMMIT}`);
+  assert.equal(gitBlobSha(css),SOURCE_STYLE_BLOB,`style.css must remain exact source ${SOURCE_COMMIT}`);
   assert.match(html,/UNOFFICIAL STATISTICS/);
   assert.match(html,/レジェンド帯 キャラ集計/);
-  assert.match(html,/id="summary" class="summary-grid"/);
+  assert.match(html,/id="summary"/);
   assert.match(html,/id="ranking-body"/);
   assert.match(html,/id="equipment-dialog"/);
   assert.match(html,/data-rank-period="hour"/);
   assert.match(html,/data-rank-period="day"/);
   assert.match(html,/data-rank-period="week"/);
   assert.match(html,/data-rank-period="month"/);
-  assert.match(html,/href="\/boards"/);
-  assert.match(html,/コミュニティを見る/);
-  assert.match(html,/u1631e-sally/);
-  assert.match(html,/かに座 サリー/);
-  assert.match(html,/究極進化/);
-  assert.match(html,/original-compat\.css/);
-  assert.match(html,/noindex,nofollow,noarchive,nosnippet/);
 });
 
-test('ranking interaction keeps the original image-first table contract',async()=>{
-  const [js,css]=await Promise.all([read('public/pvp/assets/app.js'),read('public/pvp/assets/original-compat.css')]);
+test('runtime preserves original image-first table and adds board without changing source layout files',async()=>{
+  const js=await read('public/pvp/assets/app.js');
+  assert.match(js,/Faithful runtime for the pre-maintenance PvP surface/);
   assert.match(js,/className = "character-button"/);
   assert.match(js,/className = "rank-number"/);
   assert.match(js,/className = "rate-track"/);
   assert.match(js,/className = "rate-bar"/);
   assert.match(js,/showModal\(\)/);
-  assert.match(css,/\.character-button/);
-  assert.match(css,/\.character-image-frame/);
-  assert.match(css,/\.rank-period-changes/);
-  assert.match(css,/\.equipment-tabs/);
-  assert.match(css,/@media\(max-width:720px\)/);
+  assert.match(js,/community-bridge-link/);
+  assert.match(js,/href = "\/boards"/);
+  assert.match(js,/position:fixed/);
 });
 
-test('ranking browser reads only the local validated snapshot',async()=>{
+test('ranking browser reads only the isolated local validated snapshot',async()=>{
   const js=await read('public/pvp/assets/app.js');
   assert.match(js,/\.\/data\/character_usage\.json/);
   assert.match(js,/equipment_rankings/);

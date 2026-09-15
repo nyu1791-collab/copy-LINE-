@@ -1,24 +1,8 @@
 name: deploy-cloudflare-review
 
+# Public Worker deployment is never automatic. Owner must explicitly dispatch it.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - "app/**"
-      - "build/**"
-      - "components/**"
-      - "db/**"
-      - "drizzle/**"
-      - "lib/**"
-      - "public/**"
-      - "scripts/**"
-      - "worker/**"
-      - "package.json"
-      - "package-lock.json"
-      - "vite.config.ts"
-      - "wrangler.jsonc"
-      - ".github/workflows/deploy-cloudflare-review.yml"
 
 permissions:
   contents: read
