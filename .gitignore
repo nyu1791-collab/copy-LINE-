@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# generated original PvP review copy
+/public/pvp/
+
 # misc
 .DS_Store
 *.pem
