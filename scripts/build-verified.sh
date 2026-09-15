@@ -18,10 +18,13 @@ if [[ ! -x "${vinext}" ]]; then
   exit 69
 fi
 
-echo "Preparing exact original PvP site copy..."
-bash "${script_dir}/sync-original-pvp.sh"
-
-echo "Running bounded vinext build..."
+# The canonical PvP repository is private and GitHub Pages is intentionally
+# disabled while the production site is under maintenance. Do not make an
+# unauthenticated codeload/raw request during CI: GitHub correctly returns 404
+# and that used to make every verification build fail before application tests
+# could run. The review application is self-contained and reads PvP data only
+# through its bounded read-only adapters/fallbacks.
+echo "Building board-first Owner review application..."
 timeout \
   --signal=TERM \
   --kill-after="${SITES_BUILD_KILL_AFTER:-10s}" \
