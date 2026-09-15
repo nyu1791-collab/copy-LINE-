@@ -1,111 +1,104 @@
-# ChatGPT Work — Owner専用確認版の最終反映指示
+# ChatGPT Work — 元PvP完全コピー＋掲示板併設 Owner確認版
 
-## 目的
+## 最優先目的
 
-このRepository `nyu1791-collab/copy-LINE-` の現在の `main` を、LINEレンジャー「新キャラ情報掲示板＋PvPランキング」のOwner確認版として扱う。
+`nyu1791-collab/copy-LINE-` を、**元のPvPランキングサイトを忠実にコピーした画面を主画面**として完成させ、その同一サイト内へ新キャラ情報掲示板を併設する。
 
-**一般公開は目的ではない。Owner本人がスマホ/iPadで完成画面と動作を確認できることが目的。**
+前回の「掲示板を主画面にしてPvPを小さく内包する」構成は誤り。絶対に再利用しない。
 
-## 正本と禁止事項
+## Source of Truth
 
-- 確認版コード: `nyu1791-collab/copy-LINE-`
-- PvP正本: `line-rangers-fan/line-rangers-pvp`
-- PvP正本はPrivate/maintenance状態を維持し、GitHub Pagesを再有効化しない。
-- `copy-LINE-` のGitHub Pagesも有効化しない。
-- 一般公開Worker、Production公開、PR Merge、Secrets変更、課金サービス開始はOwnerの明示承認なしに行わない。
-- noindex、robots、推測困難URLだけをOwner認証の代用にしない。
-- API key、PAT、Owner access token、Cookie signing secret、D1/R2 credential、個人情報をGitへCommitしない。
+- 確認版Repository: `nyu1791-collab/copy-LINE-`
+- 元PvP Repository: `line-rangers-fan/line-rangers-pvp`
+- 元PvP画面の固定Source snapshot: `517291dfa3f9eeaecd8b6c6f1d445da52f0480ac`
+- 元画面の中心ファイル: `docs/index.html`, `docs/assets/style.css`, `docs/assets/app.js`
+- 新キャラ掲示板: 確認版の既存 `/boards` と `app/community.tsx`
 
-## 現在のUI正解
+現在の元PvP `main` のmaintenance-only shellを画面コピー元にしない。見た目・ランキング・比較UI・装備Dialogが残っている上記snapshotを使用する。
 
-1. `/` は旧PvP統計画面から開始しない。
-2. `/` と `/boards` は「新キャラ情報掲示板」を直接表示する。
-3. 大きな「掲示板を開く」カードをPvP画面に置く旧方式へ戻さない。
-4. 掲示板ページの中にPvPランキングを表示する。
-5. 掲示板の投票・コメント・写真/動画投稿・Owner/Moderator管理は維持する。
-6. PvP取得障害が掲示板の投稿/投票を停止させない。
-7. PvP集計ロジック/正本データは確認版から書き換えない。
+## Workが最初に行うこと
 
-## キャラクター
+1. GitHub接続済み権限で `line-rangers-fan/line-rangers-pvp@517291...` を直接読み取る。
+2. `docs/` の実ファイルを確認版の `public/pvp/` へコピーする。unauthenticated codeload/raw URLでPrivate Repositoryを取得しない。
+3. コピー先だけでmaintenance表示を解除する。元Repositoryは変更しない。
+4. コピー先だけで `frame-ancestors 'none'` 等Previewを妨げる設定を必要最小限調整する。
+5. 元ランキングのDOM/CSS/JSを作り直さない・近似実装しない。**元ファイルをコピーして使う。**
+6. `/` は `/pvp/index.html` の元PvP画面を開く。
+7. 元PvP画面に掲示板への同一サイト導線 `/boards` を併設する。ランキングそのものを掲示板に置き換えない。
 
-2026-09の確認対象は正確に以下のみ。
+## 完成画面の必須条件
 
-- ID: `u1631e-sally`
-- 名前: `かに座 サリー`
-- 究極進化側
+主画面は元サイトと同じ以下を保持する。
 
-青色の別進化/超進化を代用・混同しない。
+- `UNOFFICIAL STATISTICS`
+- `レジェンド帯 キャラ集計`
+- 言語切替
+- リーグ / 全編成キャラ数 / 最終更新
+- キャラクターランキング表
+- 順位 / キャラクター / 編成数 / 採用人数 / 採用率
+- 比較基準 `1時間前 / 前日締め / 先週締め / 先月締め`、初期値は `前日締め`
+- キャラクタータップ時の武器・防具・アクセサリー装備ランキング
+- 集計方法とデータ出典
+- 元サイトのダークネイビー＋緑、スマホ表示
 
-## コメント必須挙動
+その上で、同じサイトから `/boards` の「新キャラ情報掲示板」へ自然に移動できる導線を追加する。掲示板カードや導線は元ランキングを隠したり置換したりしない。
 
-- 投稿成功がサーバーから確認された後だけ入力欄を空にする。
-- 成功時はlocalStorage等の保存draftも削除する。
-- 通信失敗、timeout、validation error、rate limit、server errorでは本文を残す。
-- 送信中の二重押下を防ぐ。
-- request ID/idempotencyで「保存済みだが応答喪失」の再送を重複コメントにしない。
+## PvPデータ
 
-## 権限
+- 正本の集計ロジックを書き換えない。
+- 既存 `character_usage.json` / history と元 `app.js` の契約を維持する。
+- Private正本をブラウザから直接raw取得させない。
+- Previewで必要なread-only snapshot/dataをWorkの認証済み取得で `public/pvp/data/` に含めるか、既存の安全なread-only routeへ同一originで接続する。
+- 異常/空データで正常データを上書きしない。
+- 掲示板障害でPvPランキングを停止させない。
 
-- Owner / Moderator / Userは必ずサーバー側で決定する。
-- `運営`、`管理人`、`Owner`、`Moderator`等の表示名からRoleを与えない。
-- Owner activation tokenはサーバー環境値だけに置き、ブラウザやRepositoryへ出さない。
+## 新キャラ掲示板
+
+- `/boards` を維持。
+- 2026-09対象は `u1631e-sally` / `かに座 サリー` / 究極進化側のみ。
+- 青色の別進化を混同しない。
+- 投票、コメント、写真/動画、翻訳、並び順、固定/非表示/復元、Owner/Moderatorを維持。
+- コメントは保存成功確認後だけ入力欄とlocalStorage draftを消す。失敗時はdraftを保持。
+- 二重送信を防止しrequest ID/idempotencyを維持。
+
+## 権限・Security
+
+- Owner / Moderator / Userはサーバー側で決定。
+- `運営` `管理人` `Owner` `Moderator` 等の表示名でRoleを与えない。
 - OwnerだけがModerator追加/解除可能。
-- ModeratorはOwner変更・Role付与をできない。
-- 称号/貢献バッジと権限Roleを別物として扱う。
+- Secret/PAT/Owner token/Cookie signing secret/DB・Storage credentialをCommitしない。
+- noindex/nofollow/noarchive/nosnippetを維持。
 
-## Owner専用URLを出す条件
+## 禁止
 
-Workで実際のPreviewを作成する場合、次を全部満たすこと。
+- 掲示板を主画面にしてPvPランキングを小型カード化すること。
+- 元PvPをReact等で近似再制作すること。
+- 元PvP Repositoryのmain/Pages/Productionを変更すること。
+- GitHub Pagesを有効化すること。
+- PR Merge、Production Publish、一般公開Worker、課金開始。
+- Private Repositoryをunauthenticated codeloadして404になる旧処理へ戻すこと。
 
-1. Ownerだけが通れる実認証がある。
-2. 未認証/別ユーザーでURLを開くと本体を閲覧できない。
-3. noindex/nofollow/no-storeを防御層として追加する。
-4. Preview DB/StorageはProductionと分離する。PvPはread-only。
-5. 課金が必要なら実行せずOwnerへ停止報告する。
-6. 一般公開しか選べない場合は公開せず停止する。
+## Preview作成と最終検証
 
-## 最終検証
+Build前に `public/pvp/index.html`, `public/pvp/assets/style.css`, `public/pvp/assets/app.js` が実在し、元snapshot由来であることを確認する。存在しない場合はPreviewを成功扱いしない。
 
-OwnerへURLを渡す前に、Work自身で以下を確認する。
+URLを返す前にWork自身で実サイトを開き、以下を確認する。
 
-- URLが404/blank/old buildでない。
-- `/` で掲示板が直接開く。
-- `u1631e-sally` が正しい画像/名称/進化で表示される。
-- PvPランキングが掲示板内にある。
-- 投票が動く。
-- コメント成功後に入力欄が空になる。
-- コメント失敗時はdraftが残る。
-- 二重送信が増殖しない。
-- 一般UserがOwner/Moderatorを偽装できない。
-- Owner本人にはOwner表示が出る。
-- 写真/動画の上限・形式拒否・no autoplayが機能する。
-- 320/375/390/430pxとiPad幅で横崩れがない。
-- PvP取得失敗を模擬しても掲示板が使える。
-- Secrets/Token/Cookie値がHTML/JS/API error/logへ漏れていない。
-- GitHub Pagesを有効化していない。
+1. `/` を開くと元PvPランキング画面が最初に見える。
+2. maintenance画面や掲示板単体画面から始まらない。
+3. ランキング表が元サイト同様に表示される。
+4. 前日締めが初期選択され、4比較期間を切替できる。
+5. キャラタップで装備ランキングが開く。
+6. 同一サイトの掲示板導線から `/boards` へ移動できる。
+7. `/boards` で投票・コメントが使える。
+8. コメント成功後は入力欄が空、失敗時はdraft保持。
+9. `u1631e-sally` の名前・画像・進化が正しい。
+10. 320/375/390/430pxとiPad幅で横崩れしない。
+11. 一般UserがOwner/Moderatorを偽装できない。
+12. Secrets/Token/Cookie値がHTML/JS/API error/logに出ない。
 
-## 現在のCI基準
+## 重要な照合
 
-`.github/workflows/verify-owner-copy.yml` の `verify` がSUCCESSのCommitだけを確認版候補にする。Build時にPrivateなPvP Repositoryをunauthenticated codeloadする旧処理へ戻さない。
+Workが報告する「検証Commit」は、必ず `nyu1791-collab/copy-LINE-` の実在Commitと照合する。Repositoryに存在しないSHAを検証Commitとして報告しない。
 
-## 最終報告形式
-
-実認証付きOwner Previewの作成と実アクセス確認が完了してから、以下を先頭に返す。
-
-```text
-【Owner専用確認URL】
-<実際にOwner認証を確認したURL>
-
-【GitHub確認用Repository】
-https://github.com/nyu1791-collab/copy-LINE-
-
-【検証Commit】
-<実際に確認したSHA>
-
-【CI】
-SUCCESS
-```
-
-その後に「実施内容」「実機/認証テスト結果」「残課題」を短く記載する。
-
-**実際にOwnerだけが閲覧できるURLを確認していない段階では、Owner専用URLが完成したとは報告しない。**
+最終報告は、実際に開いて上記を確認した `chatgpt.site` URL、実在するGitHub Commit SHA、CI結果を返す。画面が元PvPと一致しない場合はURLを完成品として返さず、修正→再Build→再確認を続ける。
