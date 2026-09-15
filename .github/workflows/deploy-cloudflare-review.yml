@@ -155,7 +155,7 @@ jobs:
 
           grep -q 'レジェンド帯 キャラ集計' <<< "$pvp"
           grep -q '新キャラ情報掲示板' <<< "$board"
-          printf '%s' "$snapshot" | jq -e '.player_count == 200 and (.characters | length > 0)' >/dev/null
+          printf '%s' "$snapshot" | jq -e '.target_players == 200 and .sampled_players == 200 and .complete_target == true and (.characters | length > 0)' >/dev/null
           grep -qi '^x-content-type-options: nosniff' "$api_headers"
           grep -qi '^set-cookie: __Host-lr_guest=' "$api_headers"
           if grep -q '現在、サイトを改修しています。' <<< "$pvp"; then
