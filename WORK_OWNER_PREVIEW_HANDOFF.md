@@ -1,100 +1,117 @@
-# ChatGPT Work — PvPランキング＋掲示板 Owner確認版 最終Preview指示
+# LINE Rangers PvP + Community — 改修用コピー運用基準
 
-## 最優先目的
+## 目的
 
-`nyu1791-collab/copy-LINE-` の**現在のmainをそのままBuild**し、Owner確認用Previewで実機確認する。主画面は元PvPランキング、`/boards` は新キャラ情報掲示板。掲示板を主画面へ戻さない。
+`nyu1791-collab/copy-LINE-` を、元サイトを壊さず改善するためのレビュー／改修用コピーとして使う。
 
-## Source of Truth
+2026-09-15、ユーザー確認済みの元サイト Owner Preview
+`https://line-rangers-pvp-owner-preview.n-yu1791.workers.dev`
+の表示構成を改修用コピーへ同期した。
 
-- Build対象: `nyu1791-collab/copy-LINE-` の最新 `main`
-- 元PvP正本: `line-rangers-fan/line-rangers-pvp` は読み取り専用。変更・Pages再公開・Production反映をしない。
-- 元画面のpre-maintenance基準: commit `d6664b75502a73896b9d5b0c31667a2d4a0de95b`
-- `public/pvp/index.html` は上記commitの `docs/index.html` と**Git blob SHAまで一致**すること。期待SHA: `68bf23323b166102ab968481c1ddea1e98b84adf`
-- `public/pvp/assets/style.css` は上記commitの `docs/assets/style.css` と**Git blob SHAまで一致**すること。期待SHA: `60679caa61a9a440856ee068601048df4783ae13`
-- `public/pvp/assets/app.js` は、元画面のDOM/CSS契約を維持しつつ、確認版の同一origin 200/200 snapshotを読むための互換runtime。Private GitHub raw/Pagesへ依存させない。
-- `/boards` の併設導線は元HTML/CSSを崩さないようruntimeで小型固定ボタンとして追加する。
-- **WorkがPrivate正本から再コピーして上書きしてはいけない。現在mainの追跡済みファイルをそのままBuildする。**
+## Repository の役割
 
-## 現在のPvP実装
+- 改修先: `nyu1791-collab/copy-LINE-` / `main`
+- 元サイト正本: `line-rangers-fan/line-rangers-pvp`
+- 元サイトは、改修内容がレビュー完了するまで**読み取り専用**として扱う。
+- 元Repositoryのmain、Pages、Production Workerへ、改修途中の変更を直接反映しない。
+- 改善はまず `copy-LINE-` で実装・テスト・実機確認し、ユーザー承認後に元サイトへ必要な差分だけ反映する。
+
+## 2026-09-15 Owner Preview 同期基準
+
+元サイト側の確認基準UIは、同期時点で `line-rangers-fan/line-rangers-pvp` の commit
+`09f829c0f136230f3839f243e69ced93fccac6bc` に含まれる `docs/` と Owner Preview Worker の表示結果。
+
+Owner Preview Worker は元 `docs/index.html` の maintenance overlay だけを除去してランキング本体を表示するため、改修コピーでは最初から maintenance overlay を含めずに表示する。
+
+同期対象の主要要素:
+
+- `UNOFFICIAL STATISTICS`
+- `レジェンド帯 キャラ集計`
+- 7言語切替
+- リーグ / 全編成キャラ数 / 最終更新
+- キャラクターランキング
+- 順位 / キャラクター / 編成数 / 採用人数 / 採用率
+- 1時間前 / 前日締め / 先週締め / 先月締め
+- キャラクタータップ時の装備ランキング
+- 集計方法 / データ出典
+- 新キャラ情報掲示板の入口
+- ダークネイビー＋緑の元デザイン
+- スマホ優先レイアウト
+
+## 改修コピー側の実装
 
 - `/` → `/pvp/index.html`
-- `public/pvp/index.html` = 元サイトpre-maintenance HTMLの完全コピー
-- `public/pvp/assets/style.css` = 元サイトpre-maintenance CSSの完全コピー
-- `public/pvp/assets/app.js` = 元UI契約互換runtime + `/boards` 導線
-- `public/pvp/data/character_usage.json`
-- `public/pvp/data/character_usage_history.json`
-- `scripts/collect-pvp.mjs` が公開API `rangers.lerico.net` からLEGEND上位200人を取得し、200/200が検証できた場合だけsnapshotを生成する。
-- `.github/workflows/refresh-pvp-data.yml` が毎時更新する。部分/異常取得時は失敗させ、正常snapshotを壊さない。
-- BrowserはPrivate GitHub raw/Pagesへ接続せず、同一originの追跡済みsnapshotだけ読む。
+- `public/pvp/index.html` は Owner Preview の表示シェルを再現し、maintenance overlayを含めない。
+- `public/pvp/assets/style.css` は元PvPスタイルを維持する。
+- `public/pvp/assets/community-entry.css` / `community-entry.js` は Owner Preview の掲示板入口を再現する。
+- コピー側の掲示板入口は外部開発URLではなく、同一サイトの `/boards` を使う。
+- 2026-09対象は `u1631e-sally` / `かに座 サリー` のみ。別進化を混同しない。
+- `public/pvp/assets/app.js` はコピー環境用の互換runtimeを維持し、同一originの検証済みデータだけを読む。
+- 旧固定式 `community-bridge-link` は互換runtime内に残る場合があるが、Owner Preview型の掲示板カードを正本UIとして表示し、重複導線はCSSで非表示にする。
 
-## Workが行うこと
+## PvPデータの隔離
 
-1. 最新mainを取得し、HEAD SHAを記録する。
-2. `public/pvp/index.html`, `assets/style.css`, `assets/app.js`, `data/character_usage.json` の実在を確認する。
-3. `index.html` と `style.css` のGit blob SHAが上記期待値と一致することを確認する。
-4. `character_usage.json` が `target_players=200`, `sampled_players=200`, `complete_target=true` であることを確認する。
-5. `npm run install:ci` → `npm run build` → `npm test` を実行する。
-6. Buildが成功したら**Owner限定**Previewを作る。一般公開へ切り替えない。
-7. 実際のPreviewを開き、下記E2Eを最後まで確認する。
-8. 実サイトを確認していないURL、推測URL、Repositoryに存在しないSHAは報告しない。
+元サイトの現在データを無条件にコピーして、正常な改修用snapshotを上書きしてはいけない。
 
-## PvP画面の必須条件
+改修コピーでは:
 
-- 元サイトと同じ `UNOFFICIAL STATISTICS`
-- 元サイトと同じ `レジェンド帯 キャラ集計`
-- 元サイトと同じダークネイビー＋緑、余白、表、スマホレイアウト
-- 言語切替
-- リーグ / 全編成キャラ数 / 最終更新
-- キャラクターランキング表
-- 順位 / キャラクター / 編成数 / 採用人数 / 採用率
-- `1時間前 / 前日締め / 先週締め / 先月締め`、初期値は前日締め
-- キャラクタータップで武器・防具・アクセサリー装備ランキング
-- 集計方法 / データ出典
-- 比較履歴がまだ蓄積していない期間は推測値を作らず「履歴待ち」
-- 元画面のレイアウトを押し下げたり組み替えず、右下の小型導線から `/boards` へ移動できる
+- `target_players = 200`
+- `sampled_players = 200`
+- `complete_target = true`
 
-## 新キャラ掲示板
+を満たした検証済みsnapshotだけを表示対象にする。
 
-- `/boards` を維持。
-- 2026-09対象は `u1631e-sally` / `かに座 サリー` / 究極進化側のみ。
-- 青色の別進化を混同しない。
-- 投票、コメント、写真/動画、翻訳、並び順、固定/非表示/復元、Owner/Moderatorを維持。
-- コメントは保存成功確認後だけ入力欄とlocalStorage draftを消す。失敗時はdraftを保持。
-- request ID/idempotencyと二重送信防止を維持。
+部分取得、空データ、異常減少、検証失敗を正常snapshotへ上書きしない。
 
-## 権限・Security
+## 掲示板
 
-- Owner / Moderator / Userはサーバー側で決定。
-- `運営` `管理人` `Owner` `Moderator` 等の表示名でRoleを与えない。
-- OwnerだけがModerator追加/解除可能。
-- Secret/PAT/Owner token/Cookie signing secret/DB・Storage credentialをCommitしない。
-- PreviewはOwner確認用。一般公開URLで代用しない。
-- Preview環境側で検索index対象にしない。元HTMLの完全コピーを壊すため、HTMLへ勝手にrobots metaを追加しない。
+`/boards` を維持する。
+
+- 投票
+- コメント
+- 写真 / 動画
+- 翻訳
+- 新着 / いいね / 役に立った
+- 固定 / 非表示 / 復元
+- Owner / Moderator / User
+- request ID / idempotency
+- コメント失敗時のdraft保持
+
+を既存仕様どおり維持する。
+
+PvP表示障害と掲示板障害は分離し、一方の障害で他方を停止させない。
+
+## Security
+
+- Secret、PAT、Cloudflare token、Cookie signing secret、DB/R2 credentialをCommitしない。
+- Owner / Moderator権限はサーバー側で判定する。
+- 表示名から権限を付与しない。
+- 元Private Repositoryをブラウザから直接参照しない。
+- 検索index対象にしない。
+
+## 改修フロー
+
+1. `copy-LINE-` の最新mainを取得。
+2. Owner Preview同期状態と200/200 snapshotを確認。
+3. 改善をコピー側だけへ実装。
+4. `npm run install:ci` / `npm run build` / `npm test`。
+5. Review Workerへ明示的にDeploy。
+6. 実サイトでスマホ/iPad/PC、ランキング、比較、装備、掲示板をE2E確認。
+7. ユーザーへ変更点と確認URLを提示。
+8. ユーザー承認後、元サイトへ差分を適用。
+9. 元サイト側でも再度Build/Test/E2Eしてから公開再開を判断。
 
 ## 禁止
 
-- `public/pvp/index.html` / `style.css` を再構築・再デザインすること。
-- `public/pvp/` をPrivate正本から再materializeして上書きすること。
-- unauthenticated codeload/raw取得をBuildへ戻すこと。
-- 掲示板を主画面にしてPvPを小型カード化すること。
-- 元PvP Repositoryのmain/Pages/Productionを変更すること。
-- copy RepositoryのGitHub Pagesを有効化すること。
-- PR Merge、Production Publish、一般公開Worker、課金開始。
+- コピー側の未確認変更を元サイトへ直接Pushすること。
+- 元サイトProductionを無断で再公開すること。
+- 正常な200/200データを部分取得で上書きすること。
+- Secretsを公開Repositoryへコピーすること。
+- 掲示板をPvP本体と置き換えること。
+- `u1631e-sally` と別進化を誤統合すること。
 
-## URL返却前のE2E
+## 完了条件
 
-1. `/` でPvPランキングが最初に表示される。
-2. maintenance画面や404にならない。
-3. 元サイトのpre-maintenance画面と主要視覚要素・余白・表レイアウトが一致する。
-4. 200/200のsnapshotからランキングが表示される。
-5. 前日締めが初期選択で、4期間を切替できる。
-6. キャラタップで装備ランキングが開き、装備画像が表示される。
-7. 右下の掲示板導線から `/boards` へ移動でき、戻ってPvPも再表示できる。
-8. 掲示板で投票・コメントが使える。
-9. コメント成功後は入力欄が空、失敗時はdraft保持。
-10. 掲示板の `u1631e-sally` は `かに座 サリー` / 究極進化画像。
-11. 320/375/390/430pxとiPad幅で致命的な横崩れがない。
-12. 一般UserがOwner/Moderatorを偽装できない。
-13. Secrets/Token/Cookie値がHTML/JS/API error/logに出ない。
+改修コピーで、元Owner PreviewのPvP画面・主要操作が再現され、同一サイト `/boards` が利用でき、200/200正常snapshotが表示され、テストと実機確認が通った時点で「改修開始可能」とする。
 
-最終報告は、**実際に開いて確認したOwner Previewの `chatgpt.site` URL、実在HEAD SHA、Build/Test結果、E2E結果**だけを返す。不具合があればURLを完成品扱いせず、修正→再Build→再確認する。
+元サイトへの反映は別工程であり、コピー側の完成だけでは自動反映しない。
