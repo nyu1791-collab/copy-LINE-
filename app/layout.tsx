@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./community.css";
+import "./pvp-ranking.css";
 
 export const metadata: Metadata = {
-  title: "新キャラ情報掲示板 | LINEレンジャー",
-  description: "新キャラについて投票・コメント・動画で話そう。",
+  title: "LINEレンジャー レジェンド帯キャラ集計＋新キャラ情報掲示板",
+  description: "レジェンド帯PvPキャラクター集計と新キャラ情報掲示板のOwner確認版。",
   robots: { index: false, follow: false },
   icons: {icon: "/favicon.svg"},
 };
