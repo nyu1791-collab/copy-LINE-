@@ -1,12 +1,13 @@
 /* eslint-disable @next/next/no-html-link-for-pages -- Vinext's Workers output keeps same-origin navigation as native links. */
 import CommunityTeaser from './community-teaser';
 import PvpRanking from './pvp-ranking';
+import BoardOpenButton from './board-open-button';
 
 export default function Home() {
   return <main className="shell">
     <nav className="topbar">
       <a className="wordmark" href="/">LR <span>PVP STATISTICS</span></a>
-      <a href="/boards" className="primary-link">新キャラ掲示板</a>
+      <BoardOpenButton className="primary-link">新キャラ掲示板</BoardOpenButton>
     </nav>
     <header className="intro">
       <p className="eyebrow">UNOFFICIAL STATISTICS</p>
@@ -20,7 +21,7 @@ export default function Home() {
       <p>新キャラの評価・ガチャ投票・コメント・写真・動画を、PvPランキングと同じサイトで確認できます。</p>
       <CommunityTeaser />
       <div className="community-entry-actions">
-        <a href="/boards">コミュニティを見る</a>
+        <BoardOpenButton>コミュニティを見る</BoardOpenButton>
         <span className="community-entry-note">掲示板に障害があってもPvPランキングは独立して表示します。</span>
       </div>
     </section>
