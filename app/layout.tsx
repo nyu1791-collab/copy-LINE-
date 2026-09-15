@@ -4,9 +4,9 @@ import "./community.css";
 import CommentDraftSuccessGuard from "./comment-draft-success-guard";
 
 export const metadata: Metadata = {
-  title: "LINEレンジャー レジェンド帯キャラ集計＋新キャラ情報掲示板",
-  description: "元のレジェンド帯PvPキャラクター集計に新キャラ情報掲示板を併設したOwner確認版。",
-  robots: { index: false, follow: false },
+  title: "LINEレンジャー 新キャラ情報掲示板＋PvPランキング｜Owner確認版",
+  description: "新キャラ情報掲示板にレジェンド帯PvPランキングを統合したOwner確認版。",
+  robots: { index: false, follow: false, noarchive: true, nosnippet: true },
   icons: {icon: "/favicon.svg"},
 };
 
