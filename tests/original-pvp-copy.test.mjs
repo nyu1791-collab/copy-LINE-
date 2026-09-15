@@ -11,6 +11,7 @@ const sourceProxy=readFileSync(new URL('lib/pvp-source-proxy.ts',root),'utf8');
 const draftGuard=readFileSync(new URL('app/comment-draft-success-guard.tsx',root),'utf8');
 const pvpHtml=readFileSync(new URL('public/pvp/index.html',root),'utf8');
 const pvpApp=readFileSync(new URL('public/pvp/assets/app.js',root),'utf8');
+const communityEntry=readFileSync(new URL('public/pvp/assets/community-entry.js',root),'utf8');
 
 test('review build never uses unauthenticated private-repository codeload',()=>{
  assert.doesNotMatch(build,/sync-original-pvp\.sh/);
@@ -18,16 +19,18 @@ test('review build never uses unauthenticated private-repository codeload',()=>{
  assert.match(build,/vinext.*build/s);
 });
 
-test('PvP ranking is the home and tracked assets are the Work build source',()=>{
+test('PvP ranking remains home and the copy is the improvement staging surface',()=>{
  assert.match(home,/OriginalPvpLauncher/);
  assert.doesNotMatch(home,/<Community\s+boardPage/);
  assert.match(launcher,/\/pvp\/index\.html/);
- assert.match(handoff,/d6664b75502a73896b9d5b0c31667a2d4a0de95b/);
- assert.match(handoff,/public\/pvp\//);
- assert.match(handoff,/上書きしてはいけない/);
+ assert.match(handoff,/09f829c0f136230f3839f243e69ced93fccac6bc/);
+ assert.match(handoff,/元サイトは、改修内容がレビュー完了するまで\*\*読み取り専用\*\*/);
+ assert.match(handoff,/ユーザー承認後、元サイトへ差分を適用/);
  assert.match(handoff,/\/boards/);
  assert.match(pvpHtml,/レジェンド帯 キャラ集計/);
+ assert.match(pvpHtml,/community-board-entry-slot/);
  assert.match(pvpApp,/\.\/data\/character_usage\.json/);
+ assert.match(communityEntry,/url: "\/boards"/);
 });
 
 test('board remains available and isolated from canonical PvP writes',()=>{
