@@ -1,3 +1,5 @@
+import communityCharacterRegistry from '@/config/community-characters.json';
+
 export const languages = ['ja','en','zh','ko','th','id','vi'] as const;
 export type Language = typeof languages[number];
 export function requestUUID(){const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const s=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');return `${s.slice(0,8)}-${s.slice(8,12)}-${s.slice(12,16)}-${s.slice(16,20)}-${s.slice(20)}`;}
@@ -62,16 +64,47 @@ export function mayModerate(role:Role, action:string){
   // checks happen again in the API; contribution badges are presentation only.
   return role==='moderator' && ['pin','unpin','hide','restore','delete'].includes(action);
 }
-// Confirmed identity mappings from the existing production image registry.
-// These are evaluation topics, NOT inferred release dates. The array is
-// intentionally many-to-one by month: a month can contain any number of new
-// characters, each with its own board keyed by month + exact character ID.
-export type CharacterTopic={id:string;name:string;image:string;releaseMonth:string;confirmed:boolean};
-// A topic is shown only after its exact ID, image and JST release month are
-// explicitly verified. A calendar change by itself never switches the board.
-export const characters:readonly CharacterTopic[]=[
- {id:'u1631e-sally',name:'かに座 サリー',image:'https://rangers.lerico.net/res/u1631e-sally/u1631e-sally-thum.png',releaseMonth:'2026-09',confirmed:true},
-];
-export function confirmedCharactersForMonth(month:string){return characters.filter(character=>character.confirmed&&character.releaseMonth===month);}
+
+export type CharacterTopic={
+ id:string;
+ name:string;
+ image:string;
+ releaseMonth:string;
+ confirmed:boolean;
+ source?:'manual'|'pvp-auto';
+ confirmedAt?:string|null;
+ pvpRank?:number|null;
+ adoptionRate?:number|null;
+};
+
+function isSafeTopic(value:unknown):value is CharacterTopic{
+ if(!value||typeof value!=='object'||Array.isArray(value))return false;
+ const topic=value as Record<string,unknown>;
+ if(typeof topic.id!=='string'||!/^u\d+[a-z]?-[a-z0-9_-]+$/i.test(topic.id))return false;
+ if(typeof topic.name!=='string'||!topic.name.trim()||[...topic.name].length>80)return false;
+ if(!validMonth(topic.releaseMonth)||topic.confirmed!==true)return false;
+ if(typeof topic.image!=='string')return false;
+ try{const url=new URL(topic.image);if(url.protocol!=='https:'||url.hostname!=='rangers.lerico.net')return false;}catch{return false;}
+ if(topic.pvpRank!==null&&topic.pvpRank!==undefined&&(!Number.isSafeInteger(topic.pvpRank)||Number(topic.pvpRank)<1))return false;
+ if(topic.adoptionRate!==null&&topic.adoptionRate!==undefined&&(typeof topic.adoptionRate!=='number'||!Number.isFinite(topic.adoptionRate)||topic.adoptionRate<0||topic.adoptionRate>100))return false;
+ return true;
+}
+
+const registryRows=Array.isArray(communityCharacterRegistry.characters)?communityCharacterRegistry.characters:[];
+const safeRows=registryRows.filter(isSafeTopic);
+const topicKeys=new Set<string>();
+export const characters:readonly CharacterTopic[]=Object.freeze(safeRows.filter(topic=>{
+ const key=`${topic.releaseMonth}:${topic.id}`;
+ if(topicKeys.has(key))return false;
+ topicKeys.add(key);return true;
+}).map(topic=>Object.freeze({...topic})));
+
+export function confirmedCharactersForMonth(month:string){
+ return characters.filter(character=>character.confirmed&&character.releaseMonth===month).sort((a,b)=>{
+  const ar=Number.isSafeInteger(a.pvpRank)?Number(a.pvpRank):Number.MAX_SAFE_INTEGER;
+  const br=Number.isSafeInteger(b.pvpRank)?Number(b.pvpRank):Number.MAX_SAFE_INTEGER;
+  return ar-br||(b.adoptionRate||0)-(a.adoptionRate||0)||a.id.localeCompare(b.id);
+ });
+}
 export function isKnownCharacter(id:string){return characters.some(character=>character.id===id);}
 export function isConfirmedCharacterForMonth(id:string,month:string){return confirmedCharactersForMonth(month).some(character=>character.id===id);}
