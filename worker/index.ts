@@ -5,6 +5,7 @@ interface Env {
   ASSETS: Fetcher;
   DB: D1Database;
   BUCKET: R2Bucket;
+  BOARD_ANON_COOKIE_SECRET?: string;
 }
 
 interface ExecutionContext {
@@ -12,13 +13,57 @@ interface ExecutionContext {
   passThroughOnException(): void;
 }
 
+type MutationBudget={max:number;seconds:number};
+const encoder=new TextEncoder();
+
+function mutationBudget(request:Request,path:string):MutationBudget|null{
+  const method=request.method.toUpperCase();
+  if(path==="/api/board"&&method==="POST")return {max:120,seconds:600};
+  if(path==="/api/owner"&&method==="POST")return {max:30,seconds:600};
+  if(path==="/api/translate"&&method==="POST")return {max:60,seconds:600};
+  if(path==="/api/telemetry"&&method==="POST")return {max:240,seconds:600};
+  if(path==="/api/upload"&&method==="PUT")return {max:12,seconds:600};
+  if(path==="/api/upload/session"&&method==="POST")return {max:15,seconds:600};
+  if(path==="/api/upload/complete"&&method==="POST")return {max:30,seconds:600};
+  if(path==="/api/upload/part"&&method==="PUT")return {max:180,seconds:600};
+  return null;
+}
+
+function base64url(bytes:Uint8Array){let binary="";for(const byte of bytes)binary+=String.fromCharCode(byte);return btoa(binary).replaceAll("+","-").replaceAll("/","_").replace(/=+$/g,"");}
+async function networkBucket(request:Request,env:Env){
+  const ip=request.headers.get("cf-connecting-ip")?.trim()||"";
+  const secret=env.BOARD_ANON_COOKIE_SECRET;
+  if(!ip||ip.length>64||!/^[0-9A-Fa-f:.]+$/.test(ip)||typeof secret!=="string"||secret.length<32)return null;
+  const key=await crypto.subtle.importKey("raw",encoder.encode(secret),{name:"HMAC",hash:"SHA-256"},false,["sign"]);
+  const signed=await crypto.subtle.sign("HMAC",key,encoder.encode(`edge-network|${ip}`));
+  return base64url(new Uint8Array(signed)).slice(0,24);
+}
+async function allowMutation(request:Request,env:Env,path:string){
+  const budget=mutationBudget(request,path);if(!budget)return true;
+  const bucket=await networkBucket(request,env);if(!bucket)return true;
+  const now=Date.now();const key=`edge:${path}:${request.method}:${bucket}`;
+  const result=await env.DB.prepare("INSERT INTO limits(key,count,until) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN until<=? THEN 1 ELSE count+1 END,until=CASE WHEN until<=? THEN excluded.until ELSE until END WHERE until<=? OR count<? RETURNING count")
+    .bind(key,now+budget.seconds*1000,now,now,now,budget.max).first();
+  return !!result;
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const url=new URL(request.url);
     // This review deployment intentionally does not bind Cloudflare Images.
     // Character/media assets are served directly, avoiding a paid image-
     // transformation dependency while the site is still under development.
-    if (new URL(request.url).pathname === "/_vinext/image") {
+    if (url.pathname === "/_vinext/image") {
       return secureResponse(new Response("image_optimization_disabled", { status: 404 }));
+    }
+    try{
+      if(!(await allowMutation(request,env,url.pathname))){
+        return secureResponse(Response.json({error:"rate_limited"},{status:429,headers:{"Cache-Control":"no-store","Retry-After":"60"}}));
+      }
+    }catch{
+      // The edge limiter is defense in depth. A D1 limiter fault must not take
+      // down PvP or bypass the route's own signed-session authorization rules.
+      console.error("edge_rate_limit_unavailable");
     }
     return secureResponse(await handler.fetch(request, env, ctx));
   },
@@ -35,6 +80,7 @@ function secureResponse(response: Response) {
   headers.set("X-Frame-Options", "SAMEORIGIN");
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
   headers.set("X-Permitted-Cross-Domain-Policies", "none");
+  headers.set("Strict-Transport-Security", "max-age=31536000");
   return new Response(response.body, {
     status: response.status,
     statusText: response.statusText,
