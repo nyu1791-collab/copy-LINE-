@@ -19,7 +19,7 @@ async function promoteVerifiedOwner(sub:string,current:User|null){
  const configured=(env as unknown as Record<string,string>).BOARD_OWNER_SUBJECT;
  if(!configured||configured!==sub)return current;
  const db=database();
- await db.prepare("UPDATE users SET role='owner',display_name_set=1 WHERE subject=? AND role='user' AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner')").bind(sub).run();
+ await db.prepare("UPDATE users SET role='owner' WHERE subject=? AND role='user' AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner')").bind(sub).run();
  return user(sub);
 }
 async function limit(key:string,max:number,seconds=60){
@@ -63,7 +63,7 @@ async function setLogicalReaction(table:'likes'|'helpful',post:VisiblePost,userI
 }
 function error(e:unknown){const message=e instanceof Error?e.message:'';const codes=['signin_required','profile_required','invalid_text','invalid_media','text_only','rate_limited','not_found','forbidden','invalid_request','duplicate_post','translation_unavailable','feature_disabled','read_only','archive_readonly','anonymous_unavailable'];if(!codes.includes(message)){console.error('board_request_failed');return response({error:'unavailable'},503);}return response({error:message},message==='signin_required'?401:message==='forbidden'?403:message==='rate_limited'?429:message==='not_found'?404:['feature_disabled','read_only','anonymous_unavailable'].includes(message)?503:message==='archive_readonly'?409:400);}
 export async function GET(request:Request){try{
- const viewUntil=Date.now();const session=await identity();const sub=session.sub;const db=database();const me=await promoteVerifiedOwner(sub,await ensureUser(sub,session.owner?'LINEレンジャーは神ゲー':session.anonymous?guestName(sub):'ゲスト',session.anonymous?session.displayName:undefined,!!session.owner||!!session.displayName));const reply=(data:unknown,status=200)=>response(data,status,session.setCookie);const flags=await loadCommunityFeatureFlags(db);const u=new URL(request.url);
+ const viewUntil=Date.now();const session=await identity();const sub=session.sub;const db=database();const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName));const reply=(data:unknown,status=200)=>response(data,status,session.setCookie);const flags=await loadCommunityFeatureFlags(db);const u=new URL(request.url);
  // Reaction totals stay visible, but the people behind them are intentionally
  // private.  Keep the saved reactions for uniqueness and moderation without
  // exposing a name-list API that could be called outside the screen.
@@ -165,10 +165,10 @@ export async function POST(request:Request){try{
   // The owner secret may be added after the owner has already created a User
   // row. Promote only that verified subject, and only while no other owner is
   // present; a display name or client payload never changes a role.
-  await db.prepare("INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,1,CASE WHEN ? AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner') THEN 'owner' ELSE 'user' END,?) ON CONFLICT(subject) DO UPDATE SET name=excluded.name,display_name_set=1,role=CASE WHEN ? AND users.role='user' AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner' AND subject<>excluded.subject) THEN 'owner' ELSE users.role END").bind(crypto.randomUUID(),sub,name,ownerCandidate?1:0,now,ownerCandidate?1:0).run();return response({ok:true,me:await user(sub)},200,session.setCookie,session.anonymous?[displayNameCookie(name)]:[]);
+  await db.prepare("INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,1,CASE WHEN ? AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner') THEN 'owner' ELSE 'user' END,?) ON CONFLICT(subject) DO UPDATE SET name=excluded.name,display_name_set=1,role=CASE WHEN ? AND users.role='user' AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner' AND subject<>excluded.subject) THEN 'owner' ELSE users.role END").bind(crypto.randomUUID(),sub,name,ownerCandidate?1:0,now,ownerCandidate?1:0).run();return response({ok:true,me:await user(sub)},200,session.setCookie,[displayNameCookie(name)]);
  }
  if(b.action==='seen'){if(!Number.isSafeInteger(b.until)||Number(b.until)<0||Number(b.until)>now)throw new Error('invalid_request');await db.prepare('INSERT INTO visits(subject,seen) VALUES(?,?) ON CONFLICT(subject) DO UPDATE SET seen=MAX(seen,excluded.seen)').bind(sub,b.until).run();return reply({ok:true});}
- const me=await promoteVerifiedOwner(sub,await ensureUser(sub,session.owner?'LINEレンジャーは神ゲー':session.anonymous?guestName(sub):'ゲスト',session.anonymous?session.displayName:undefined,!!session.owner||!!session.displayName));if(!me)throw new Error('profile_required');const flags=await loadCommunityFeatureFlags(db);
+ const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName));if(!me)throw new Error('profile_required');const flags=await loadCommunityFeatureFlags(db);
  if(b.action==='feature_flag'){
   if(me.role!=='owner')throw new Error('forbidden');if(!isCommunityFeatureName(b.name)||typeof b.enabled!=='boolean')throw new Error('invalid_request');
   await db.batch([

@@ -23,17 +23,19 @@ type MediaItem={id:string;video:string|null;mediaType:string|null;mediaName:stri
 type Post={id:string;name:string;role:Role;body:string;video:string|null;mediaType:string|null;mediaName:string|null;mediaSize:number|null;mediaGroup?:string|null;mediaItems?:MediaItem[];created:number;likes:number;liked:number;replies:number;pinned:number;helpful:number;helped:boolean;title:string|null;badges?:string[];mine?:boolean;localState?:LocalState;localRequest?:string;localParent?:string|null;localCounted?:boolean;localParentCounted?:boolean};
 type Board={id:string;character:string;name:string;image:string};
 type Stats={videos:number;comments:number;todayComments:number;latestCreated:number;latestId:string|null};
-type Data={me:{id:string;name:string;role:Role}|null;anonymous?:boolean;month:string;boards:Board[];board:string;posts:Post[];nextCursor:string|null;poll:{poll:string;choice:number;count:number}[];mine:{poll:string;choice:number}[];video:Post|null;mediaGroup:string|null;mediaItems:MediaItem[];stats:Stats;previousSeen:number;viewUntil:number;flags:CommunityFeatureFlags};
+type Data={me:{id:string;name:string;display_name_set:number;role:Role}|null;anonymous?:boolean;month:string;boards:Board[];board:string;posts:Post[];nextCursor:string|null;poll:{poll:string;choice:number;count:number}[];mine:{poll:string;choice:number}[];video:Post|null;mediaGroup:string|null;mediaItems:MediaItem[];stats:Stats;previousSeen:number;viewUntil:number;flags:CommunityFeatureFlags};
 type UploadJob={key:string;request:string;group?:string|null;board:string;name:string;type:string;size:number;body:string;created:number;progress:number;status:'preparing'|'uploading'|'finalizing'|'failed';file?:File;error?:string};
 type ResumeRecord={request:string;board:string;name:string;type:string;size:number;lastModified:number;body:string};
 const featureLabels:Record<CommunityFeatureName,string>={commentsEnabled:'コメント・反応',videoUploadEnabled:'動画投稿',translationEnabled:'翻訳',votingEnabled:'投票',readOnly:'緊急Read-only'};
 const displayNameStorageKey='line-rangers-display-name';
-const displayNameCookieName='__Host-lr_display_name';
-const displayNameCookieMaxAge=60*60*24*365;
 const sallyFallbackImage='https://raw.githubusercontent.com/line-rangers-fan/line-rangers-pvp/main/docs/assets/characters/crab-sally-ultimate-fallback.jpg';
 function isGuestName(value:string|undefined|null){return !!value&&value.startsWith('ゲスト-');}
 function uiName(value:string|undefined|null,anonymousLabel='匿名ユーザー'){if(!value)return '';return isGuestName(value)?anonymousLabel:value;}
-function persistDisplayName(value:string){try{localStorage.setItem(displayNameStorageKey,value);}catch{}try{document.cookie=`${displayNameCookieName}=${encodeURIComponent(value)}; Path=/; Max-Age=${displayNameCookieMaxAge}; SameSite=Lax; Secure`;}catch{}}
+// The server writes the display-name cookie as HttpOnly after a successful
+// profile save. Keep localStorage only as a convenience for restoring the
+// draft/name dialog; browser JavaScript must not be able to impersonate an
+// authenticated name or duplicate the server cookie.
+function persistDisplayName(value:string){try{localStorage.setItem(displayNameStorageKey,value);}catch{}}
 export default function Community({boardPage=true}:{boardPage?:boolean}){
  const [lang,setLang]=useState<Language>('ja');const t=labels(lang);
  const a=activityLabels(lang);
@@ -93,7 +95,7 @@ export default function Community({boardPage=true}:{boardPage?:boolean}){
  function applyVote(poll:'strength'|'pull',nextChoice:number,previousChoice:number|undefined){setData(current=>{if(!current)return current;const mine=[...current.mine.filter(row=>row.poll!==poll),{poll,choice:nextChoice}];const delta=(choice:number)=>choice===nextChoice?1:choice===previousChoice?-1:0;const rows=[0,1,2].map(choice=>{const existing=current.poll.find(row=>row.poll===poll&&row.choice===choice);return {poll,choice,count:Math.max(0,(existing?.count||0)+delta(choice))};});return {...current,mine,poll:[...current.poll.filter(row=>row.poll!==poll),...rows]};});}
  function restoreVote(poll:'strength'|'pull',attempted:number,previous:number|undefined){setData(current=>{if(!current)return current;const mine=previous===undefined?current.mine.filter(row=>row.poll!==poll):[...current.mine.filter(row=>row.poll!==poll),{poll,choice:previous}];const rows=[0,1,2].map(choice=>{const existing=current.poll.find(row=>row.poll===poll&&row.choice===choice);const delta=(choice===attempted?-1:0)+(previous===undefined?0:choice===previous?1:0);return {poll,choice,count:Math.max(0,(existing?.count||0)+delta)};});return {...current,mine,poll:[...current.poll.filter(row=>row.poll!==poll),...rows]};});}
  async function chooseVote(poll:'strength'|'pull',choice:number){if(!canUseFeature('votingEnabled')||needsName()||!data)return;const boardAtStart=data.board;const key='vote:'+boardAtStart+':'+poll;if(pending[key])return;const previous=data.mine.find(row=>row.poll===poll)?.choice;const version=(voteVersions.current[key]||0)+1;voteVersions.current[key]=version;if(previous===choice)return;applyVote(poll,choice,previous);markPending(key,true);try{await boardRequest({action:'vote',board:boardAtStart,poll,choice},'vote');}catch(e){if(voteVersions.current[key]===version&&activeBoard.current===boardAtStart)restoreVote(poll,choice,previous);setNotice(errorText(e instanceof Error?e.message:'unavailable',lang));}finally{if(voteVersions.current[key]===version)markPending(key,false);}}
- function needsName(){if(!data?.me||(data.anonymous&&isGuestName(data.me.name))){setProfile(true);return true;}return false;}
+ function needsName(){if(!data?.me||!data.me.display_name_set||(data.anonymous&&isGuestName(data.me.name))){setProfile(true);return true;}return false;}
  function chooseBoard(id:string){setBoard(id);setVideo('');setGroup('');setOffset(0);setCursor(null);setCursorHistory([]);setBody('');setFiles([]);setReplyTarget(null);setReplyPosts({});setNewPosts(0);setRequestId(requestUUID());history.replaceState(null,'','/boards?'+new URLSearchParams({month,board:id}));}
  const activeDraftKey=`line-rangers-community-draft:${data?.board||board}:${replyTarget?.id||data?.video?.id||video||'root'}`;
  function setDraft(value:string){setBody(value);if(draftWriteTimer.current!==undefined)window.clearTimeout(draftWriteTimer.current);draftWriteTimer.current=window.setTimeout(()=>{try{if(value)localStorage.setItem(activeDraftKey,value);else localStorage.removeItem(activeDraftKey);}catch{}},220);}

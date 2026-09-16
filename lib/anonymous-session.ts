@@ -12,7 +12,11 @@ export const ownerCookieName='__Host-lr_owner';
 // It never carries a role or owner state.
 export const displayNameCookieName='__Host-lr_display_name';
 export const guestCookieMaxAge=60*60*24*365;
-export const ownerCookieMaxAge=60*60*24*30;
+// The Owner role is persisted in D1. Keep the signed browser session alive for
+// a year so the verified Owner does not silently lose the management UI after
+// a short idle period; the cookie still cannot be forged and is invalidated by
+// changing the configured Owner subject or signing secret.
+export const ownerCookieMaxAge=60*60*24*365;
 export const displayNameCookieMaxAge=60*60*24*365;
 const tokenVersion='v1';
 // Keep the established o1 wire shape, but include a hash of the configured
@@ -119,11 +123,11 @@ export async function activateOwner(accessToken:string){
 }
 
 export async function sessionFromHeaders(h:Headers):Promise<AnonymousSession>{
- const ownerExisting=cookieValue(h.get('cookie'),ownerCookieName);
- if(ownerExisting){const sub=await verifyOwner(ownerExisting);if(sub)return {sub,anonymous:false,owner:true};}
- const authenticated=trustedUpstreamSubject(h);
- if(authenticated)return {sub:authenticated,anonymous:false};
  const savedDisplayName=displayNameValue(h.get('cookie'))||undefined;
+ const ownerExisting=cookieValue(h.get('cookie'),ownerCookieName);
+ if(ownerExisting){const sub=await verifyOwner(ownerExisting);if(sub)return {sub,anonymous:false,owner:true,displayName:savedDisplayName};}
+ const authenticated=trustedUpstreamSubject(h);
+ if(authenticated)return {sub:authenticated,anonymous:false,displayName:savedDisplayName};
  const existing=cookieValue(h.get('cookie'),guestCookieName);
  if(existing){const sub=await verify(existing);if(sub)return {sub,anonymous:true,displayName:savedDisplayName};}
  const sub=crypto.randomUUID();

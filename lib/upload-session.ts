@@ -2,7 +2,7 @@ import {database} from '@/db/raw';
 import {mediaPartBytes,mediaPartCount,validMediaHeader} from '@/lib/rules';
 import {guestName,sessionFromHeaders} from '@/lib/anonymous-session';
 
-export type UploadUser={id:string;name?:string;display_name_set?:number};
+export type UploadUser={id:string;name?:string;display_name_set?:number;role?:string};
 export type UploadSession={id:string;user:string;board:string;body:string;request:string;media_key:string;media_type:string;media_name:string;media_size:number;media_group:string|null;upload_id:string;part_size:number;status:string;post:string|null;created:number;updated:number};
 
 // A resumable upload should survive a short connection loss, but it must not
@@ -26,10 +26,11 @@ export function assertSameOrigin(request:Request,h:Headers){
  if(!origin||origin!==new URL(request.url).origin||h.get('sec-fetch-site')==='cross-site')throw new Error('forbidden');
 }
 export async function currentUser(h:Headers){
- const session=await sessionFromHeaders(h);const {sub}=session;const db=database();let user=await db.prepare('SELECT id,name,display_name_set FROM users WHERE subject=?').bind(sub).first<UploadUser>();
- const fallbackName=session.anonymous?session.displayName||guestName(sub):session.owner?'LINEレンジャーは神ゲー':'ゲスト';
- if(!user){await db.prepare("INSERT OR IGNORE INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,?,'user',?)").bind(crypto.randomUUID(),sub,fallbackName,session.owner||!!session.displayName?1:0,Date.now()).run();user=await db.prepare('SELECT id,name,display_name_set FROM users WHERE subject=?').bind(sub).first<UploadUser>();}
- else if((session.anonymous&&session.displayName&&user.name===guestName(sub))||session.owner||session.displayName&&!user.display_name_set){await db.prepare("UPDATE users SET name=CASE WHEN ? IS NOT NULL AND name=? THEN ? ELSE name END,display_name_set=CASE WHEN ? THEN 1 ELSE display_name_set END WHERE subject=?").bind(session.displayName||null,guestName(sub),session.displayName||user.name,session.owner||!!session.displayName?1:0,sub).run();user=await db.prepare('SELECT id,name,display_name_set FROM users WHERE subject=?').bind(sub).first<UploadUser>();}
+ const session=await sessionFromHeaders(h);const {sub}=session;const db=database();let user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();
+ const fallbackName=session.anonymous?session.displayName||guestName(sub):guestName(sub);
+ if(!user){await db.prepare("INSERT OR IGNORE INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?, ?,CASE WHEN ? AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner') THEN 'owner' ELSE 'user' END,?)").bind(crypto.randomUUID(),sub,fallbackName,session.displayName?1:0,session.owner?1:0,Date.now()).run();user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();}
+ else if(session.owner||user.role==='owner'){await db.prepare("UPDATE users SET name=CASE WHEN ? IS NOT NULL AND (name=? OR display_name_set=0) THEN ? ELSE name END,display_name_set=CASE WHEN ? IS NOT NULL AND (name=? OR display_name_set=0) THEN 1 ELSE display_name_set END,role=CASE WHEN ? AND role='user' AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner' AND subject<>?) THEN 'owner' ELSE role END WHERE subject=?").bind(session.displayName||null,guestName(sub),session.displayName||user.name,session.displayName||null,guestName(sub),session.owner?1:0,sub,sub).run();user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();}
+ else if((session.anonymous&&session.displayName&&user.name===guestName(sub))||session.displayName&&!user.display_name_set){await db.prepare("UPDATE users SET name=CASE WHEN ? IS NOT NULL AND name=? THEN ? ELSE name END,display_name_set=CASE WHEN ? THEN 1 ELSE display_name_set END WHERE subject=?").bind(session.displayName||null,guestName(sub),session.displayName||user.name,1,sub).run();user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();}
  return {sub,user,setCookie:session.setCookie};
 }
 export async function enforceLimit(key:string,max:number,seconds=60){

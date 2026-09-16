@@ -143,7 +143,10 @@ test('public browsing and anonymous mutations work while cross-origin writes fai
 test('owner activation exchanges a private access key for a signed cookie without login',async()=>{
  const {call,anonymous}=setup();const activated=await anonymous.activateOwner('test-owner-access-token');assert.ok(activated);assert.match(activated.setCookie,/^__Host-lr_owner=o1\.[0-9]+\./);
  const session=await anonymous.sessionFromHeaders(new Headers({cookie:activated.setCookie}));assert.equal(session.owner,true);assert.equal(session.sub,'owner-subject');
- const owner=await call(null,'','','owner@example.invalid','https://review.example',activated.setCookie);assert.equal(owner.status,200);assert.equal(owner.data.me.role,'owner');assert.equal(owner.data.me.name,'LINEレンジャーは神ゲー');
+ const owner=await call(null,'','','owner@example.invalid','https://review.example',activated.setCookie);assert.equal(owner.status,200);assert.equal(owner.data.me.role,'owner');assert.equal(owner.data.me.display_name_set,0);assert.match(owner.data.me.name,/^ゲスト-/);
+ const named=await call({action:'profile',name:'保存した運営名'},'','','owner@example.invalid','https://review.example',activated.setCookie);assert.equal(named.status,200);assert.equal(named.data.me.role,'owner');assert.equal(named.data.me.name,'保存した運営名');assert.equal(named.data.me.display_name_set,1);const savedCookie=named.headers.get('set-cookie')||'';assert.match(savedCookie,/__Host-lr_display_name=%E4%BF%9D%E5%AD%98%E3%81%97%E3%81%9F%E9%81%8B%E5%96%B6%E5%90%8D/);assert.match(savedCookie,/HttpOnly/);
+ const restoredSession=await anonymous.sessionFromHeaders(new Headers({cookie:`${activated.setCookie}; ${savedCookie.split(';')[0]}`}));assert.equal(restoredSession.owner,true);assert.equal(restoredSession.displayName,'保存した運営名');
+ const restored=await call(null,'','','owner@example.invalid','https://review.example',activated.setCookie);assert.equal(restored.data.me.role,'owner');assert.equal(restored.data.me.name,'保存した運営名');assert.equal(restored.data.me.display_name_set,1);
  assert.equal(await anonymous.activateOwner('wrong-token'),null);
 });
 test('profile rename preserves identity and never grants owner via display name or payload',async()=>{
