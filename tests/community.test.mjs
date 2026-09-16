@@ -104,13 +104,25 @@ function setup(){
   if(id==='@/lib/community-activity')return activity;
   if(id==='@/lib/community-flags')return flags;
   if(id==='@/lib/community-features')return featureTypes;
+ if(id==='@/lib/anonymous-session')return anonymous;
+ throw new Error('Unexpected import '+id);
+ });
+ const activityApi=compile('app/api/activity/route.ts',id=>{
+  if(id==='next/headers')return {headers:async()=>requestContext.getStore().headers};
+  if(id==='@/db/raw')return {database:()=>db};
+  if(id==='@/lib/community-activity')return activity;
+  if(id==='@/lib/rules')return rules;
   if(id==='@/lib/anonymous-session')return anonymous;
-  throw new Error('Unexpected import '+id);
+  throw new Error('Unexpected activity import '+id);
  });
  const call=async(body=null,who='test-a',path='',email='test@example.invalid',origin='https://review.example',cookie='')=>{
   const request=new Request('https://review.example/api/board'+path,{method:body?'POST':'GET',headers:{...(who?{'oai-authenticated-user-id':who,'oai-authenticated-user-email':email}:{}),...(cookie?{cookie}:{}),origin,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
   return requestContext.run(request,async()=>{const r=await (body?api.POST(request):api.GET(request));return {status:r.status,data:await r.json(),headers:r.headers};});};
- return {sql,call,anonymous,clearLimits(){sql.exec('DELETE FROM limits');}};
+ const activityCall=async(who='test-a',cookie='')=>{
+  const request=new Request('https://review.example/api/activity',{headers:{...(who?{'oai-authenticated-user-id':who,'oai-authenticated-user-email':'test@example.invalid'}:{}),...(cookie?{cookie}:{}),origin:'https://review.example'}});
+  return requestContext.run(request,async()=>{const r=await activityApi.GET();return {status:r.status,data:await r.json(),headers:r.headers};});
+ };
+ return {sql,call,activityCall,anonymous,clearLimits(){sql.exec('DELETE FROM limits');}};
 }
 test('JST month boundaries and leap/year transitions',()=>{
  assert.equal(rules.monthJST(new Date('2026-09-30T14:59:59Z')),'2026-09');assert.equal(rules.monthJST(new Date('2026-09-30T15:00:00Z')),'2026-10');assert.equal(rules.monthJST(new Date('2026-12-31T15:00:00Z')),'2027-01');assert.equal(rules.monthJST(new Date('2028-02-29T15:00:00Z')),'2028-03');assert.equal(rules.validMonth('2026-13'),false);
@@ -182,6 +194,8 @@ test('archived month boards remain visible even when not in the current confirme
  assert.equal(result.status,200);assert.deepEqual(archived.data.boards.map(b=>b.id),['2026-08:archived-character']);
  const blockedPost=await call({action:'post',board:'2026-08:archived-character',body:'Archived write',request:crypto.randomUUID()},'archive-reader','','archive@example.invalid');assert.equal(blockedPost.status,409);assert.equal(blockedPost.data.error,'archive_readonly');
  const blockedVote=await call({action:'vote',board:'2026-08:archived-character',poll:'strength',choice:0},'archive-reader','','archive@example.invalid');assert.equal(blockedVote.status,409);assert.equal(blockedVote.data.error,'archive_readonly');
+ const archivedPost=crypto.randomUUID();sql.prepare("INSERT INTO posts(id,board,author,parent,body,status,pinned,created,request) VALUES(?,?,?,NULL,?,'visible',0,?,?)").run(archivedPost,'2026-08:archived-character',result.data.me.id,'Archived existing post',Date.now(),crypto.randomUUID());
+ for(const action of [{action:'like',post:archivedPost,liked:true},{action:'helpful',post:archivedPost,selected:true},{action:'post',board:'2026-08:archived-character',parent:archivedPost,body:'Archived reply',request:crypto.randomUUID()}]){const blocked=await call(action,'archive-reader','','archive@example.invalid');assert.equal(blocked.status,409);assert.equal(blocked.data.error,'archive_readonly');}
  sql.prepare('INSERT INTO boards(id,month,character,name,image) VALUES(?,?,?,?,?)').run('2026-09:unconfirmed-character','2026-09','unconfirmed-character','Unconfirmed Ranger','https://example.invalid/unconfirmed.png');
  const unconfirmedVote=await call({action:'vote',board:'2026-09:unconfirmed-character',poll:'strength',choice:0},'archive-reader','','archive@example.invalid');assert.equal(unconfirmedVote.status,404);assert.equal(unconfirmedVote.data.error,'not_found');
 });
@@ -357,19 +371,26 @@ test('group detail returns every sibling media item and group moderation stays a
 });
 
 
-test('grouped media count as one logical post across listing stats and new-post checks',async()=>{
- const {call,sql}=setup();
+test('grouped media count as one logical post across listing stats, activity, reactions, and replies',async()=>{
+ const {call,sql,activityCall}=setup();
  await call({action:'profile',name:'Logical Group Tester'});
  const state=(await call()).data;
  const group=crypto.randomUUID();const start=Date.now();let created=start;
  const ids=[crypto.randomUUID(),crypto.randomUUID(),crypto.randomUUID(),crypto.randomUUID(),crypto.randomUUID()];
  const rows=[[ids[0],'image/jpeg','a.jpg'],[ids[1],'image/png','b.png'],[ids[2],'image/webp','c.webp'],[ids[3],'video/mp4','one.mp4'],[ids[4],'video/webm','two.webm']];
  for(const [id,type,name] of rows)sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?,?,'visible',0,?,?)").run(id,state.board,state.me.id,'One logical post',`media/${id}`,type,name,100,group,created++,crypto.randomUUID());
+ const legacyUser=crypto.randomUUID();sql.prepare('INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,?,?,?)').run(legacyUser,'legacy-reactor','Legacy Reactor',1,'user',Date.now());sql.prepare('INSERT INTO likes(post,user,created) VALUES(?,?,?)').run(ids[0],legacyUser,Date.now());sql.prepare('INSERT INTO helpful(post,user,created) VALUES(?,?,?)').run(ids[0],legacyUser,Date.now());sql.prepare('INSERT INTO visits(subject,seen) VALUES(?,?)').run('test-a',start-1);
+ const activity=await activityCall();assert.equal(activity.status,200);assert.equal(activity.data.unread,1);assert.equal(activity.data.featured.id,ids[3]);assert.equal(Number(activity.data.featured.likes),1);assert.equal(Number(activity.data.featured.helpful),1);
  const listed=await call();const grouped=listed.data.posts.filter(post=>post.mediaGroup===group);
  assert.equal(grouped.length,1);assert.equal(grouped[0].mediaItems.length,5);
  assert.equal(listed.data.stats.comments,1);assert.equal(listed.data.stats.todayComments,1);assert.equal(listed.data.stats.videos,2);
  const counted=await call(null,'test-a','?board='+encodeURIComponent(state.board)+'&newerThan='+(start-1)+'&countOnly=1');
  assert.equal(counted.status,200);assert.equal(counted.data.count,1);
+ const directLike=await call({action:'like',post:ids[0],liked:true});assert.equal(directLike.status,200);const directHelpful=await call({action:'helpful',post:ids[0],selected:true});assert.equal(directHelpful.status,200);
+ assert.deepEqual(sql.prepare('SELECT post FROM likes ORDER BY user').all().map(row=>row.post).sort(),[ids[0],ids[3]].sort());assert.deepEqual(sql.prepare('SELECT post FROM helpful ORDER BY user').all().map(row=>row.post).sort(),[ids[0],ids[3]].sort());
+ const afterReactions=(await call()).data.posts.find(post=>post.id===ids[3]);assert.equal(afterReactions.likes,2);assert.equal(afterReactions.helpful,2);
+ const reply=await call({action:'post',board:state.board,parent:ids[0],body:'Reply to the grouped post',request:crypto.randomUUID()});assert.equal(reply.status,200);assert.equal(sql.prepare('SELECT parent FROM posts WHERE id=?').get(reply.data.id).parent,ids[3]);assert.deepEqual((await call(null,'test-a','?replies='+ids[0])).data.posts.map(post=>post.id),[reply.data.id]);
+ assert.equal((await call({action:'moderate',operation:'delete',target:ids[0]})).status,200);const afterDelete=(await call()).data;assert.equal(afterDelete.posts.some(post=>post.mediaGroup===group),false);assert.equal(afterDelete.stats.comments,0);assert.equal((await call(null,'test-a','?replies='+ids[0])).status,404);
 });
 
 

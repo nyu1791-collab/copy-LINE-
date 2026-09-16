@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import { env } from 'cloudflare:workers';
 import { database } from '@/db/raw';
-import { enrichPosts } from '@/lib/community-activity';
+import { enrichPosts,logicalPostAnchorSql as logicalPostAnchor } from '@/lib/community-activity';
 import {displayNameCookie,guestName,sessionFromHeaders,type AnonymousSession} from '@/lib/anonymous-session';
 import {loadCommunityFeatureFlags,requireCommunityFeature} from '@/lib/community-flags';
 import {isCommunityFeatureName} from '@/lib/community-features';
@@ -26,7 +26,13 @@ async function limit(key:string,max:number,seconds=60){
  const now=Date.now();const result=await database().prepare('INSERT INTO limits(key,count,until) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN until<=? THEN 1 ELSE count+1 END, until=CASE WHEN until<=? THEN excluded.until ELSE until END WHERE until<=? OR count<? RETURNING count').bind(key,now+seconds*1000,now,now,now,max).first();
  if(!result)throw new Error('rate_limited');
 }
-async function visiblePost(id:string){return database().prepare("SELECT p.* FROM posts p WHERE p.id=? AND p.status='visible' AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))").bind(id).first<{id:string;board:string;author:string;parent:string|null;video:string|null;media_type:string|null;body:string}>();}
+type VisiblePost={id:string;board:string;author:string;parent:string|null;video:string|null;media_type:string|null;body:string;media_group?:string|null;status?:string};
+async function visiblePost(id:string){return database().prepare("SELECT p.* FROM posts p WHERE p.id=? AND p.status='visible' AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))").bind(id).first<VisiblePost>();}
+async function logicalVisiblePost(id:string){
+ const post=await visiblePost(id);if(!post)return null;
+ const mediaGroup=typeof post.media_group==='string'?post.media_group:'';if(!mediaGroup)return post;
+ return database().prepare("SELECT p.* FROM posts p WHERE p.board=? AND p.author=? AND p.parent IS ? AND p.media_group=? AND p.status='visible' AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible')) ORDER BY CASE WHEN p.video IS NOT NULL OR p.media_type LIKE 'video/%' THEN 0 ELSE 1 END,p.created ASC,p.id ASC LIMIT 1").bind(post.board,post.author,post.parent,mediaGroup).first<VisiblePost>();
+}
 function isVideoPost(post:{video:string|null;media_type:string|null}){return !!post.video||isVideoMedia(post.media_type);}
 function jstDayStart(now=Date.now()){const jst=new Date(now+9*60*60*1000);jst.setUTCHours(0,0,0,0);return jst.getTime()-9*60*60*1000;}
 function readCursor(value:string|null){if(!value)return null;const [pinned,created,...id]=value.split(':');const pinnedValue=Number(pinned),createdValue=Number(created),idValue=id.join(':');if(![0,1].includes(pinnedValue)||!Number.isSafeInteger(createdValue)||!/^[a-f0-9-]{36}$/.test(idValue))throw new Error('invalid_request');return {pinned:pinnedValue,created:createdValue,id:idValue};}
@@ -41,7 +47,20 @@ async function withMediaItems(rows:Record<string,unknown>[],userId:string){
  const byScope=new Map<string,Record<string,unknown>[]>();for(const item of media){const scope={board:String(item.board||''),author:String(item.author||''),parent:item.parent===null?null:String(item.parent||''),mediaGroup:String(item.mediaGroup||'')};const scopedKey=key(scope);byScope.set(scopedKey,[...(byScope.get(scopedKey)||[]),item]);}
  return posts.map(post=>{const scope=scopes.get(String(post.id));return scope?.mediaGroup?{...post,mediaItems:byScope.get(key(scope))||[]}:post;});
 }
-const logicalPostAnchor="(p.media_group IS NULL OR p.id=COALESCE((SELECT g.id FROM posts g WHERE g.board=p.board AND g.author=p.author AND g.parent IS p.parent AND g.status='visible' AND g.media_group=p.media_group AND (g.video IS NOT NULL OR g.media_type LIKE 'video/%') ORDER BY g.created ASC,g.id ASC LIMIT 1),(SELECT g.id FROM posts g WHERE g.board=p.board AND g.author=p.author AND g.parent IS p.parent AND g.status='visible' AND g.media_group=p.media_group ORDER BY g.created ASC,g.id ASC LIMIT 1)))";
+async function ensureCurrentBoard(boardId:string){
+ const board=await database().prepare('SELECT month,character FROM boards WHERE id=?').bind(boardId).first<{month:string;character:string}>();
+ if(!board)throw new Error('not_found');
+ if(board.month!==monthJST())throw new Error('archive_readonly');
+ if(!isConfirmedCharacterForMonth(board.character,board.month))throw new Error('not_found');
+}
+const logicalLikeCount="(SELECT COUNT(DISTINCT l.user) FROM likes l WHERE l.post=p.id OR (p.media_group IS NOT NULL AND l.post IN (SELECT g.id FROM posts g WHERE g.board=p.board AND g.author=p.author AND g.parent IS p.parent AND g.media_group=p.media_group AND g.status='visible')))";
+const logicalHelpfulCount="(SELECT COUNT(DISTINCT h.user) FROM helpful h WHERE h.post=p.id OR (p.media_group IS NOT NULL AND h.post IN (SELECT g.id FROM posts g WHERE g.board=p.board AND g.author=p.author AND g.parent IS p.parent AND g.media_group=p.media_group AND g.status='visible')))";
+async function setLogicalReaction(table:'likes'|'helpful',post:VisiblePost,userId:string,selected:boolean,created:number){
+ const mediaGroup=typeof post.media_group==='string'?post.media_group:'';
+ if(!mediaGroup){if(selected)await database().prepare(`INSERT OR IGNORE INTO ${table}(post,user,created) VALUES(?,?,?)`).bind(post.id,userId,created).run();else await database().prepare(`DELETE FROM ${table} WHERE post=? AND user=?`).bind(post.id,userId).run();return;}
+ const remove=database().prepare(`DELETE FROM ${table} WHERE user=? AND post IN (SELECT id FROM posts WHERE board=? AND author=? AND parent IS ? AND media_group=?)`).bind(userId,post.board,post.author,post.parent,mediaGroup);
+ if(selected)await database().batch([remove,database().prepare(`INSERT OR IGNORE INTO ${table}(post,user,created) VALUES(?,?,?)`).bind(post.id,userId,created)]);else await remove.run();
+}
 function error(e:unknown){const message=e instanceof Error?e.message:'';const codes=['signin_required','profile_required','invalid_text','invalid_media','text_only','rate_limited','not_found','forbidden','invalid_request','duplicate_post','translation_unavailable','feature_disabled','read_only','archive_readonly','anonymous_unavailable'];if(!codes.includes(message)){console.error('board_request_failed');return response({error:'unavailable'},503);}return response({error:message},message==='signin_required'?401:message==='forbidden'?403:message==='rate_limited'?429:message==='not_found'?404:['feature_disabled','read_only','anonymous_unavailable'].includes(message)?503:message==='archive_readonly'?409:400);}
 export async function GET(request:Request){try{
  const viewUntil=Date.now();const session=await identity();const sub=session.sub;const db=database();const me=await promoteVerifiedOwner(sub,await ensureUser(sub,session.owner?'LINEレンジャーは神ゲー':session.anonymous?guestName(sub):'ゲスト',session.anonymous?session.displayName:undefined,!!session.owner||!!session.displayName));const reply=(data:unknown,status=200)=>response(data,status,session.setCookie);const flags=await loadCommunityFeatureFlags(db);const u=new URL(request.url);
@@ -50,11 +69,12 @@ export async function GET(request:Request){try{
  // exposing a name-list API that could be called outside the screen.
  if(u.searchParams.has('helpers')||u.searchParams.has('likers'))throw new Error('not_found');
  if(u.searchParams.has('replies')){
-  const parentId=String(u.searchParams.get('replies')||'');const parentPost=await visiblePost(parentId);if(!parentPost)throw new Error('not_found');
+  let parentId=String(u.searchParams.get('replies')||'');const requestedParent=await visiblePost(parentId);const parentPost=await logicalVisiblePost(parentId);if(!requestedParent||!parentPost)throw new Error('not_found');parentId=parentPost.id;
   // A root post can have one text-reply level. A video comment can have one
   // extra text-reply level; replies themselves can never receive replies.
   if(parentPost.parent){const root=await visiblePost(parentPost.parent);if(!root||!isVideoPost(root)||root.parent)throw new Error('not_found');}
-  const rows=(await db.prepare(`SELECT p.id,p.author,p.board,p.parent,p.body,p.video,p.media_type mediaType,p.media_name mediaName,p.media_size mediaSize,p.media_group mediaGroup,p.created,p.pinned,u.name,u.role,(SELECT COUNT(*) FROM likes l WHERE l.post=p.id) likes,0 replies,EXISTS(SELECT 1 FROM likes l WHERE l.post=p.id AND l.user=?) liked FROM posts p JOIN users u ON u.id=p.author WHERE p.parent=? AND p.status='visible' ORDER BY p.created ASC,p.id ASC LIMIT 20`).bind(me?.id||'',parentId).all()).results;
+  const parentGroup=typeof parentPost.media_group==='string'?parentPost.media_group:'';const replyParents=parentGroup?(await db.prepare('SELECT id FROM posts WHERE board=? AND author=? AND parent IS ? AND media_group=? AND status=\'visible\'').bind(parentPost.board,parentPost.author,parentPost.parent,parentGroup).all()).results.map(row=>String(row.id)):[parentId];const replyMarks=replyParents.map(()=>'?').join(',');
+  const rows=(await db.prepare(`SELECT p.id,p.author,p.board,p.parent,p.body,p.video,p.media_type mediaType,p.media_name mediaName,p.media_size mediaSize,p.media_group mediaGroup,p.created,p.pinned,u.name,u.role,(SELECT COUNT(*) FROM likes l WHERE l.post=p.id) likes,0 replies,EXISTS(SELECT 1 FROM likes l WHERE l.post=p.id AND l.user=?) liked FROM posts p JOIN users u ON u.id=p.author WHERE p.parent IN (${replyMarks}) AND p.status='visible' ORDER BY p.created ASC,p.id ASC LIMIT 20`).bind(me?.id||'',...replyParents).all()).results;
   return reply({posts:await enrichPosts(rows,me?.id||'')});
  }
  if(u.searchParams.get('admin')==='1'){
@@ -112,13 +132,13 @@ export async function GET(request:Request){try{
    :(await db.prepare(`SELECT p.id,p.author,p.board,p.parent,p.body,p.video,p.media_type mediaType,p.media_name mediaName,p.media_size mediaSize,p.media_group mediaGroup,p.created,p.pinned,u.name,u.role,(SELECT COUNT(*) FROM likes l WHERE l.post=p.id) likes,(SELECT COUNT(*) FROM posts r WHERE r.parent=p.id AND r.status='visible') replies,EXISTS(SELECT 1 FROM likes l WHERE l.post=p.id AND l.user=?) liked FROM posts p JOIN users u ON u.id=p.author WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND p.created>? ORDER BY p.created ASC,p.id ASC LIMIT 21`).bind(me?.id||'',board,parentId,since).all()).results;
   const pageRows=rows.slice(0,20) as Record<string,unknown>[];const last=pageRows[pageRows.length-1] as {created:number;id:string}|undefined;const more=rows.length>20;const posts=await withMediaItems(pageRows,me?.id||'');return reply({posts,count:rows.length,more,latestCreated:Number(last?.created||after.created),latestId:last?.id||after.id||null,nextAfter:more&&last?afterFor(last):null});
  }
- const sortParam=u.searchParams.get('sort');const selectedSort=sortParam==='helpful'||sortParam==='likes'?sortParam:null;const sort=selectedSort==='helpful'?'(SELECT COUNT(*) FROM helpful h WHERE h.post=p.id) DESC,p.created DESC,p.id DESC':selectedSort==='likes'?'likes DESC,p.created DESC,p.id DESC':'p.created DESC,p.id DESC';
+ const sortParam=u.searchParams.get('sort');const selectedSort=sortParam==='helpful'||sortParam==='likes'?sortParam:null;const sort=selectedSort==='helpful'?`${logicalHelpfulCount} DESC,p.created DESC,p.id DESC`:selectedSort==='likes'?`${logicalLikeCount} DESC,p.created DESC,p.id DESC`:'p.created DESC,p.id DESC';
  const cursor=selectedSort?null:readCursor(u.searchParams.get('cursor'));
  const offset=Math.max(0,Math.min(10000,Number(u.searchParams.get('offset'))||0));
  // Keep first paint small on phones. Replies load only after their count is
  // tapped, and the list itself is capped at 20 items per page.
  const result=board?cursor?await db.prepare(`SELECT p.id,p.author,p.board,p.parent,p.body,p.video,p.media_type mediaType,p.media_name mediaName,p.media_size mediaSize,p.media_group mediaGroup,p.created,p.pinned,u.name,u.role,(SELECT COUNT(*) FROM likes l WHERE l.post=p.id) likes,(SELECT COUNT(*) FROM posts r WHERE r.parent=p.id AND r.status='visible') replies,EXISTS(SELECT 1 FROM likes l WHERE l.post=p.id AND l.user=?) liked FROM posts p JOIN users u ON u.id=p.author WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND (p.pinned<? OR (p.pinned=? AND (p.created<? OR (p.created=? AND p.id<?)))) ORDER BY p.pinned DESC,p.created DESC,p.id DESC LIMIT 21`).bind(me?.id||'',board,parent,cursor.pinned,cursor.pinned,cursor.created,cursor.created,cursor.id).all():await db.prepare(`SELECT p.id,p.author,p.board,p.parent,p.body,p.video,p.media_type mediaType,p.media_name mediaName,p.media_size mediaSize,p.media_group mediaGroup,p.created,p.pinned,u.name,u.role,(SELECT COUNT(*) FROM likes l WHERE l.post=p.id) likes,(SELECT COUNT(*) FROM posts r WHERE r.parent=p.id AND r.status='visible') replies,EXISTS(SELECT 1 FROM likes l WHERE l.post=p.id AND l.user=?) liked FROM posts p JOIN users u ON u.id=p.author WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} ORDER BY p.pinned DESC,${sort} LIMIT 21 OFFSET ?`).bind(me?.id||'',board,parent,offset).all():{results:[]};
- const statsBase=board?((await db.prepare(`SELECT COALESCE(SUM(CASE WHEN p.video IS NOT NULL OR p.media_type LIKE 'video/%' THEN 1 ELSE 0 END),0) videos,COALESCE(SUM(CASE WHEN ${logicalPostAnchor} THEN 1 ELSE 0 END),0) comments,COALESCE(SUM(CASE WHEN p.created>=? AND ${logicalPostAnchor} THEN 1 ELSE 0 END),0) todayComments FROM posts p WHERE p.board=? AND p.status='visible'`).bind(jstDayStart(),board).first<{videos:number;comments:number;todayComments:number}>())||{videos:0,comments:0,todayComments:0}):{videos:0,comments:0,todayComments:0};
+ const statsBase=board?((await db.prepare(`SELECT COALESCE(SUM(CASE WHEN p.video IS NOT NULL OR p.media_type LIKE 'video/%' THEN 1 ELSE 0 END),0) videos,COALESCE(SUM(CASE WHEN ${logicalPostAnchor} THEN 1 ELSE 0 END),0) comments,COALESCE(SUM(CASE WHEN p.created>=? AND ${logicalPostAnchor} THEN 1 ELSE 0 END),0) todayComments FROM posts p WHERE p.board=? AND p.status='visible' AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))`).bind(jstDayStart(),board).first<{videos:number;comments:number;todayComments:number}>())||{videos:0,comments:0,todayComments:0}):{videos:0,comments:0,todayComments:0};
  const latestRow=board?(await db.prepare(`SELECT p.id,p.created FROM posts p WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} ORDER BY p.created DESC,p.id DESC LIMIT 1`).bind(board,parent).first<{id:string;created:number}>()):null;
  const stats:BoardStats={...statsBase,latestCreated:Number(latestRow?.created||0),latestId:latestRow?.id||null};
  const poll=board&&!video?(await db.prepare('SELECT poll,choice,COUNT(*) count FROM votes WHERE board=? GROUP BY poll,choice').bind(board).all()).results:[];
@@ -165,15 +185,15 @@ export async function POST(request:Request){try{
   await db.batch([mutation,db.prepare('INSERT INTO audit(id,actor,action,target,created) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),me.id,b.enabled?'badge_grant':'badge_revoke',`${target}:${badge}`,now)]);
   return reply({ok:true,target,badge,enabled:b.enabled});
  }
- if(b.action==='helpful'){requireCommunityFeature(flags,'commentsEnabled');const post=await visiblePost(String(b.post));if(!post)throw new Error('not_found');if(typeof b.selected!=='boolean')throw new Error('invalid_request');await limit('helpful:'+me.id,15);if(b.selected)await db.prepare('INSERT OR IGNORE INTO helpful(post,user,created) VALUES(?,?,?)').bind(post.id,me.id,now).run();else await db.prepare('DELETE FROM helpful WHERE post=? AND user=?').bind(post.id,me.id).run();return reply({ok:true});}
- if(b.action==='report'){const post=await visiblePost(String(b.post));if(!post||post.author===me.id)throw new Error('not_found');await limit('report:'+me.id,6,600);await db.batch([db.prepare('INSERT OR IGNORE INTO post_reports(post,reporter,created) VALUES(?,?,?)').bind(post.id,me.id,now),db.prepare('INSERT INTO audit(id,actor,action,target,created)').bind(crypto.randomUUID(),me.id,'report',post.id,now)]);return reply({ok:true});}
+ if(b.action==='helpful'){requireCommunityFeature(flags,'commentsEnabled');const post=await logicalVisiblePost(String(b.post));if(!post)throw new Error('not_found');await ensureCurrentBoard(post.board);if(typeof b.selected!=='boolean')throw new Error('invalid_request');await limit('helpful:'+me.id,15);await setLogicalReaction('helpful',post,me.id,b.selected,now);return reply({ok:true});}
+ if(b.action==='report'){const post=await logicalVisiblePost(String(b.post));if(!post||post.author===me.id)throw new Error('not_found');await limit('report:'+me.id,6,600);await db.batch([db.prepare('INSERT OR IGNORE INTO post_reports(post,reporter,created) VALUES(?,?,?)').bind(post.id,me.id,now),db.prepare('INSERT INTO audit(id,actor,action,target,created)').bind(crypto.randomUUID(),me.id,'report',post.id,now)]);return reply({ok:true});}
  if(b.action==='post'){
   requireCommunityFeature(flags,'commentsEnabled');
   const board=String(b.board||'');const boardRow=await db.prepare('SELECT id,month,character FROM boards WHERE id=?').bind(board).first<{id:string;month:string;character:string}>();if(!boardRow)throw new Error('not_found');if(boardRow.month!==monthJST())throw new Error('archive_readonly');if(!isConfirmedCharacterForMonth(boardRow.character,boardRow.month))throw new Error('not_found');
-  const body=textInput(b.body,2000);const parent=b.parent?String(b.parent):null;const requestId=String(b.request||'');if(!/^[a-f0-9-]{36}$/.test(requestId)||b.video||b.media||b.attachment||b.file)throw new Error('invalid_request');
+  const body=textInput(b.body,2000);let parent=b.parent?String(b.parent):null;const requestId=String(b.request||'');if(!/^[a-f0-9-]{36}$/.test(requestId)||b.video||b.media||b.attachment||b.file)throw new Error('invalid_request');
   const existing=await db.prepare('SELECT id FROM posts WHERE author=? AND request=?').bind(me.id,requestId).first();if(existing)return reply({ok:true,id:existing.id});
   if(parent){
-   validateReply(body,null);const p=await visiblePost(parent);if(!p||p.board!==board)throw new Error('text_only');
+   validateReply(body,null);const p=await logicalVisiblePost(parent);if(!p||p.board!==board)throw new Error('text_only');parent=p.id;
    // Direct replies are allowed.  A reply to a video comment is also allowed,
    // but another level is rejected so the discussion cannot become an endless
    // tree or accept media/URLs at any reply level.
@@ -190,16 +210,16 @@ export async function POST(request:Request){try{
  }
  if(b.action==='like'){
   requireCommunityFeature(flags,'commentsEnabled');
-  const post=await visiblePost(String(b.post));if(!post)throw new Error('not_found');await limit('like:'+me.id,15);
-  if(b.liked===true)await db.prepare('INSERT OR IGNORE INTO likes(post,user,created) VALUES(?,?,?)').bind(post.id,me.id,now).run();else if(b.liked===false)await db.prepare('DELETE FROM likes WHERE post=? AND user=?').bind(post.id,me.id).run();else throw new Error('invalid_request');return reply({ok:true});
+  const post=await logicalVisiblePost(String(b.post));if(!post)throw new Error('not_found');await ensureCurrentBoard(post.board);await limit('like:'+me.id,15);
+  if(typeof b.liked!=='boolean')throw new Error('invalid_request');await setLogicalReaction('likes',post,me.id,b.liked,now);return reply({ok:true});
  }
  if(b.action==='moderate'){
   const action=String(b.operation);const target=String(b.target);const roleChange=['moderator','user'].includes(action);
   let statement;
   if(roleChange){if(me.role!=='owner')throw new Error('forbidden');const targetUser=await db.prepare('SELECT role FROM users WHERE id=?').bind(target).first();if(!targetUser||targetUser.role==='owner')throw new Error('forbidden');statement=db.prepare("UPDATE users SET role=? WHERE id=? AND role<>'owner'").bind(action,target);}
-  else{const post=await db.prepare('SELECT author,video,media_type,status,media_group mediaGroup FROM posts WHERE id=?').bind(target).first<{author:string;video:string|null;media_type:string|null;status:string;mediaGroup:string|null}>();const selfDelete=action==='delete'&&post?.author===me.id;if(!post||post.status==='deleted'||(!selfDelete&&!mayModerate(me.role,action)))throw new Error('forbidden');
-   if(['pin','unpin'].includes(action))statement=post.mediaGroup?db.prepare('UPDATE posts SET pinned=? WHERE author=? AND media_group=?').bind(action==='pin'?1:0,post.author,post.mediaGroup):db.prepare('UPDATE posts SET pinned=? WHERE id=?').bind(action==='pin'?1:0,target);
-   else if(['hide','restore','delete'].includes(action))statement=post.mediaGroup?db.prepare('UPDATE posts SET status=?,pinned=0 WHERE author=? AND media_group=?').bind(action==='hide'?'hidden':action==='delete'?'deleted':'visible',post.author,post.mediaGroup):db.prepare('UPDATE posts SET status=?,pinned=0 WHERE id=?').bind(action==='hide'?'hidden':action==='delete'?'deleted':'visible',target);
+  else{const post=await db.prepare('SELECT board,author,parent,video,media_type,status,media_group mediaGroup FROM posts WHERE id=?').bind(target).first<{board:string;author:string;parent:string|null;video:string|null;media_type:string|null;status:string;mediaGroup:string|null}>();const selfDelete=action==='delete'&&post?.author===me.id;if(!post||post.status==='deleted'||(!selfDelete&&!mayModerate(me.role,action)))throw new Error('forbidden');
+   if(['pin','unpin'].includes(action))statement=post.mediaGroup?db.prepare('UPDATE posts SET pinned=? WHERE board=? AND author=? AND parent IS ? AND media_group=?').bind(action==='pin'?1:0,post.board,post.author,post.parent,post.mediaGroup):db.prepare('UPDATE posts SET pinned=? WHERE id=?').bind(action==='pin'?1:0,target);
+   else if(['hide','restore','delete'].includes(action))statement=post.mediaGroup?db.prepare('UPDATE posts SET status=?,pinned=0 WHERE board=? AND author=? AND parent IS ? AND media_group=?').bind(action==='hide'?'hidden':action==='delete'?'deleted':'visible',post.board,post.author,post.parent,post.mediaGroup):db.prepare('UPDATE posts SET status=?,pinned=0 WHERE id=?').bind(action==='hide'?'hidden':action==='delete'?'deleted':'visible',target);
    else throw new Error('invalid_request');}
   await db.batch([statement,db.prepare('INSERT INTO audit(id,actor,action,target,created) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),me.id,action,target,now)]);return reply({ok:true});
  }
