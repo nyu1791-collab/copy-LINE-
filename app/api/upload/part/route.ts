@@ -21,8 +21,20 @@ export async function PUT(request:Request){try{
  const expected=expectedPartSize(part,session.media_size);const declared=Number(request.headers.get('content-length')||0);if(declared&&declared!==expected)throw new Error('invalid_media');
  const existing=await db.prepare('SELECT part_number,size FROM upload_parts WHERE session=? AND part_number=?').bind(id,part).first<{part_number:number;size:number}>();if(existing){if(existing.size!==expected)throw new Error('invalid_media');return reply({ok:true,part,size:existing.size,already:true});}
  if(!request.body)throw new Error('invalid_media');
- const monitored=captureAndCount(request.body,expected,16);const fixed=new FixedLengthStream(expected);const upload=bucket().resumeMultipartUpload(session.media_key,session.upload_id);const forwarding=monitored.stream.pipeTo(fixed.writable);const [uploaded]=await Promise.all([upload.uploadPart(part,fixed.readable),forwarding]);
- if(part===1&&!headerMatches(session.media_type,monitored.getPrefix())){await upload.abort();await db.prepare("UPDATE upload_sessions SET status='failed',updated=? WHERE id=?").bind(Date.now(),id).run();throw new Error('invalid_media');}
- const now=Date.now();await db.prepare('INSERT INTO upload_parts(session,part_number,etag,size,created) VALUES(?,?,?,?,?) ON CONFLICT(session,part_number) DO UPDATE SET etag=excluded.etag,size=excluded.size,created=excluded.created').bind(id,part,uploaded.etag,monitored.getSize(),now).run();await db.prepare('UPDATE upload_sessions SET updated=? WHERE id=? AND status=\'uploading\'').bind(now,id).run();
+ const monitored=captureAndCount(request.body,expected,16);const fixed=new FixedLengthStream(expected);const upload=bucket().resumeMultipartUpload(session.media_key,session.upload_id);
+ try{
+  const forwarding=monitored.stream.pipeTo(fixed.writable);const [uploaded]=await Promise.all([upload.uploadPart(part,fixed.readable),forwarding]);
+  if(part===1&&!headerMatches(session.media_type,monitored.getPrefix()))throw new Error('invalid_media');
+  const now=Date.now();await db.prepare('INSERT INTO upload_parts(session,part_number,etag,size,created) VALUES(?,?,?,?,?) ON CONFLICT(session,part_number) DO UPDATE SET etag=excluded.etag,size=excluded.size,created=excluded.created').bind(id,part,uploaded.etag,monitored.getSize(),now).run();await db.prepare('UPDATE upload_sessions SET updated=? WHERE id=? AND status=\\'uploading\\'').bind(now,id).run();
+ }catch(e){
+  // Deterministic validation failures must not leave an R2 multipart upload
+  // writable or waiting for the daily garbage-collector. Transport failures
+  // stay resumable; the client can retry the same part.
+  if(e instanceof Error&&e.message==='invalid_media'){
+   try{await upload.abort();}catch{}
+   await db.prepare("UPDATE upload_sessions SET status='failed',updated=? WHERE id=? AND status='uploading'").bind(Date.now(),id).run();
+  }
+  throw e;
+ }
  return reply({ok:true,part,size:monitored.getSize()});
 }catch(e){return fail(e);}}
