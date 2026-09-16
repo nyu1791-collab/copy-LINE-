@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/verify-live-review.yml'
+      - 'app/boards/**'
 
 permissions:
   contents: read
@@ -25,6 +26,7 @@ jobs:
           board_headers="$(mktemp)"; board_body="$(mktemp)"
           api_headers="$(mktemp)"; api_body="$(mktemp)"
           snapshot_body="$(mktemp)"
+          board_css="$(mktemp)"
 
           curl --location --fail --silent --show-error -D "$pvp_headers" -o "$pvp_body" "$BASE/pvp/index.html"
           curl --location --fail --silent --show-error -D "$board_headers" -o "$board_body" "$BASE/boards"
@@ -72,5 +74,8 @@ jobs:
               echo "FAIL: browser asset served as HTML: $asset"
               exit 1
             fi
+            if [[ "$asset" == *.css* ]]; then cat "$b" >> "$board_css"; fi
           done <<< "$refs"
+          grep -Eq '\.pvp-ranking[^}]*display:none!important' "$board_css" || { echo 'FAIL: board CSS does not hide PvP ranking card'; exit 1; }
+          echo 'OK: boards hide PvP ranking card'
           echo 'OK: live review routes and browser assets verified'
