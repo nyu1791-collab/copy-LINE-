@@ -2,16 +2,16 @@ name: visual-review
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/visual-review.yml'
+  workflow_run:
+    workflows: ["deploy-cloudflare-review"]
+    types: [completed]
 
 permissions:
   contents: read
 
 jobs:
   screenshot:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
@@ -41,12 +41,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          pvp="$(curl --location --fail --silent --show-error --retry 5 --retry-delay 2 "$REVIEW_BASE_URL/pvp/")"
-          board="$(curl --location --fail --silent --show-error --retry 5 --retry-delay 2 "$REVIEW_BASE_URL/boards")"
-          health="$(curl --location --fail --silent --show-error --retry 5 --retry-delay 2 "$REVIEW_BASE_URL/api/health")"
+          pvp="$(curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 5 --retry-delay 2 "$REVIEW_BASE_URL/pvp/")"
+          board="$(curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 5 --retry-delay 2 "$REVIEW_BASE_URL/boards")"
+          snapshot="$(curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 5 --retry-delay 2 "$REVIEW_BASE_URL/pvp/data/character_usage.json")"
+          health="$(curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 5 --retry-delay 2 "$REVIEW_BASE_URL/api/health")"
           grep -q 'UNOFFICIAL STATISTICS' <<< "$pvp"
           grep -q 'レジェンド帯 キャラ集計' <<< "$pvp"
           grep -q '新キャラ情報掲示板' <<< "$board"
+          if grep -q 'PvPランキング' <<< "$board"; then echo 'Board unexpectedly renders PvP ranking'; exit 1; fi
+          printf '%s' "$snapshot" | jq -e '.target_players == 200 and .sampled_players == 200 and .complete_target == true and (.characters | length > 0)' >/dev/null
           printf '%s' "$health" | jq -e '.ok == true and .checks.d1 == true and .checks.r2 == true' >/dev/null
       - uses: actions/upload-artifact@v4
         with:
