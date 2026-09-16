@@ -34,9 +34,11 @@ jobs:
           capture pvp-mobile '390,844' "$REVIEW_BASE_URL/pvp/"
           capture pvp-tablet '1024,1366' "$REVIEW_BASE_URL/pvp/"
           capture pvp-desktop '1440,1000' "$REVIEW_BASE_URL/pvp/"
-          capture boards-mobile '390,844' "$REVIEW_BASE_URL/boards"
-          capture boards-tablet '1024,1366' "$REVIEW_BASE_URL/boards"
-          capture boards-desktop '1440,1000' "$REVIEW_BASE_URL/boards"
+          capture boards-mobile-ja '390,844' "$REVIEW_BASE_URL/boards?lang=ja"
+          capture boards-tablet-ja '1024,1366' "$REVIEW_BASE_URL/boards?lang=ja"
+          capture boards-desktop-ja '1440,1000' "$REVIEW_BASE_URL/boards?lang=ja"
+          capture boards-mobile-en '390,844' "$REVIEW_BASE_URL/boards?lang=en"
+          capture boards-tablet-en '1024,1366' "$REVIEW_BASE_URL/boards?lang=en"
       - name: Verify live PvP and board contract
         shell: bash
         run: |
