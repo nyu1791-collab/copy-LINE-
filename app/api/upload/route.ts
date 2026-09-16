@@ -1,7 +1,7 @@
 import { headers } from 'next/headers';
 import { bucket,database } from '@/db/raw';
 import {loadCommunityFeatureFlags,requireCommunityFeature} from '@/lib/community-flags';
-import { isConfirmedCharacterForMonth,isVideoMedia,legacyMultipartMediaBytes,monthJST,optionalTextInput,validateMedia } from '@/lib/rules';
+import { isConfirmedCharacterForMonth,isVideoMedia,legacyMultipartMediaBytes,maxImagesPerPost,maxVideosPerPost,monthJST,optionalTextInput,validateMedia } from '@/lib/rules';
 import {currentUser} from '@/lib/upload-session';
 export const dynamic='force-dynamic';
 function reply(data:unknown,status=200,setCookie?:string){const responseHeaders=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});if(setCookie)responseHeaders.set('Set-Cookie',setCookie);return Response.json(data,{status,headers:responseHeaders});}
@@ -16,7 +16,9 @@ export async function PUT(request:Request){try{
  const length=Number(request.headers.get('content-length')||0);if(length&&length>legacyMultipartMediaBytes+16000)throw new Error('invalid_media');
  if(!request.headers.get('content-type')?.startsWith('multipart/form-data'))throw new Error('invalid_request');
  const db=database();const session=await currentUser(h);const sub=session.sub;const me=session.user;if(!me)throw new Error('profile_required');const send=(data:unknown,status=200)=>reply(data,status,session.setCookie);const flags=await loadCommunityFeatureFlags(db);requireCommunityFeature(flags,'commentsEnabled');
- await limit('write:'+sub,30,60);await limit('upload:'+me.id,3,60);
+ // One legitimate image post may contain ten images. Keep the per-minute bound
+ // slightly above that so one retry is possible without allowing unbounded use.
+ await limit('write:'+sub,30,60);await limit('upload:'+me.id,12,60);
  const reader=request.body?.getReader();if(!reader)throw new Error('invalid_request');const chunks:Uint8Array[]=[];let size=0;
  for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>legacyMultipartMediaBytes+16000){await reader.cancel();throw new Error('invalid_media');}chunks.push(value);}
  const form=await new Response(new Blob(chunks as BlobPart[]),{headers:{'Content-Type':request.headers.get('content-type')!}}).formData();const file=form.get('file');if(!(file instanceof File))throw new Error('invalid_media');
@@ -26,11 +28,19 @@ export async function PUT(request:Request){try{
  const topic=await db.prepare('SELECT character,month FROM boards WHERE id=?').bind(board).first<{character:string;month:string}>();
  if(!topic)throw new Error('not_found');if(topic.month!==monthJST())throw new Error('archive_readonly');if(!isConfirmedCharacterForMonth(topic.character,topic.month))throw new Error('not_found');
  const existing=await db.prepare('SELECT id FROM posts WHERE author=? AND request=?').bind(me.id,requestId).first<{id:string}>();if(existing)return send({ok:true,id:existing.id});
- if(mediaGroup){const grouped=await db.prepare("SELECT COUNT(*) count FROM posts WHERE author=? AND media_group=? AND status='visible'").bind(me.id,mediaGroup).first<{count:number}>();if(Number(grouped?.count||0)>=5)throw new Error('media_group_full');}
- const extension=await validateMedia(file,legacyMultipartMediaBytes);if(isVideoMedia(file.type))requireCommunityFeature(flags,'videoUploadEnabled');const key=`uploads/${me.id}/${crypto.randomUUID()}.${extension}`;const now=Date.now();
- // Check the group limit before writing to object storage. Otherwise a rejected
- // sixth attachment would leave an orphan object with no matching post row.
+ const extension=await validateMedia(file,legacyMultipartMediaBytes);const video=isVideoMedia(file.type);if(video)requireCommunityFeature(flags,'videoUploadEnabled');
+ const groupLimit=video?maxVideosPerPost:maxImagesPerPost;const groupFilter=video?"media_type LIKE 'video/%'":"media_type LIKE 'image/%'";
+ if(mediaGroup){const grouped=await db.prepare(`SELECT COUNT(*) count FROM posts WHERE author=? AND media_group=? AND status='visible' AND ${groupFilter}`).bind(me.id,mediaGroup).first<{count:number}>();if(Number(grouped?.count||0)>=groupLimit)throw new Error('media_group_full');}
+ const key=`uploads/${me.id}/${crypto.randomUUID()}.${extension}`;const now=Date.now();
+ // Check before writing to object storage, then enforce the same limit again in
+ // the INSERT below so concurrent requests cannot all pass the first count.
  await bucket().put(key,file.stream(),{httpMetadata:{contentType:file.type,contentDisposition:`inline; filename="attachment.${extension}"`}});
- try{const id=crypto.randomUUID();await db.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,?,?,NULL,?,?,?,?,?,'visible',0,?,?)").bind(id,board,me.id,null,body,key,file.type,file.name.slice(0,120),file.size,mediaGroup,now,requestId).run();return send({ok:true,id});}
+ try{
+  const id=crypto.randomUUID();let inserted;
+  if(mediaGroup){inserted=await db.prepare(`INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) SELECT ?,?,?,NULL,?,NULL,?,?,?,?,?,'visible',0,?,? WHERE (SELECT COUNT(*) FROM posts WHERE author=? AND media_group=? AND status='visible' AND ${groupFilter}) < ?`).bind(id,board,me.id,body,key,file.type,file.name.slice(0,120),file.size,mediaGroup,now,requestId,me.id,mediaGroup,groupLimit).run();}
+  else inserted=await db.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,?,?,NULL,?,?,?,?,?,'visible',0,?,?)").bind(id,board,me.id,null,body,key,file.type,file.name.slice(0,120),file.size,null,now,requestId).run();
+  const changes=Number((inserted as {meta?:{changes?:number}}).meta?.changes||0);if(changes!==1){const saved=await db.prepare('SELECT id,media_key FROM posts WHERE author=? AND request=?').bind(me.id,requestId).first<{id:string;media_key:string}>();if(saved){if(saved.media_key!==key)await bucket().delete(key);return send({ok:true,id:saved.id});}await bucket().delete(key);throw new Error('media_group_full');}
+  return send({ok:true,id});
+ }
  catch(e){const saved=await db.prepare('SELECT id,media_key FROM posts WHERE author=? AND request=?').bind(me.id,requestId).first<{id:string;media_key:string}>();if(saved){if(saved.media_key!==key)await bucket().delete(key);return send({ok:true,id:saved.id});}await bucket().delete(key);throw e;}
  }catch(e){return fail(e);}}
