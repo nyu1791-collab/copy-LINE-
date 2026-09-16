@@ -227,6 +227,7 @@ test('deleting a grouped media post removes every R2 object in the group',async(
  sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?,?,'visible',0,?,?)").run(video,state.board,state.me.id,'Grouped media',videoKey,'video/mp4','video.mp4',20,group,Date.now()+1,crypto.randomUUID());
  assert.equal((await call({action:'moderate',operation:'delete',target:image})).status,200);
  assert.deepEqual(new Set(deletedObjects),new Set([imageKey,videoKey]));
+ assert.equal(sql.prepare('SELECT COUNT(*) n FROM media_cleanup').get().n,0);
  assert.equal(sql.prepare('SELECT COUNT(*) n FROM posts WHERE media_group=? AND status=\'deleted\'').get(group).n,2);
 });
 test('JSON posts reject legacy video URLs and cap video comment replies at one nested level',async()=>{
