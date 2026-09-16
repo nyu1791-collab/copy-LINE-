@@ -215,13 +215,18 @@ export async function POST(request:Request){try{
  }
  if(b.action==='moderate'){
   const action=String(b.operation);const target=String(b.target);const roleChange=['moderator','user'].includes(action);
-  let statement;
+  let statement;let affectedBoard:string|undefined;
   if(roleChange){if(me.role!=='owner')throw new Error('forbidden');const targetUser=await db.prepare('SELECT role FROM users WHERE id=?').bind(target).first();if(!targetUser||targetUser.role==='owner')throw new Error('forbidden');statement=db.prepare("UPDATE users SET role=? WHERE id=? AND role<>'owner'").bind(action,target);}
   else{const post=await db.prepare('SELECT board,author,parent,video,media_type,status,media_group mediaGroup FROM posts WHERE id=?').bind(target).first<{board:string;author:string;parent:string|null;video:string|null;media_type:string|null;status:string;mediaGroup:string|null}>();const selfDelete=action==='delete'&&post?.author===me.id;if(!post||post.status==='deleted'||(!selfDelete&&!mayModerate(me.role,action)))throw new Error('forbidden');
+   affectedBoard=post.board;
    if(['pin','unpin'].includes(action))statement=post.mediaGroup?db.prepare('UPDATE posts SET pinned=? WHERE board=? AND author=? AND parent IS ? AND media_group=?').bind(action==='pin'?1:0,post.board,post.author,post.parent,post.mediaGroup):db.prepare('UPDATE posts SET pinned=? WHERE id=?').bind(action==='pin'?1:0,target);
    else if(['hide','restore','delete'].includes(action))statement=post.mediaGroup?db.prepare('UPDATE posts SET status=?,pinned=0 WHERE board=? AND author=? AND parent IS ? AND media_group=?').bind(action==='hide'?'hidden':action==='delete'?'deleted':'visible',post.board,post.author,post.parent,post.mediaGroup):db.prepare('UPDATE posts SET status=?,pinned=0 WHERE id=?').bind(action==='hide'?'hidden':action==='delete'?'deleted':'visible',target);
    else throw new Error('invalid_request');}
-  await db.batch([statement,db.prepare('INSERT INTO audit(id,actor,action,target,created) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),me.id,action,target,now)]);return reply({ok:true});
+  await db.batch([statement,db.prepare('INSERT INTO audit(id,actor,action,target,created) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),me.id,action,target,now)]);
+  if(!affectedBoard)return reply({ok:true});
+  const statsBase=(await db.prepare(`SELECT COALESCE(SUM(CASE WHEN p.video IS NOT NULL OR p.media_type LIKE 'video/%' THEN 1 ELSE 0 END),0) videos,COALESCE(SUM(CASE WHEN ${logicalPostAnchor} THEN 1 ELSE 0 END),0) comments,COALESCE(SUM(CASE WHEN p.created>=? AND ${logicalPostAnchor} THEN 1 ELSE 0 END),0) todayComments FROM posts p WHERE p.board=? AND p.status='visible' AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))`).bind(jstDayStart(),affectedBoard).first<{videos:number;comments:number;todayComments:number}>())||{videos:0,comments:0,todayComments:0};
+  const latest=await db.prepare(`SELECT p.id,p.created FROM posts p WHERE p.board=? AND p.parent IS NULL AND p.status='visible' AND ${logicalPostAnchor} ORDER BY p.created DESC,p.id DESC LIMIT 1`).bind(affectedBoard).first<{id:string;created:number}>();
+  return reply({ok:true,stats:{videos:Number(statsBase.videos||0),comments:Number(statsBase.comments||0),todayComments:Number(statsBase.todayComments||0),latestCreated:Number(latest?.created||0),latestId:latest?.id||null}});
  }
  throw new Error('invalid_request');
  }catch(e){return error(e);}}
