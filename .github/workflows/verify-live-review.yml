@@ -1,0 +1,58 @@
+name: verify-live-review
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-live-review.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      BASE: https://line-rangers-pvp-community-review.n-yu1791.workers.dev
+    steps:
+      - name: Inspect live review routes and browser assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          pvp_headers="$(mktemp)"; pvp_body="$(mktemp)"
+          board_headers="$(mktemp)"; board_body="$(mktemp)"
+          api_headers="$(mktemp)"; api_body="$(mktemp)"
+          snapshot_body="$(mktemp)"
+
+          curl --fail --silent --show-error -D "$pvp_headers" -o "$pvp_body" "$BASE/pvp/index.html"
+          curl --fail --silent --show-error -D "$board_headers" -o "$board_body" "$BASE/boards"
+          curl --fail --silent --show-error -D "$api_headers" -o "$api_body" "$BASE/api/board"
+          curl --fail --silent --show-error -o "$snapshot_body" "$BASE/pvp/data/character_usage.json"
+
+          grep -q 'レジェンド帯 キャラ集計' "$pvp_body" || { echo 'FAIL: PvP marker missing'; exit 1; }
+          echo 'OK: PvP HTML marker'
+          grep -q '20260916-ui-1' "$pvp_body" || { echo 'FAIL: latest PvP cache-bust marker missing'; exit 1; }
+          echo 'OK: latest PvP UI bundle referenced'
+          grep -q '新キャラ情報掲示板' "$board_body" || { echo 'FAIL: board title missing from SSR HTML'; exit 1; }
+          echo 'OK: board SSR title'
+          jq -e '.target_players == 200 and .sampled_players == 200 and .complete_target == true' "$snapshot_body" >/dev/null || { echo 'FAIL: snapshot is not complete 200/200'; exit 1; }
+          echo 'OK: complete 200/200 snapshot'
+          grep -qi '^x-content-type-options: nosniff' "$api_headers" || { echo 'FAIL: API security header missing'; sed -n '1,30p' "$api_headers"; exit 1; }
+          echo 'OK: API security header'
+          if grep -qi '^set-cookie: __Host-lr_guest=' "$api_headers"; then echo 'OK: anonymous guest cookie'; else echo 'WARN: anonymous guest cookie was not set on this request'; fi
+
+          echo 'Board asset refs:'
+          refs="$({ grep -oE '(href|src)="[^"]+\.(css|js)(\?[^"]*)?"' "$board_body" | sed -E 's/^(href|src)="([^"]+)"/\2/' | grep '^/' | sort -u; } || true)"
+          printf '%s\n' "$refs"
+          [ -n "$refs" ] || { echo 'FAIL: no same-origin CSS/JS refs found in board HTML'; exit 1; }
+          while IFS= read -r asset; do
+            [ -z "$asset" ] && continue
+            h="$(mktemp)"; b="$(mktemp)"
+            curl --fail --silent --show-error -D "$h" -o "$b" "$BASE$asset" || { echo "FAIL: asset request failed: $asset"; exit 1; }
+            [ -s "$b" ] || { echo "FAIL: empty asset: $asset"; exit 1; }
+            ctype="$(grep -i '^content-type:' "$h" | head -1 | tr -d '\r' || true)"
+            echo "OK: $asset :: ${ctype:-content-type-missing}"
+            grep -qi '^content-type:.*text/html' "$h" && { echo "FAIL: browser asset served as HTML: $asset"; exit 1; }
+          done <<< "$refs"
