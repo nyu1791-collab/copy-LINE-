@@ -180,9 +180,9 @@ jobs:
           python3 - "$image_one" "$image_two" "$video" <<'PY'
           import sys
           from pathlib import Path
-          Path(sys.argv[1]).write_bytes(b"\\x89PNG\\r\\n\\x1a\\n" + b"\\0" * 40)
-          Path(sys.argv[2]).write_bytes(b"\\x89PNG\\r\\n\\x1a\\n" + b"\\0" * 40)
-          Path(sys.argv[3]).write_bytes(b"\\0\\0\\0\\x18ftypisom" + b"\\0" * 40)
+          Path(sys.argv[1]).write_bytes(b"\x89PNG\r\n\x1a\n" + b"\0" * 40)
+          Path(sys.argv[2]).write_bytes(b"\x89PNG\r\n\x1a\n" + b"\0" * 40)
+          Path(sys.argv[3]).write_bytes(b"\0\0\0\x18ftypisom" + b"\0" * 40)
           PY
           initial="$(mktemp)"
           curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 \
