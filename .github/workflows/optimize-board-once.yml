@@ -1,0 +1,55 @@
+name: optimize-board-once
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/optimize-board-once.yml'
+permissions:
+  contents: write
+jobs:
+  optimize:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.13.0
+          cache: npm
+      - name: Remove hidden PvP request path from boards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          path=Path('app/community.tsx')
+          text=path.read_text()
+          def sub(pattern,repl,label,flags=0):
+              global text
+              text,count=re.subn(pattern,repl,text,count=1,flags=flags)
+              if count!=1:
+                  raise SystemExit(f'{label}: expected one replacement, got {count}')
+          sub(r"type PvpEquipment=.*?;\ntype PvpData=.*?;\n",'', 'pvp types')
+          sub(r",pvpSequence=useRef\(0\)", '', 'pvp sequence')
+          sub(r",\[pvp,setPvp\]=useState<PvpData\|null>\(null\),\[pvpLoading,setPvpLoading\]=useState\(false\),\[pvpFailure,setPvpFailure\]=useState\(''\)", '', 'pvp state')
+          sub(r"\n useEffect\(\(\)=>\{\n  if\(!boardPage\|\|video\|\|!data\?\.board\)\{setPvp.*?\n \},\[boardPage,video,data\?\.board,data\?\.boards,month\]\);", '', 'pvp effect', re.S)
+          sub(r"\n function pvpRankingCard\(\)\{.*?\n function postCard", '\n function postCard', 'pvp card helpers', re.S)
+          sub(r"\{pvpRankingCard\(\)\}", '', 'pvp render')
+          if '/api/pvp' in text or 'PvpData' in text or 'pvpRankingCard' in text or 'pvpSequence' in text:
+              raise SystemExit('PvP-only board code remains after optimization')
+          path.write_text(text)
+          PY
+          npm run install:ci
+          npm audit --omit=dev --audit-level=high
+          npm test
+          git diff --check
+          git diff -- app/community.tsx
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/community.tsx
+          git commit -m 'Remove hidden PvP fetch from community board'
+          git push origin HEAD:main
