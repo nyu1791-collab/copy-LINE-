@@ -30,7 +30,7 @@ function getApprovedCommunityBoardUrl(rawUrl, allowedPath) {
       url.pathname !== allowedPath
     ) return null;
     return url.href;
-  } catch (_error) {
+  } catch {
     return null;
   }
 }
@@ -76,7 +76,7 @@ function normalizeTopics(value) {
     try {
       const image = new URL(topic.image);
       if (image.protocol !== "https:" || image.hostname !== "rangers.lerico.net") return false;
-    } catch (_error) {
+    } catch {
       return false;
     }
     seen.add(topic.id);
@@ -207,7 +207,7 @@ async function loadCommunityEntryState() {
           return a.name.localeCompare(b.name, "ja");
         });
       }
-    } catch (_error) {
+    } catch {
       // PvP ordering is an enhancement. Community access still works if the
       // ranking snapshot is temporarily unavailable.
     }
@@ -216,7 +216,7 @@ async function loadCommunityEntryState() {
       featured: activity.featured && typeof activity.featured === "object" ? activity.featured : null,
       unread: Number.isFinite(Number(activity.unread)) ? Number(activity.unread) : 0,
     };
-  } catch (_error) {
+  } catch {
     return fallback;
   }
 }

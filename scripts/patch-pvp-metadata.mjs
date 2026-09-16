@@ -19,7 +19,7 @@ try{
     const translated=await response.json();
     if(translated?.['ja:UNIT']&&typeof translated['ja:UNIT']==='object')catalog=translated['ja:UNIT'];
   }
-}catch(error){console.warn('Unit translation metadata unavailable; keeping existing names.')}
+}catch{console.warn('Unit translation metadata unavailable; keeping existing names.')}
 for(const row of payload.characters||[]){
   const name=catalog[`${row.unit_code}_snm`]||catalog[`${row.unit_code}_nm`];
   if(typeof name==='string'&&name.trim())row.name=name.replace(/\s+/g,' ').trim();
