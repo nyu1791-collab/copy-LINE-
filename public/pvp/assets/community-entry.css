@@ -48,3 +48,44 @@
 
 /* The copied Owner Preview uses the inline community entry, not the older floating staging shortcut. */
 .community-bridge-link { display:none !important; }
+
+/* Review UX adjustments requested after the iPad inspection.
+   Keep the original PvP stylesheet byte-exact and layer staging-only changes here. */
+.summary-updated-value {
+  font-size: clamp(1.45rem, 4vw, 2.1rem) !important;
+  line-height: 1.2 !important;
+  letter-spacing: 0 !important;
+}
+
+.ranking-section .character-image {
+  width: 3rem !important;
+  height: 3rem !important;
+}
+
+.ranking-section .rate-track {
+  display: none !important;
+}
+
+.ranking-section .rate-cell {
+  min-width: 0 !important;
+}
+
+.ranking-section .rate-cell > div {
+  justify-content: flex-end !important;
+  gap: 0 !important;
+}
+
+.ranking-section .rate-value {
+  min-width: 0 !important;
+}
+
+@media (max-width: 700px) {
+  .summary-updated-value {
+    font-size: clamp(1.35rem, 5.4vw, 1.85rem) !important;
+  }
+
+  .ranking-section .character-image {
+    width: 2.65rem !important;
+    height: 2.65rem !important;
+  }
+}
