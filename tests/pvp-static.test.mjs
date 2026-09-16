@@ -44,6 +44,18 @@ test('PvP shell mirrors the current Owner Preview while preserving the original 
   assert.match(communityJs,/\/boards/);
 });
 
+test('review UX keeps the update time and ranking rows compact',async()=>{
+  const [html,communityCss]=await Promise.all([
+    read('public/pvp/index.html'),
+    read('public/pvp/assets/community-entry.css'),
+  ]);
+  assert.match(html,/community-entry\.css\?v=20260916-ui-1/);
+  assert.match(html,/app\.js\?v=20260916-ui-1/);
+  assert.match(communityCss,/\.summary-updated-value\s*\{[\s\S]*?font-size:\s*clamp\(1\.45rem,\s*4vw,\s*2\.1rem\)/);
+  assert.match(communityCss,/\.ranking-section \.character-image\s*\{[\s\S]*?width:\s*3rem/);
+  assert.match(communityCss,/\.ranking-section \.rate-track\s*\{[\s\S]*?display:\s*none !important/);
+});
+
 test('runtime preserves original image-first table and keeps the local board route available',async()=>{
   const js=await read('public/pvp/assets/app.js');
   assert.match(js,/Faithful runtime for the pre-maintenance PvP surface/);
@@ -54,6 +66,13 @@ test('runtime preserves original image-first table and keeps the local board rou
   assert.match(js,/showModal\(\)/);
   assert.match(js,/community-bridge-link/);
   assert.match(js,/href = "\/boards"/);
+});
+
+test('public review serves built browser assets before dynamic Worker routes',async()=>{
+  const config=await read('wrangler.jsonc');
+  assert.match(config,/"binding":\s*"ASSETS"/);
+  assert.match(config,/"not_found_handling":\s*"none"/);
+  assert.doesNotMatch(config,/"run_worker_first":\s*true/);
 });
 
 test('ranking browser reads only the isolated local validated snapshot',async()=>{
