@@ -19,8 +19,8 @@ jobs:
         with:
           node-version: '22.13.0'
           cache: npm
-      - name: Apply grouped media post patch
-        run: node scripts/apply-media-group-post-fix-v3.mjs
+      - name: Apply logical grouped-media post patch
+        run: node scripts/apply-media-group-post-fix-v4.mjs
       - name: Reject malformed diff
         run: git diff --check
       - name: Install locked dependencies
@@ -33,12 +33,12 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/community.tsx app/api/board/route.ts app/community.css tests/community.test.mjs
+          git add app/api/board/route.ts tests/community.test.mjs
           if git diff --cached --quiet; then
-            echo 'Grouped media patch already applied.'
+            echo 'Logical grouped-media patch already applied.'
             exit 0
           fi
-          git commit -m 'Group mixed media into one post and comparison page'
+          git commit -m 'Count grouped media as one logical post'
           git pull --rebase origin main
           for attempt in 1 2 3; do
             if git push origin HEAD:main; then exit 0; fi
