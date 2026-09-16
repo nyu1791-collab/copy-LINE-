@@ -25,6 +25,9 @@
       "bucket_name": "line-rangers-copy-review-media"
     }
   ],
+  "triggers": {
+    "crons": ["17 3 * * *"]
+  },
   "observability": {
     "enabled": true
   }
