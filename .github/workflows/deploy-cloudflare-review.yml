@@ -52,6 +52,9 @@ jobs:
       - name: Install locked dependencies
         run: npm run install:ci
 
+      - name: Audit production dependency vulnerabilities
+        run: npm audit --omit=dev --audit-level=high
+
       - name: Resolve Cloudflare account safely
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
@@ -166,6 +169,7 @@ jobs:
           printf '%s' "$health" | jq -e '.ok == true and .checks.d1 == true and .checks.r2 == true' >/dev/null || { echo 'Runtime D1/R2 health check failed.'; exit 1; }
           jq -e '.boards | type == "array"' "$api_body" >/dev/null || { echo 'Board API did not return a valid boards array.'; exit 1; }
           grep -qi '^x-content-type-options: nosniff' "$api_headers" || { echo 'Board API security header missing.'; exit 1; }
+          grep -qi '^strict-transport-security: max-age=31536000' "$api_headers" || { echo 'HSTS header missing.'; exit 1; }
           grep -qi '^set-cookie: __Host-lr_guest=' "$api_headers" || { echo 'Anonymous signed cookie was not issued.'; exit 1; }
           if grep -q '現在、サイトを改修しています。' <<< "$pvp"; then
             echo "Review Worker unexpectedly returned maintenance mode."
