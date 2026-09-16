@@ -355,3 +355,19 @@ test('group detail returns every sibling media item and group moderation stays a
  const listed=await call();const anchor=listed.data.posts.find(post=>post.id===ids[3]);assert.equal(anchor.mediaItems.length,4);
  clearLimits();assert.equal((await call({action:'moderate',operation:'delete',target:ids[3]})).status,200);assert.deepEqual(sql.prepare('SELECT DISTINCT status FROM posts WHERE media_group=?').all(group).map(row=>row.status),['deleted']);
 });
+
+
+test('grouped media count as one logical post across listing stats and new-post checks',async()=>{
+ const {call,sql}=setup();
+ await call({action:'profile',name:'Logical Group Tester'});
+ const state=(await call()).data;
+ const group=crypto.randomUUID();const start=Date.now();let created=start;
+ const ids=[crypto.randomUUID(),crypto.randomUUID(),crypto.randomUUID(),crypto.randomUUID(),crypto.randomUUID()];
+ const rows=[[ids[0],'image/jpeg','a.jpg'],[ids[1],'image/png','b.png'],[ids[2],'image/webp','c.webp'],[ids[3],'video/mp4','one.mp4'],[ids[4],'video/webm','two.webm']];
+ for(const [id,type,name] of rows)sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?,?,'visible',0,?,?)").run(id,state.board,state.me.id,'One logical post',`media/${id}`,type,name,100,group,created++,crypto.randomUUID());
+ const listed=await call();const grouped=listed.data.posts.filter(post=>post.mediaGroup===group);
+ assert.equal(grouped.length,1);assert.equal(grouped[0].mediaItems.length,5);
+ assert.equal(listed.data.stats.comments,1);assert.equal(listed.data.stats.todayComments,1);assert.equal(listed.data.stats.videos,2);
+ const counted=await call(null,'test-a','?board='+encodeURIComponent(state.board)+'&newerThan='+(start-1)+'&countOnly=1');
+ assert.equal(counted.status,200);assert.equal(counted.data.count,1);
+});
