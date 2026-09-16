@@ -29,16 +29,16 @@ jobs:
         run: npm audit --omit=dev --audit-level=high
       - name: Build and run regression tests before commit
         run: npm test
-      - name: Commit only the verified UI and regression changes
+      - name: Commit only the verified board language, media and regression changes
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/community.tsx tests/community.test.mjs
+          git add app/community.tsx app/api/translate/route.ts lib/rules.ts lib/labels.ts lib/activity-labels.ts tests/community.test.mjs
           if git diff --cached --quiet; then
-            echo 'Guarded UI patch was already applied.'
+            echo 'Guarded community patch was already applied.'
             exit 0
           fi
-          git commit -m 'Support ten images and five videos per community post'
+          git commit -m 'Limit board to Japanese and English and expand media posts'
           git pull --rebase origin main
           for attempt in 1 2 3; do
             if git push origin HEAD:main; then
@@ -48,5 +48,5 @@ jobs:
             sleep $((attempt * 5))
             git pull --rebase origin main
           done
-          echo 'Verified UI patch could not be pushed after three attempts.' >&2
+          echo 'Verified community patch could not be pushed after three attempts.' >&2
           exit 1
