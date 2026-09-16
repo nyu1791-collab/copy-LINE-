@@ -15,6 +15,10 @@ export function optionalTextInput(value: unknown, max: number) {
   if ([...s].length>max || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(s)) throw new Error('invalid_text');
   return s;
 }
+// One community post may contain multiple attachments. Keep the limits here so
+// browser validation, API validation and regression tests cannot silently drift.
+export const maxImagesPerPost=10;
+export const maxVideosPerPost=5;
 // Large uploads are sent in R2 multipart chunks. Keeping each request at 8 MiB
 // avoids buffering a long phone video inside the Worker while allowing a practical
 // 200 MiB evaluation upload without making uploads unlimited.
@@ -59,7 +63,9 @@ export function mayModerate(role:Role, action:string){
   return role==='moderator' && ['pin','unpin','hide','restore','delete'].includes(action);
 }
 // Confirmed identity mappings from the existing production image registry.
-// These are evaluation topics, NOT inferred release dates.
+// These are evaluation topics, NOT inferred release dates. The array is
+// intentionally many-to-one by month: a month can contain any number of new
+// characters, each with its own board keyed by month + exact character ID.
 export type CharacterTopic={id:string;name:string;image:string;releaseMonth:string;confirmed:boolean};
 // A topic is shown only after its exact ID, image and JST release month are
 // explicitly verified. A calendar change by itself never switches the board.
