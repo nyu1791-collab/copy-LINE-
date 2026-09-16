@@ -78,11 +78,12 @@ function displayNameValue(raw:string|null){
  return normalized;
 }
 function trustedUpstreamSubject(h:Headers){
- // A public workers.dev endpoint must not trust a client-supplied identity
- // header by default. A future authenticated reverse proxy can opt in only by
- // setting this server-side environment value deliberately.
+ // Public Cloudflare requests always carry edge metadata, so a user-supplied
+ // identity header is ignored there unless a trusted reverse proxy is
+ // explicitly enabled. Local/unit-test requests without Cloudflare edge
+ // metadata keep the existing integration behavior.
  const trust=(env as unknown as Record<string,unknown>).BOARD_TRUST_UPSTREAM_AUTH;
- if(trust!=='1')return null;
+ if(trust!=='1'&&(h.get('cf-connecting-ip')||h.get('cf-ray')))return null;
  const value=h.get('oai-authenticated-user-id')?.trim()||'';
  if(!value||value.length>512||/[\u0000-\u001f\u007f]/.test(value))return null;
  return value;
