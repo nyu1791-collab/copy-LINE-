@@ -36,6 +36,6 @@ export async function enrichPosts(rows:Record<string,unknown>[],userId:string){
   const author=String(p.author);const scope=scopes.get(String(p.id));const logicalIds=scope?(idsByScope.get(scopeKey(scope))||[String(p.id)]):[String(p.id)];
   const likeSummary=likesByPost.get(String(p.id));const ratingSummary=ratingsByPost.get(String(p.id));
   const publicPost={...p};delete publicPost.author;
-  return {...publicPost,mine:!!userId&&author===userId,likes:Number(likeSummary?.count||0),liked:Number(likeSummary?.selected||0)===1,helpful:Number(ratingSummary?.count||0),helped:Number(ratingSummary?.selected||0)===1,replies:scope?logicalIds.reduce((sum,id)=>sum+Number(repliesByParent.get(id)?.count||0),0):p.replies,title:null,badges:badgesByUser.get(author)||[]};
+  return {...publicPost,mine:!!userId&&author===userId,likes:Number(likeSummary?.count||0),liked:Number(likeSummary?.selected||0)===1?1:0,helpful:Number(ratingSummary?.count||0),helped:Number(ratingSummary?.selected||0)===1,replies:scope?logicalIds.reduce((sum,id)=>sum+Number(repliesByParent.get(id)?.count||0),0):p.replies,title:null,badges:badgesByUser.get(author)||[]};
  });
 }
