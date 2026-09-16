@@ -40,7 +40,8 @@ test('PvP shell mirrors the current Owner Preview while preserving the original 
   assert.match(communityCss,/community-board-entry-card/);
   assert.match(communityCss,/community-bridge-link\s*\{\s*display:none !important/);
   assert.match(communityJs,/u1631e-sally/);
-  assert.match(communityJs,/href = url/);
+  assert.match(communityJs,/topicBoardUrl/);
+  assert.match(communityJs,/button\.href = firstTopicUrl \|\| url/);
   assert.match(communityJs,/\/boards/);
 });
 
@@ -49,8 +50,9 @@ test('review UX keeps the update time and ranking rows compact',async()=>{
     read('public/pvp/index.html'),
     read('public/pvp/assets/community-entry.css'),
   ]);
-  assert.match(html,/community-entry\.css\?v=20260916-ui-1/);
+  assert.match(html,/community-entry\.css\?v=20260916-ui-2/);
   assert.match(html,/app\.js\?v=20260916-ui-1/);
+  assert.match(html,/community-entry\.js\?v=20260916-ui-2/);
   assert.match(communityCss,/\.summary-updated-value\s*\{[\s\S]*?font-size:\s*clamp\(1\.45rem,\s*4vw,\s*2\.1rem\)/);
   assert.match(communityCss,/\.ranking-section \.character-image\s*\{[\s\S]*?width:\s*3rem/);
   assert.match(communityCss,/\.ranking-section \.rate-track\s*\{[\s\S]*?display:\s*none !important/);
@@ -98,6 +100,11 @@ test('collector fails closed unless all 200 Legend players validate',async()=>{
   assert.match(collector,/public\/pvp\/data\/character_usage\.json/);
   assert.match(workflow,/cron: '17 \* \* \* \*'/);
   assert.match(workflow,/permissions:\n  contents: write/);
-  assert.match(workflow,/git add public\/pvp\/data\/character_usage\.json public\/pvp\/data\/character_usage_history\.json/);
+  for(const path of [
+    'public/pvp/data/character_usage.json',
+    'public/pvp/data/character_usage_history.json',
+    'config/community-characters.json',
+    'data/community-character-discovery.json',
+  ]) assert.match(workflow,new RegExp(path.replace(/[./-]/g,'\\$&')));
   assert.match(workflow,/git diff --cached --quiet/);
 });
