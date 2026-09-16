@@ -82,13 +82,13 @@ test('abandoned multipart sessions expire after a bounded lifetime',()=>{
  assert.match(uploadSessionSource,/uploadSessionMaxAgeMs/);
 });
 function setup(){
- const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');sql.exec(readFileSync(new URL('drizzle/0000_clumsy_penance.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0001_talented_gabe_jones.sql',root),'utf8'));
+ const deletedObjects=[];const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');sql.exec(readFileSync(new URL('drizzle/0000_clumsy_penance.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0001_talented_gabe_jones.sql',root),'utf8'));
  const db={prepare(query){let args=[];return {bind(...a){args=a;return this;},async first(){return sql.prepare(query).get(...args)||null;},async all(){return {results:sql.prepare(query).all(...args)};},async run(){return sql.prepare(query).run(...args);}};},async batch(statements){sql.exec('BEGIN');try{const rows=[];for(const s of statements)rows.push(await s.run());sql.exec('COMMIT');return rows;}catch(e){sql.exec('ROLLBACK');throw e;}}};
  sql.exec(readFileSync(new URL('drizzle/0002_true_purifiers.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0003_thankful_firestar.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0004_yummy_warbird.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0005_bumpy_hellcat.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0006_quick_zuras.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0007_overjoyed_scorpion.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0008_free_phalanx.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0009_horizontal_media_groups.sql',root),'utf8'));
  const activity=compile('lib/community-activity.ts',()=>({database:()=>db}));
  const featureTypes=compile('lib/community-features.ts',()=>{});
  const flags=compile('lib/community-flags.ts',id=>{
-  if(id==='@/db/raw')return {database:()=>db};
+  if(id==='@/db/raw')return {database:()=>db,bucket:()=>({async delete(keys){deletedObjects.push(...(Array.isArray(keys)?keys:[keys]));}})};
   if(id==='@/lib/community-features')return featureTypes;
   throw new Error('Unexpected flag import '+id);
  });
@@ -101,7 +101,7 @@ function setup(){
  const api=compile('app/api/board/route.ts',id=>{
   if(id==='next/headers')return {headers:async()=>requestContext.getStore().headers};
   if(id==='cloudflare:workers')return {env:{BOARD_OWNER_EMAIL:'owner@example.invalid',BOARD_OWNER_SUBJECT:'owner-subject',BOARD_OWNER_ACCESS_TOKEN:'test-owner-access-token',BOARD_ANON_COOKIE_SECRET:'test-anon-cookie-secret-0123456789012345'}};
-  if(id==='@/db/raw')return {database:()=>db};
+  if(id==='@/db/raw')return {database:()=>db,bucket:()=>({async delete(keys){deletedObjects.push(...(Array.isArray(keys)?keys:[keys]));}})};
   if(id==='@/lib/rules')return rules;
   if(id==='@/lib/community-activity')return activity;
   if(id==='@/lib/community-flags')return flags;
@@ -111,7 +111,7 @@ function setup(){
  });
  const activityApi=compile('app/api/activity/route.ts',id=>{
   if(id==='next/headers')return {headers:async()=>requestContext.getStore().headers};
-  if(id==='@/db/raw')return {database:()=>db};
+  if(id==='@/db/raw')return {database:()=>db,bucket:()=>({async delete(keys){deletedObjects.push(...(Array.isArray(keys)?keys:[keys]));}})};
   if(id==='@/lib/community-activity')return activity;
   if(id==='@/lib/rules')return rules;
   if(id==='@/lib/anonymous-session')return anonymous;
@@ -124,7 +124,7 @@ function setup(){
   const request=new Request('https://review.example/api/activity',{headers:{...(who?{'oai-authenticated-user-id':who,'oai-authenticated-user-email':'test@example.invalid'}:{}),...(cookie?{cookie}:{}),origin:'https://review.example'}});
   return requestContext.run(request,async()=>{const r=await activityApi.GET();return {status:r.status,data:await r.json(),headers:r.headers};});
  };
- return {sql,call,activityCall,anonymous,clearLimits(){sql.exec('DELETE FROM limits');}};
+ return {sql,call,activityCall,anonymous,deletedObjects,clearLimits(){sql.exec('DELETE FROM limits');}};
 }
 test('JST month boundaries and leap/year transitions',()=>{
  assert.equal(rules.monthJST(new Date('2026-09-30T14:59:59Z')),'2026-09');assert.equal(rules.monthJST(new Date('2026-09-30T15:00:00Z')),'2026-10');assert.equal(rules.monthJST(new Date('2026-12-31T15:00:00Z')),'2027-01');assert.equal(rules.monthJST(new Date('2028-02-29T15:00:00Z')),'2028-03');assert.equal(rules.validMonth('2026-13'),false);
@@ -220,6 +220,14 @@ test('posts persist, idempotent retry does not duplicate, and reaction names are
 test('users can delete only their own posts while moderation rules remain server-side',async()=>{
  const {call}=setup();await call({action:'profile',name:'Tester'});const board=(await call()).data.board;const own=(await call({action:'post',board,body:'自分で削除する投稿',request:crypto.randomUUID()})).data.id;
  assert.equal((await call({action:'moderate',operation:'delete',target:own})).status,200);assert.equal((await call()).data.posts.length,0);
+});
+test('deleting a grouped media post removes every R2 object in the group',async()=>{
+ const {call,sql,deletedObjects}=setup();await call({action:'profile',name:'Media owner'});const state=(await call()).data;const group=crypto.randomUUID();const imageKey='uploads/test/image.jpg';const videoKey='uploads/test/video.mp4';const image=crypto.randomUUID();const video=crypto.randomUUID();
+ sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?,?,'visible',0,?,?)").run(image,state.board,state.me.id,'Grouped media',imageKey,'image/jpeg','image.jpg',10,group,Date.now(),crypto.randomUUID());
+ sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?,?,'visible',0,?,?)").run(video,state.board,state.me.id,'Grouped media',videoKey,'video/mp4','video.mp4',20,group,Date.now()+1,crypto.randomUUID());
+ assert.equal((await call({action:'moderate',operation:'delete',target:image})).status,200);
+ assert.deepEqual(new Set(deletedObjects),new Set([imageKey,videoKey]));
+ assert.equal(sql.prepare('SELECT COUNT(*) n FROM posts WHERE media_group=? AND status=\'deleted\'').get(group).n,2);
 });
 test('JSON posts reject legacy video URLs and cap video comment replies at one nested level',async()=>{
  const {call,sql,clearLimits}=setup();await call({action:'profile',name:'Tester'});const state=(await call()).data;const parent=crypto.randomUUID();
