@@ -64,19 +64,27 @@ export async function GET(request:Request){try{
   return reply({hidden,reports,users:usersWithBadges,flags});
  }
  const current=monthJST();const requested=u.searchParams.get('month')||current;if(!validMonth(requested)||requested>current)throw new Error('invalid_request');
- // Only explicitly confirmed evaluation topics are seeded, once, for the
- // current JST month. A date rollover alone never creates or switches a topic.
- // Do not write on every read: it adds avoidable latency and D1 contention.
+ // Only explicitly confirmed evaluation topics are seeded for the current JST
+ // month. Insert only topics that are still missing, so a second or third new
+ // character confirmed later in the same month gets its own board immediately.
  let boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;
  const confirmedTopics=confirmedCharactersForMonth(requested);
- if(requested===current&&!boards.length&&confirmedTopics.length){
-  await db.batch(confirmedTopics.map(c=>db.prepare('INSERT OR IGNORE INTO boards(id,month,character,name,image) VALUES(?,?,?,?,?)').bind(`${requested}:${c.id}`,requested,c.id,c.name,c.image)));
-  boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;
+ if(requested===current&&confirmedTopics.length){
+  const existingCharacters=new Set(boards.map(b=>String(b.character)));
+  const missingTopics=confirmedTopics.filter(c=>!existingCharacters.has(c.id));
+  if(missingTopics.length){
+   await db.batch(missingTopics.map(c=>db.prepare('INSERT OR IGNORE INTO boards(id,month,character,name,image) VALUES(?,?,?,?,?)').bind(`${requested}:${c.id}`,requested,c.id,c.name,c.image)));
+   boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;
+  }
  }
  // The current evaluation exposes only explicitly confirmed topics. Archived
  // months remain read-only records and must never disappear merely because
- // their character is not in this month's current catalog.
- if(requested===current)boards=boards.filter(b=>confirmedTopics.some(c=>c.id===b.character)).map(b=>{const c=confirmedTopics.find(c=>c.id===b.character)!;return {...b,name:c.name,image:c.image};});
+ // their character is not in this month's current catalog. For the current
+ // month, preserve the confirmed topic order (PvP rank/adoption-rate order).
+ if(requested===current){
+  const boardByCharacter=new Map(boards.map(b=>[String(b.character),b]));
+  boards=confirmedTopics.flatMap(c=>{const row=boardByCharacter.get(c.id);return row?[{...row,name:c.name,image:c.image}]:[];});
+ }
  const board=u.searchParams.get('board')||String(boards[0]?.id||'');const parent=u.searchParams.get('video');
  if(board&&!boards.some(b=>b.id===board))throw new Error('not_found');
  let video=null;if(parent){video=await visiblePost(parent);if(!video||!isVideoPost(video)||video.parent||video.board!==board)throw new Error('not_found');}
