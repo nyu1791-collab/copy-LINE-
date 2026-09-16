@@ -86,7 +86,7 @@ export async function GET(request:Request){try{
   // `display_name_set` is authoritative for new rows. The name fallback keeps
   // profiles created before that column was added visible without exposing the
   // generated guest labels; it never grants a role or badge by itself.
-  const users=me.role==='owner'?(await db.prepare("SELECT id,name,role FROM users WHERE display_name_set=1 OR role='owner' OR (name<>'匿名ユーザー' AND name<>'ゲスト' AND name NOT LIKE 'ゲスト-%') ORDER BY created DESC LIMIT 100").all()).results:[];
+  const users=me.role!=='user'?(await db.prepare("SELECT id,name,role FROM users WHERE display_name_set=1 OR role='owner' OR (name<>'匿名ユーザー' AND name<>'ゲスト' AND name NOT LIKE 'ゲスト-%') ORDER BY created DESC LIMIT 100").all()).results:[];
   const userIds=users.map(u=>String((u as {id:string}).id));
   const badgeRows=userIds.length?(await db.prepare(`SELECT user,badge FROM user_badges WHERE user IN (${userIds.map(()=>'?').join(',')}) ORDER BY badge`).bind(...userIds).all()).results:[];
   const badgesByUser=new Map<string,string[]>();for(const row of badgeRows){const key=String(row.user);badgesByUser.set(key,[...(badgesByUser.get(key)||[]),String(row.badge)]);}
@@ -180,7 +180,7 @@ export async function POST(request:Request){try{
   return reply({ok:true,name:b.name,enabled:b.enabled});
  }
  if(b.action==='badge'){
-  if(me.role!=='owner')throw new Error('forbidden');
+  if(me.role!=='owner'&&me.role!=='moderator')throw new Error('forbidden');
   const target=String(b.target||'');const badge=String(b.badge||'');if(!contributionBadges.includes(badge as typeof contributionBadges[number])||typeof b.enabled!=='boolean')throw new Error('invalid_request');
   const targetUser=await db.prepare("SELECT role FROM users WHERE id=? AND role<>'owner'").bind(target).first();if(!targetUser)throw new Error('forbidden');
   const mutation=b.enabled?db.prepare('INSERT OR IGNORE INTO user_badges(user,badge,granted_by,created) VALUES(?,?,?,?)').bind(target,badge,me.id,now):db.prepare('DELETE FROM user_badges WHERE user=? AND badge=?').bind(target,badge);
