@@ -28,6 +28,7 @@ type UploadJob={key:string;request:string;group?:string|null;board:string;name:s
 type ResumeRecord={request:string;board:string;name:string;type:string;size:number;lastModified:number;body:string};
 const featureLabels:Record<CommunityFeatureName,string>={commentsEnabled:'コメント・反応',videoUploadEnabled:'動画投稿',translationEnabled:'翻訳',votingEnabled:'投票',readOnly:'緊急Read-only'};
 const displayNameStorageKey='line-rangers-display-name';
+// The confirmed u1631e-sally character image is served by the trusted character CDN; no private-repository fallback is used.
 function isGuestName(value:string|undefined|null){return !!value&&value.startsWith('ゲスト-');}
 function uiName(value:string|undefined|null,anonymousLabel='匿名ユーザー'){if(!value)return '';return isGuestName(value)?anonymousLabel:value;}
 // The server writes the display-name cookie as HttpOnly after a successful
