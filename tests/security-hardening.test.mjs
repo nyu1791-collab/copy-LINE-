@@ -29,3 +29,12 @@ test('Owner cookie is cryptographically bound to the configured Owner subject',a
  const rotated=await session.sessionFromHeaders(new Headers({cookie}));
  assert.equal(rotated.owner,undefined);assert.equal(rotated.anonymous,true);assert.notEqual(rotated.sub,'owner-b');
 });
+
+
+test('original-production promotion is manual and explicitly gated',()=>{
+ const workflow=readFileSync(new URL('../.github/workflows/migrate-original-community-production.yml',import.meta.url),'utf8');
+ assert.doesNotMatch(workflow,/^  push:/m);
+ assert.match(workflow,/workflow_dispatch:/);
+ assert.match(workflow,/PROMOTE_COPY_TO_ISOLATED_PRODUCTION/);
+ assert.match(workflow,/environment: original-production-promotion/);
+});
