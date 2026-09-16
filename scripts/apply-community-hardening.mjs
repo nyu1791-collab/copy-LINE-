@@ -40,15 +40,56 @@ await patch('app/community.tsx',source=>{
  return source;
 });
 
-await patch('app/api/board/route.ts',source=>{
- const oldBlock=`let boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;\n const confirmedTopics=confirmedCharactersForMonth(requested);\n if(requested===current&&!boards.length&&confirmedTopics.length){\n  await db.batch(confirmedTopics.map(c=>db.prepare('INSERT OR IGNORE INTO boards(id,month,character,name,image) VALUES(?,?,?,?,?)').bind(\`${'${requested}:${c.id}'}\`,requested,c.id,c.name,c.image)));\n  boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;\n }\n // The current evaluation exposes only explicitly confirmed topics. Archived\n // months remain read-only records and must never disappear merely because\n // their character is not in this month's current catalog.\n if(requested===current)boards=boards.filter(b=>confirmedTopics.some(c=>c.id===b.character)).map(b=>{const c=confirmedTopics.find(c=>c.id===b.character)!;return {...b,name:c.name,image:c.image};});`;
- const newBlock=`let boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;\n const confirmedTopics=confirmedCharactersForMonth(requested);\n if(requested===current&&confirmedTopics.length){\n  // A second or third confirmed character may arrive later in the same month.\n  // Add only missing boards; never recreate or overwrite existing discussion data.\n  const existingCharacters=new Set(boards.map(b=>String(b.character)));\n  const missingTopics=confirmedTopics.filter(c=>!existingCharacters.has(c.id));\n  if(missingTopics.length){\n   await db.batch(missingTopics.map(c=>db.prepare('INSERT OR IGNORE INTO boards(id,month,character,name,image) VALUES(?,?,?,?,?)').bind(\`${'${requested}:${c.id}'}\`,requested,c.id,c.name,c.image)));\n   boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;\n  }\n  // Current-month order follows the validated PvP ordering from the registry;\n  // confirmed characters without PvP data naturally remain behind those with data.\n  const topicOrder=new Map(confirmedTopics.map((c,index)=>[c.id,index]));\n  boards=boards.filter(b=>topicOrder.has(String(b.character))).map(b=>{const c=confirmedTopics.find(c=>c.id===String(b.character))!;return {...b,name:c.name,image:c.image};}).sort((a,b)=>(topicOrder.get(String(a.character))??Number.MAX_SAFE_INTEGER)-(topicOrder.get(String(b.character))??Number.MAX_SAFE_INTEGER)||String(a.character).localeCompare(String(b.character)));\n }`;
- return once(source,oldBlock,newBlock,'incremental monthly board seeding');
-});
+// The board route is already hardened independently. Refuse to continue if the
+// same-month backfill contract disappeared instead of trying to reapply it.
+{
+ const source=await readFile('app/api/board/route.ts','utf8');
+ for(const needle of ['const missingTopics=confirmedTopics.filter(c=>!existingCharacters.has(c.id))','boards=confirmedTopics.flatMap(']){
+  if(!source.includes(needle))throw new Error(`Missing multi-character board contract: ${needle}`);
+ }
+}
 
 await patch('app/community.css',source=>{
  if(source.includes('.owner-mode-indicator{'))throw new Error('Owner indicator CSS already exists unexpectedly');
  return source+`\n.owner-mode-indicator{display:inline-flex;align-items:center;justify-content:center;gap:7px;margin:16px 0 0;padding:8px 12px;border:1px solid #3f9e7c;border-radius:999px;background:#12392f;color:#8de6c3;font-size:13px;font-weight:800}\n`;
 });
 
-console.log('Community hardening patch applied.');
+await patch('tests/community.test.mjs',source=>{
+ source=once(source,
+  "const rules=compile('lib/rules.ts',()=>{});",
+  "const communityRegistry=JSON.parse(readFileSync(new URL('config/community-characters.json',root),'utf8'));\nconst rules=compile('lib/rules.ts',id=>{if(id==='@/config/community-characters.json')return {default:communityRegistry};throw new Error('Unexpected rules import '+id);});",
+  'community rules JSON loader');
+ source=once(source,
+  "assert.match(communitySource,/media-picker-title/);assert.match(communitySource,/ここをタップ/);assert.match(communitySource,/multiple type=\"file\"/);assert.match(communitySource,/最大5本/);assert.match(communitySource,/新キャラに関する感想・情報/);assert.doesNotMatch(communitySource,/media-picker.*<small>/s);",
+  "assert.match(communitySource,/media-picker-title/);assert.match(communitySource,/1回の投稿につき動画は最大5本・画像は最大10枚/);assert.match(communitySource,/multiple type=\"file\"/);assert.match(communitySource,/imageCount>maxImagesPerPost/);assert.match(communitySource,/videoCount>maxVideosPerPost/);assert.match(communitySource,/else void uploadImage/);assert.match(communitySource,/新キャラに関する感想・情報/);assert.doesNotMatch(communitySource,/media-picker.*<small>/s);",
+  'community media UI assertions');
+ source=once(source,
+  "assert.match(communitySource,/line-rangers-display-name/);assert.match(communitySource,/function uiName/);assert.match(communitySource,/匿名ユーザー/);assert.match(communitySource,/uiName\\(replyTarget\\.name\\)/);assert.match(communitySource,/profileRestoreSubject/);assert.match(communitySource,/profileRestoreInFlight/);assert.doesNotMatch(communitySource,/profileRestoreAttempted/);assert.match(communitySource,/運営アクセス/);assert.match(communitySource,/one-time-code/);",
+  "assert.match(communitySource,/line-rangers-display-name/);assert.match(communitySource,/function uiName/);assert.match(communitySource,/匿名ユーザー/);assert.match(communitySource,/uiName\\(replyTarget\\.name\\)/);assert.match(communitySource,/profileRestoreSubject/);assert.match(communitySource,/profileRestoreInFlight/);assert.doesNotMatch(communitySource,/profileRestoreAttempted/);assert.match(communitySource,/運営アクセス/);assert.match(communitySource,/運営モード/);assert.match(communitySource,/owner-mode-indicator/);assert.match(communitySource,/one-time-code/);assert.doesNotMatch(communitySource,/\\} JST<\\/time>/);",
+  'owner mode and JST assertions');
+ return source;
+});
+
+await patch('tests/pvp-ranking.test.mjs',source=>once(source,
+  "const rules = compile('lib/rules.ts', () => ({}));",
+  "const communityRegistry=JSON.parse(readFileSync(new URL('config/community-characters.json',root),'utf8'));\n  const rules = compile('lib/rules.ts', id => { if(id==='@/config/community-characters.json') return {default:communityRegistry}; throw new Error(`unexpected rules import ${id}`); });",
+  'pvp ranking rules JSON loader'));
+
+await patch('tests/upload-safety.test.mjs',source=>once(source,
+  "const rules=compile('lib/rules.ts',()=>({}));",
+  "const communityRegistry=JSON.parse(readFileSync(new URL('config/community-characters.json',root),'utf8'));\nconst rules=compile('lib/rules.ts',id=>{if(id==='@/config/community-characters.json')return {default:communityRegistry};throw new Error('Unexpected rules import '+id);});",
+  'upload safety rules JSON loader'));
+
+await patch('tests/pvp-static.test.mjs',source=>{
+ source=once(source,"assert.match(communityJs,/href = url/);","assert.match(communityJs,/loadCommunityEntryState/);\n  assert.match(communityJs,/\\/api\\/activity/);\n  assert.match(communityJs,/featured\\.likes/);\n  assert.match(communityJs,/topicBoardUrl/);",'dynamic community entry assertions');
+ source=once(source,"assert.match(html,/community-entry\\.css\\?v=20260916-ui-1/);","assert.match(html,/community-entry\\.css\\?v=20260916-ui-2/);",'community cache version');
+ source=once(source,"assert.match(workflow,/git add public\\/pvp\\/data\\/character_usage\\.json public\\/pvp\\/data\\/character_usage_history\\.json/);","assert.match(workflow,/public\\/pvp\\/data\\/character_usage\\.json/);\n  assert.match(workflow,/public\\/pvp\\/data\\/character_usage_history\\.json/);\n  assert.match(workflow,/config\\/community-characters\\.json/);\n  assert.match(workflow,/data\\/community-character-discovery\\.json/);\n  assert.match(workflow,/update-community-characters\\.mjs/);",'refresh workflow multi-topic assertions');
+ return source;
+});
+
+await patch('tests/rendered-html.test.mjs',source=>once(source,
+  "assert.deepEqual(await publicActivity.json(),{unread:0,featured:null});",
+  "const activity=await publicActivity.json();assert.equal(activity.unread,0);assert.equal(activity.featured,null);assert.ok(Array.isArray(activity.topics));assert.ok(activity.topics.some(topic=>topic.character==='u1631e-sally'&&topic.month==='2026-09'));",
+  'activity topics runtime assertion'));
+
+console.log('Community hardening and contract test patch applied.');
