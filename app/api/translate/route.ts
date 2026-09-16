@@ -8,7 +8,7 @@ import {currentUser} from '@/lib/upload-session';
 
 export const dynamic='force-dynamic';
 
-const googleLanguage:Record<Language,string>={ja:'ja',en:'en',zh:'zh-TW',ko:'ko',th:'th',id:'id',vi:'vi'};
+const googleLanguage:Record<Language,string>={ja:'ja',en:'en'};
 
 function response(data:unknown,status=200,setCookie?:string){const responseHeaders=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});if(setCookie)responseHeaders.set('Set-Cookie',setCookie);return Response.json(data,{status,headers:responseHeaders});}
 function fail(code:string,status=400){return response({error:code},status);}

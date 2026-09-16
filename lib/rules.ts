@@ -1,6 +1,6 @@
 import * as communityCharacterRegistryModule from '@/config/community-characters.json';
 
-export const languages = ['ja','en','zh','ko','th','id','vi'] as const;
+export const languages = ['ja','en'] as const;
 export type Language = typeof languages[number];
 export function requestUUID(){const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const s=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');return `${s.slice(0,8)}-${s.slice(8,12)}-${s.slice(12,16)}-${s.slice(16,20)}-${s.slice(20)}`;}
 export function monthJST(now = new Date()) { return new Date(now.getTime()+9*3600000).toISOString().slice(0,7); }

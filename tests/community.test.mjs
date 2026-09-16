@@ -27,7 +27,7 @@ test('media byte ranges support suffixes and reject malformed requests',()=>{
 test('comment UI keeps reactions private, opens replies on demand, and marks a selected reply target',()=>{
  assert.doesNotMatch(communitySource,/openReactors|setLikers|translate\.google\.com/);
  assert.match(communitySource,/replyTarget/);assert.match(communitySource,/toggleReplies/);assert.match(communitySource,/返信を表示/);assert.doesNotMatch(communitySource,/translatePost|<Languages/);assert.match(communitySource,/replyingTo/);
- assert.match(communitySource,/media-picker-title/);assert.match(communitySource,/ここをタップ/);assert.match(communitySource,/multiple type="file"/);assert.match(communitySource,/最大5本/);assert.match(communitySource,/新キャラに関する感想・情報/);assert.doesNotMatch(communitySource,/media-picker.*<small>/s);
+ assert.match(communitySource,/media-picker-title/);assert.match(communitySource,/mediaLimitHint/);assert.match(communitySource,/multiple type="file"/);assert.match(communitySource,/maxVideosPerPost/);assert.match(communitySource,/maxImagesPerPost/);assert.match(communitySource,/新キャラに関する感想・情報/);assert.doesNotMatch(communitySource,/media-picker.*<small>/s);
  assert.match(communitySource,/mine/);assert.match(communitySource,/composer-reply/);assert.match(communitySource,/返信先/);assert.match(communitySource,/権限・バッジ管理（Owner専用）/);assert.match(communitySource,/動画制作貢献者/);assert.match(communitySource,/有益情報貢献者/);assert.match(communitySource,/（運営）/);assert.doesNotMatch(communitySource,/運営バッジ/);assert.match(communitySource,/data\?\.me\?\.role==='owner'/);
  assert.match(communitySource,/line-rangers-display-name/);assert.match(communitySource,/function uiName/);assert.match(communitySource,/匿名ユーザー/);assert.match(communitySource,/uiName\(replyTarget\.name\)/);assert.match(communitySource,/profileRestoreSubject/);assert.match(communitySource,/profileRestoreInFlight/);assert.doesNotMatch(communitySource,/profileRestoreAttempted/);assert.match(communitySource,/運営アクセス/);assert.match(communitySource,/one-time-code/);
  assert.match(communitySource,/\.\.\.\(p\.mine\?\[\]:\['delete'\]\)/);assert.ok(communitySource.indexOf('<p className="post-body">')<communitySource.indexOf('{detail&&(p.video||p.mediaType?.startsWith(\'video/\'))'));
@@ -288,4 +288,29 @@ test('read marker is persistent, monotonic and rejects future timestamps',async(
  assert.equal((await call({action:'seen',until:before.viewUntil-1000})).status,200);
  assert.equal((await call()).data.previousSeen,before.viewUntil);
  assert.equal((await call({action:'seen',until:Date.now()+60000})).status,400);
+});
+
+
+test('community board is Japanese-English only with ten-image five-video media caps', () => {
+  const source = readFileSync(new URL('app/community.tsx', root), 'utf8');
+  const labelsSource = readFileSync(new URL('lib/labels.ts', root), 'utf8');
+  const activitySource = readFileSync(new URL('lib/activity-labels.ts', root), 'utf8');
+  const translationSource = readFileSync(new URL('app/api/translate/route.ts', root), 'utf8');
+  const directUpload = readFileSync(new URL('app/api/upload/route.ts', root), 'utf8');
+  const videoSession = readFileSync(new URL('app/api/upload/session/route.ts', root), 'utf8');
+  assert.deepEqual(rules.languages, ['ja','en']);
+  assert.equal(rules.maxImagesPerPost, 10);
+  assert.equal(rules.maxVideosPerPost, 5);
+  assert.match(labelsSource, /localeNames=\{ja:'🇯🇵 日本語',en:'🇺🇸 English'\}/);
+  assert.doesNotMatch(labelsSource, /🇹🇼|🇰🇷|🇹🇭|🇮🇩|🇻🇳/);
+  assert.doesNotMatch(activitySource, /zh:|ko:|th:|id:|vi:/);
+  assert.match(translationSource, /googleLanguage:Record<Language,string>=\{ja:'ja',en:'en'\}/);
+  assert.match(source, /media-picker-hint\">\{t\.mediaLimitHint\}/);
+  assert.match(labelsSource, /ここをタップ（1投稿につき動画5本・画像10枚まで）/);
+  assert.match(labelsSource, /Tap here \(up to 5 videos and 10 images per post\)/);
+  assert.match(source, /videoCount>maxVideosPerPost/);
+  assert.match(source, /imageCount>maxImagesPerPost/);
+  assert.match(source, /else void uploadImage\(fileToSend,description,request,uploadBoard,group\)/);
+  assert.match(directUpload, /groupLimit=video\?maxVideosPerPost:maxImagesPerPost/);
+  assert.match(videoSession, /maxVideosPerPost/);
 });
