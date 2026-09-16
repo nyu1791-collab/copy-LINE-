@@ -26,15 +26,15 @@ jobs:
           api_headers="$(mktemp)"; api_body="$(mktemp)"
           snapshot_body="$(mktemp)"
 
-          curl --fail --silent --show-error -D "$pvp_headers" -o "$pvp_body" "$BASE/pvp/index.html"
-          curl --fail --silent --show-error -D "$board_headers" -o "$board_body" "$BASE/boards"
-          curl --fail --silent --show-error -D "$api_headers" -o "$api_body" "$BASE/api/board"
-          curl --fail --silent --show-error -o "$snapshot_body" "$BASE/pvp/data/character_usage.json"
+          curl --location --fail --silent --show-error -D "$pvp_headers" -o "$pvp_body" "$BASE/pvp/index.html"
+          curl --location --fail --silent --show-error -D "$board_headers" -o "$board_body" "$BASE/boards"
+          curl --location --fail --silent --show-error -D "$api_headers" -o "$api_body" "$BASE/api/board"
+          curl --location --fail --silent --show-error -o "$snapshot_body" "$BASE/pvp/data/character_usage.json"
 
           if ! grep -q 'レジェンド帯 キャラ集計' "$pvp_body"; then
             echo 'FAIL: PvP marker missing'
             echo 'PvP response headers:'
-            sed -n '1,30p' "$pvp_headers"
+            sed -n '1,50p' "$pvp_headers"
             echo 'PvP body prefix:'
             head -c 1200 "$pvp_body"; echo
             exit 1
@@ -45,7 +45,7 @@ jobs:
           if ! grep -q '新キャラ情報掲示板' "$board_body"; then
             echo 'FAIL: board title missing from SSR HTML'
             echo 'Board response headers:'
-            sed -n '1,30p' "$board_headers"
+            sed -n '1,50p' "$board_headers"
             echo 'Board body prefix:'
             head -c 1200 "$board_body"; echo
             exit 1
@@ -64,9 +64,9 @@ jobs:
           while IFS= read -r asset; do
             [ -z "$asset" ] && continue
             h="$(mktemp)"; b="$(mktemp)"
-            curl --fail --silent --show-error -D "$h" -o "$b" "$BASE$asset" || { echo "FAIL: asset request failed: $asset"; exit 1; }
+            curl --location --fail --silent --show-error -D "$h" -o "$b" "$BASE$asset" || { echo "FAIL: asset request failed: $asset"; exit 1; }
             [ -s "$b" ] || { echo "FAIL: empty asset: $asset"; exit 1; }
-            ctype="$(grep -i '^content-type:' "$h" | head -1 | tr -d '\r' || true)"
+            ctype="$(grep -i '^content-type:' "$h" | tail -1 | tr -d '\r' || true)"
             echo "OK: $asset :: ${ctype:-content-type-missing}"
             grep -qi '^content-type:.*text/html' "$h" && { echo "FAIL: browser asset served as HTML: $asset"; exit 1; }
           done <<< "$refs"
