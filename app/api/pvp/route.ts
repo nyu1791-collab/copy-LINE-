@@ -76,7 +76,7 @@ function compactSnapshot(raw:unknown,month:string,topic:{id:string;name:string;i
  if(occurrenceCount===null||playerCount===null||playerCount>occurrenceCount||adoptionRate===null||slotRate===null)return null;
  const qualityObject=root.collection_quality&&typeof root.collection_quality==='object'&&!Array.isArray(root.collection_quality)?root.collection_quality as JsonRecord:null;
  const collectionQuality=optionalCoverage(qualityObject?.sample_coverage);if(qualityObject?.sample_coverage!==undefined&&collectionQuality===null)return null;
- const rowIndex=characters.findIndex(item=>item===record);const explicitRank=strictInteger(record.rank,1,Math.max(characters.length,1));const rank=explicitRank??(rowIndex>=0?rowIndex+1:0);
+ const rowIndex=characters.findIndex(item=>item===record);const explicitRank=strictInteger(record.rank,1,10000);const rank=explicitRank??(rowIndex>=0?rowIndex+1:0);
  const equipmentRankings=compactEquipment(record.equipment_rankings);if(equipmentRankings===null)return null;
  return {status:'fresh',source:'pvp_character_usage',month,character:{unitCode:topic.id,name:topic.name,image:safeHttpsImage(record.image)||topic.image,rank,occurrenceCount,playerCount,adoptionRate,slotRate,equipmentRankings},snapshot:{updatedAt,targetPlayers,sampledPlayers,completeTarget:true,collectionQuality}};
 }
