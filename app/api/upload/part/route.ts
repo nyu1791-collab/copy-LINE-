@@ -25,7 +25,7 @@ export async function PUT(request:Request){try{
  try{
   const forwarding=monitored.stream.pipeTo(fixed.writable);const [uploaded]=await Promise.all([upload.uploadPart(part,fixed.readable),forwarding]);
   if(part===1&&!headerMatches(session.media_type,monitored.getPrefix()))throw new Error('invalid_media');
-  const now=Date.now();await db.prepare('INSERT INTO upload_parts(session,part_number,etag,size,created) VALUES(?,?,?,?,?) ON CONFLICT(session,part_number) DO UPDATE SET etag=excluded.etag,size=excluded.size,created=excluded.created').bind(id,part,uploaded.etag,monitored.getSize(),now).run();await db.prepare('UPDATE upload_sessions SET updated=? WHERE id=? AND status=\\'uploading\\'').bind(now,id).run();
+  const now=Date.now();await db.prepare('INSERT INTO upload_parts(session,part_number,etag,size,created) VALUES(?,?,?,?,?) ON CONFLICT(session,part_number) DO UPDATE SET etag=excluded.etag,size=excluded.size,created=excluded.created').bind(id,part,uploaded.etag,monitored.getSize(),now).run();await db.prepare('UPDATE upload_sessions SET updated=? WHERE id=? AND status=\'uploading\'').bind(now,id).run();
  }catch(e){
   // Deterministic validation failures must not leave an R2 multipart upload
   // writable or waiting for the daily garbage-collector. Transport failures
