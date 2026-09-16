@@ -147,4 +147,24 @@ jobs:
             exit 1
           fi
 
+          board_assets="$({ printf '%s' "$board" | grep -oE '(href|src)="[^"]+\.(css|js)(\?[^"]*)?"' | sed -E 's/^(href|src)="([^"]+)"/\2/' | grep '^/' | sort -u; } || true)"
+          if [ -z "$board_assets" ]; then
+            echo "Board HTML did not expose any same-origin browser CSS/JS assets."
+            exit 1
+          fi
+          while IFS= read -r asset; do
+            [ -z "$asset" ] && continue
+            asset_headers="$(mktemp)"
+            asset_body="$(mktemp)"
+            curl --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 5 --retry-delay 2 -D "$asset_headers" -o "$asset_body" "$REVIEW_BASE_URL$asset"
+            if [ ! -s "$asset_body" ]; then
+              echo "Board browser asset is empty: $asset"
+              exit 1
+            fi
+            if grep -qi '^content-type:.*text/html' "$asset_headers"; then
+              echo "Board browser asset was incorrectly served as HTML: $asset"
+              exit 1
+            fi
+          done <<< "$board_assets"
+
           echo "Cloudflare review verified: $REVIEW_BASE_URL"
