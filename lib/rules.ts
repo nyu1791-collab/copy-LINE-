@@ -101,7 +101,7 @@ const bootstrapConfirmedTopics:readonly CharacterTopic[]=Object.freeze([Object.f
  confirmed:true,
  source:'manual' as const,
 })]);
-const registryModule=communityCharacterRegistryModule as unknown as {default?:{characters?:unknown},characters?:unknown};
+const registryModule=((communityCharacterRegistryModule as unknown)??{}) as {default?:{characters?:unknown},characters?:unknown};
 const importedRegistry=registryModule.default??registryModule;
 const importedRows=Array.isArray(importedRegistry.characters)?importedRegistry.characters:null;
 const registryRows=importedRows??bootstrapConfirmedTopics;
