@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "updated_at": "2026-09-16T04:12:09.827Z",
+  "updated_at": "2026-09-16T04:53:00.574Z",
   "source": {
     "name": "LINE Rangers Handbook PvP Tracker",
     "url": "https://rangers.lerico.net/ja/pvp-tracker"
@@ -14,11 +14,11 @@
   "collection_quality": {
     "sample_coverage": 100,
     "equipment_slots_expected": 5922,
-    "equipment_slots_missing": 11,
+    "equipment_slots_missing": 10,
     "detail_fetch_failures": 0,
     "invalid_player_records": 0,
-    "collection_started_at": "2026-09-16T04:11:56.700Z",
-    "collection_duration_seconds": 13.14
+    "collection_started_at": "2026-09-16T04:52:45.751Z",
+    "collection_duration_seconds": 14.83
   },
   "characters": [
     {
@@ -1824,14 +1824,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -1854,34 +1854,34 @@
       "unit_code": "u1535e-brown",
       "name": "ブラウン",
       "image": "https://rangers.lerico.net/res/u1535e-brown/u1535e-brown-thum.png",
-      "occurrence_count": 192,
-      "player_count": 192,
-      "adoption_rate": 96,
-      "slot_rate": 9.73,
+      "occurrence_count": 193,
+      "player_count": 193,
+      "adoption_rate": 96.5,
+      "slot_rate": 9.78,
       "equipment_rankings": {
         "WEAPON": {
-          "equipped_occurrence_count": 191,
-          "equipped_player_count": 191,
+          "equipped_occurrence_count": 193,
+          "equipped_player_count": 193,
           "items": [
             {
               "item_code": "eq_2507_wpn_08",
               "image": "https://rangers.lerico.net/res/eq_2507_wpn_08/eq_2507_wpn_08-icon.png",
-              "occurrence_count": 140,
-              "player_count": 140,
-              "adoption_rate": 72.9,
+              "occurrence_count": 141,
+              "player_count": 141,
+              "adoption_rate": 73.1,
               "rank": 1,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -1902,22 +1902,22 @@
             {
               "item_code": "eq_2212_wpn_07",
               "image": "https://rangers.lerico.net/res/eq_2212_wpn_07/eq_2212_wpn_07-icon.png",
-              "occurrence_count": 41,
-              "player_count": 41,
-              "adoption_rate": 21.4,
+              "occurrence_count": 42,
+              "player_count": 42,
+              "adoption_rate": 21.8,
               "rank": 2,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": -1,
+                    "occurrence_count": 0,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -2154,15 +2154,15 @@
           ]
         },
         "ARMOR": {
-          "equipped_occurrence_count": 191,
-          "equipped_player_count": 191,
+          "equipped_occurrence_count": 192,
+          "equipped_player_count": 192,
           "items": [
             {
               "item_code": "eq_amr_evt_138",
               "image": "https://rangers.lerico.net/res/eq_amr_evt_138/eq_amr_evt_138-icon.png",
               "occurrence_count": 60,
               "player_count": 60,
-              "adoption_rate": 31.3,
+              "adoption_rate": 31.1,
               "rank": 1,
               "change": {
                 "periods": {
@@ -2196,22 +2196,22 @@
             {
               "item_code": "eq_2607_amr_19",
               "image": "https://rangers.lerico.net/res/eq_2607_amr_19/eq_2607_amr_19-icon.png",
-              "occurrence_count": 50,
-              "player_count": 50,
-              "adoption_rate": 26,
+              "occurrence_count": 51,
+              "player_count": 51,
+              "adoption_rate": 26.4,
               "rank": 2,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -2234,7 +2234,7 @@
               "image": "https://rangers.lerico.net/res/eq_2510_amr_08/eq_2510_amr_08-icon.png",
               "occurrence_count": 42,
               "player_count": 42,
-              "adoption_rate": 21.9,
+              "adoption_rate": 21.8,
               "rank": 3,
               "change": {
                 "periods": {
@@ -2270,7 +2270,7 @@
               "image": "https://rangers.lerico.net/res/eq_amr_evt_117/eq_amr_evt_117-icon.png",
               "occurrence_count": 29,
               "player_count": 29,
-              "adoption_rate": 15.1,
+              "adoption_rate": 15,
               "rank": 4,
               "change": {
                 "periods": {
@@ -2448,15 +2448,15 @@
           ]
         },
         "ACC": {
-          "equipped_occurrence_count": 192,
-          "equipped_player_count": 192,
+          "equipped_occurrence_count": 193,
+          "equipped_player_count": 193,
           "items": [
             {
               "item_code": "eq_acc_evt_037",
               "image": "https://rangers.lerico.net/res/eq_acc_evt_037/eq_acc_evt_037-icon.png",
               "occurrence_count": 72,
               "player_count": 72,
-              "adoption_rate": 37.5,
+              "adoption_rate": 37.3,
               "rank": 1,
               "change": {
                 "periods": {
@@ -2492,7 +2492,7 @@
               "image": "https://rangers.lerico.net/res/eq_2606_acc_08/eq_2606_acc_08-icon.png",
               "occurrence_count": 51,
               "player_count": 51,
-              "adoption_rate": 26.6,
+              "adoption_rate": 26.4,
               "rank": 2,
               "change": {
                 "periods": {
@@ -2526,22 +2526,22 @@
             {
               "item_code": "eq_acc_evt_08",
               "image": "https://rangers.lerico.net/res/eq_acc_evt_08/eq_acc_evt_08-icon.png",
-              "occurrence_count": 32,
-              "player_count": 32,
-              "adoption_rate": 16.7,
+              "occurrence_count": 33,
+              "player_count": 33,
+              "adoption_rate": 17.1,
               "rank": 3,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -2564,7 +2564,7 @@
               "image": "https://rangers.lerico.net/res/eq_2609_acc_29/eq_2609_acc_29-icon.png",
               "occurrence_count": 29,
               "player_count": 29,
-              "adoption_rate": 15.1,
+              "adoption_rate": 15,
               "rank": 4,
               "change": {
                 "periods": {
@@ -2715,16 +2715,16 @@
           "hour": {
             "comparable": true,
             "rank": 0,
-            "occurrence_count": 0,
+            "occurrence_count": 1,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
-            "occurrence_count": 1,
+            "occurrence_count": 2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -3718,14 +3718,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": -2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -5007,14 +5007,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -5037,21 +5037,21 @@
       "unit_code": "u1518e-ron",
       "name": "ロン",
       "image": "https://rangers.lerico.net/res/u1518e-ron/u1518e-ron-thum.png",
-      "occurrence_count": 153,
-      "player_count": 153,
-      "adoption_rate": 76.5,
-      "slot_rate": 7.75,
+      "occurrence_count": 154,
+      "player_count": 154,
+      "adoption_rate": 77,
+      "slot_rate": 7.8,
       "equipment_rankings": {
         "WEAPON": {
-          "equipped_occurrence_count": 153,
-          "equipped_player_count": 153,
+          "equipped_occurrence_count": 154,
+          "equipped_player_count": 154,
           "items": [
             {
               "item_code": "eq_2602_wpn_28",
               "image": "https://rangers.lerico.net/res/eq_2602_wpn_28/eq_2602_wpn_28-icon.png",
               "occurrence_count": 65,
               "player_count": 65,
-              "adoption_rate": 42.5,
+              "adoption_rate": 42.2,
               "rank": 1,
               "change": {
                 "periods": {
@@ -5085,22 +5085,22 @@
             {
               "item_code": "eq_2408_wpn_08",
               "image": "https://rangers.lerico.net/res/eq_2408_wpn_08/eq_2408_wpn_08-icon.png",
-              "occurrence_count": 21,
-              "player_count": 21,
-              "adoption_rate": 13.7,
+              "occurrence_count": 22,
+              "player_count": 22,
+              "adoption_rate": 14.3,
               "rank": 2,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": -1,
+                    "occurrence_count": 0,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -5123,7 +5123,7 @@
               "image": "https://rangers.lerico.net/res/eq_2401_wpn_08/eq_2401_wpn_08-icon.png",
               "occurrence_count": 20,
               "player_count": 20,
-              "adoption_rate": 13.1,
+              "adoption_rate": 13,
               "rank": 3,
               "change": {
                 "periods": {
@@ -5159,7 +5159,7 @@
               "image": "https://rangers.lerico.net/res/eq_2508_wpn_28/eq_2508_wpn_28-icon.png",
               "occurrence_count": 17,
               "player_count": 17,
-              "adoption_rate": 11.1,
+              "adoption_rate": 11,
               "rank": 4,
               "change": {
                 "periods": {
@@ -5195,7 +5195,7 @@
               "image": "https://rangers.lerico.net/res/eq_2607_wpn_09/eq_2607_wpn_09-icon.png",
               "occurrence_count": 16,
               "player_count": 16,
-              "adoption_rate": 10.5,
+              "adoption_rate": 10.4,
               "rank": 5,
               "change": {
                 "periods": {
@@ -5303,7 +5303,7 @@
               "image": "https://rangers.lerico.net/res/eq_2403_wpn_08/eq_2403_wpn_08-icon.png",
               "occurrence_count": 1,
               "player_count": 1,
-              "adoption_rate": 0.7,
+              "adoption_rate": 0.6,
               "rank": 8,
               "change": {
                 "periods": {
@@ -5339,7 +5339,7 @@
               "image": "https://rangers.lerico.net/res/eq_2609_wpn_09/eq_2609_wpn_09-icon.png",
               "occurrence_count": 1,
               "player_count": 1,
-              "adoption_rate": 0.7,
+              "adoption_rate": 0.6,
               "rank": 8,
               "change": {
                 "periods": {
@@ -5375,7 +5375,7 @@
               "image": "https://rangers.lerico.net/res/eq_wpn_est_027/eq_wpn_est_027-icon.png",
               "occurrence_count": 1,
               "player_count": 1,
-              "adoption_rate": 0.7,
+              "adoption_rate": 0.6,
               "rank": 8,
               "change": {
                 "periods": {
@@ -5411,7 +5411,7 @@
               "image": "https://rangers.lerico.net/res/eq_wpn_evt_057/eq_wpn_evt_057-icon.png",
               "occurrence_count": 1,
               "player_count": 1,
-              "adoption_rate": 0.7,
+              "adoption_rate": 0.6,
               "rank": 8,
               "change": {
                 "periods": {
@@ -5445,15 +5445,15 @@
           ]
         },
         "ARMOR": {
-          "equipped_occurrence_count": 153,
-          "equipped_player_count": 153,
+          "equipped_occurrence_count": 154,
+          "equipped_player_count": 154,
           "items": [
             {
               "item_code": "eq_2504_amr_08",
               "image": "https://rangers.lerico.net/res/eq_2504_amr_08/eq_2504_amr_08-icon.png",
               "occurrence_count": 86,
               "player_count": 86,
-              "adoption_rate": 56.2,
+              "adoption_rate": 55.8,
               "rank": 1,
               "change": {
                 "periods": {
@@ -5489,7 +5489,7 @@
               "image": "https://rangers.lerico.net/res/eq_2510_amr_08/eq_2510_amr_08-icon.png",
               "occurrence_count": 38,
               "player_count": 38,
-              "adoption_rate": 24.8,
+              "adoption_rate": 24.7,
               "rank": 2,
               "change": {
                 "periods": {
@@ -5523,22 +5523,22 @@
             {
               "item_code": "eq_amr_est_007",
               "image": "https://rangers.lerico.net/res/eq_amr_est_007/eq_amr_est_007-icon.png",
-              "occurrence_count": 9,
-              "player_count": 9,
-              "adoption_rate": 5.9,
+              "occurrence_count": 10,
+              "player_count": 10,
+              "adoption_rate": 6.5,
               "rank": 3,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": -1,
+                    "occurrence_count": 0,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -5669,7 +5669,7 @@
               "image": "https://rangers.lerico.net/res/eq_2410_amr_28/eq_2410_amr_28-icon.png",
               "occurrence_count": 1,
               "player_count": 1,
-              "adoption_rate": 0.7,
+              "adoption_rate": 0.6,
               "rank": 7,
               "change": {
                 "periods": {
@@ -5705,7 +5705,7 @@
               "image": "https://rangers.lerico.net/res/eq_2504_amr_28/eq_2504_amr_28-icon.png",
               "occurrence_count": 1,
               "player_count": 1,
-              "adoption_rate": 0.7,
+              "adoption_rate": 0.6,
               "rank": 7,
               "change": {
                 "periods": {
@@ -5741,7 +5741,7 @@
               "image": "https://rangers.lerico.net/res/eq_2506_amr_17/eq_2506_amr_17-icon.png",
               "occurrence_count": 1,
               "player_count": 1,
-              "adoption_rate": 0.7,
+              "adoption_rate": 0.6,
               "rank": 7,
               "change": {
                 "periods": {
@@ -5777,7 +5777,7 @@
               "image": "https://rangers.lerico.net/res/eq_2604_amr_18/eq_2604_amr_18-icon.png",
               "occurrence_count": 1,
               "player_count": 1,
-              "adoption_rate": 0.7,
+              "adoption_rate": 0.6,
               "rank": 7,
               "change": {
                 "periods": {
@@ -5813,7 +5813,7 @@
               "image": "https://rangers.lerico.net/res/eq_2607_amr_19/eq_2607_amr_19-icon.png",
               "occurrence_count": 1,
               "player_count": 1,
-              "adoption_rate": 0.7,
+              "adoption_rate": 0.6,
               "rank": 7,
               "change": {
                 "periods": {
@@ -5849,7 +5849,7 @@
               "image": "https://rangers.lerico.net/res/eq_amr_est_0072/eq_amr_est_0072-icon.png",
               "occurrence_count": 1,
               "player_count": 1,
-              "adoption_rate": 0.7,
+              "adoption_rate": 0.6,
               "rank": 7,
               "change": {
                 "periods": {
@@ -5883,28 +5883,28 @@
           ]
         },
         "ACC": {
-          "equipped_occurrence_count": 153,
-          "equipped_player_count": 153,
+          "equipped_occurrence_count": 154,
+          "equipped_player_count": 154,
           "items": [
             {
               "item_code": "eq_2407_acc_08",
               "image": "https://rangers.lerico.net/res/eq_2407_acc_08/eq_2407_acc_08-icon.png",
-              "occurrence_count": 138,
-              "player_count": 138,
-              "adoption_rate": 90.2,
+              "occurrence_count": 139,
+              "player_count": 139,
+              "adoption_rate": 90.3,
               "rank": 1,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": -2,
+                    "occurrence_count": -1,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -5927,7 +5927,7 @@
               "image": "https://rangers.lerico.net/res/eq_2606_acc_08/eq_2606_acc_08-icon.png",
               "occurrence_count": 7,
               "player_count": 7,
-              "adoption_rate": 4.6,
+              "adoption_rate": 4.5,
               "rank": 2,
               "change": {
                 "periods": {
@@ -6042,16 +6042,16 @@
           "hour": {
             "comparable": true,
             "rank": 0,
-            "occurrence_count": 0,
+            "occurrence_count": 1,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
-            "occurrence_count": -2,
+            "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -6074,34 +6074,34 @@
       "unit_code": "u1550e-moon",
       "name": "ムーン",
       "image": "https://rangers.lerico.net/res/u1550e-moon/u1550e-moon-thum.png",
-      "occurrence_count": 146,
-      "player_count": 146,
-      "adoption_rate": 73,
-      "slot_rate": 7.4,
+      "occurrence_count": 145,
+      "player_count": 145,
+      "adoption_rate": 72.5,
+      "slot_rate": 7.35,
       "equipment_rankings": {
         "WEAPON": {
-          "equipped_occurrence_count": 146,
-          "equipped_player_count": 146,
+          "equipped_occurrence_count": 145,
+          "equipped_player_count": 145,
           "items": [
             {
               "item_code": "eq_2608_wpn_09",
               "image": "https://rangers.lerico.net/res/eq_2608_wpn_09/eq_2608_wpn_09-icon.png",
-              "occurrence_count": 120,
-              "player_count": 120,
-              "adoption_rate": 82.2,
+              "occurrence_count": 119,
+              "player_count": 119,
+              "adoption_rate": 82.1,
               "rank": 1,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": -1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 2,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -6124,7 +6124,7 @@
               "image": "https://rangers.lerico.net/res/eq_2305_wpn_08/eq_2305_wpn_08-icon.png",
               "occurrence_count": 12,
               "player_count": 12,
-              "adoption_rate": 8.2,
+              "adoption_rate": 8.3,
               "rank": 2,
               "change": {
                 "periods": {
@@ -6374,15 +6374,15 @@
           ]
         },
         "ARMOR": {
-          "equipped_occurrence_count": 146,
-          "equipped_player_count": 146,
+          "equipped_occurrence_count": 145,
+          "equipped_player_count": 145,
           "items": [
             {
               "item_code": "eq_2604_amr_28",
               "image": "https://rangers.lerico.net/res/eq_2604_amr_28/eq_2604_amr_28-icon.png",
               "occurrence_count": 98,
               "player_count": 98,
-              "adoption_rate": 67.1,
+              "adoption_rate": 67.6,
               "rank": 1,
               "change": {
                 "periods": {
@@ -6416,22 +6416,22 @@
             {
               "item_code": "eq_2609_amr_19",
               "image": "https://rangers.lerico.net/res/eq_2609_amr_19/eq_2609_amr_19-icon.png",
-              "occurrence_count": 31,
-              "player_count": 31,
-              "adoption_rate": 21.2,
+              "occurrence_count": 30,
+              "player_count": 30,
+              "adoption_rate": 20.7,
               "rank": 2,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": -1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 2,
+                    "occurrence_count": 1,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -6668,28 +6668,28 @@
           ]
         },
         "ACC": {
-          "equipped_occurrence_count": 146,
-          "equipped_player_count": 146,
+          "equipped_occurrence_count": 145,
+          "equipped_player_count": 145,
           "items": [
             {
               "item_code": "eq_2412_acc_18",
               "image": "https://rangers.lerico.net/res/eq_2412_acc_18/eq_2412_acc_18-icon.png",
-              "occurrence_count": 49,
-              "player_count": 49,
-              "adoption_rate": 33.6,
+              "occurrence_count": 48,
+              "player_count": 48,
+              "adoption_rate": 33.1,
               "rank": 1,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": -1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 3,
+                    "occurrence_count": 2,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -6712,7 +6712,7 @@
               "image": "https://rangers.lerico.net/res/eq_2403_acc_08/eq_2403_acc_08-icon.png",
               "occurrence_count": 36,
               "player_count": 36,
-              "adoption_rate": 24.7,
+              "adoption_rate": 24.8,
               "rank": 2,
               "change": {
                 "periods": {
@@ -6748,7 +6748,7 @@
               "image": "https://rangers.lerico.net/res/eq_2607_acc_29/eq_2607_acc_29-icon.png",
               "occurrence_count": 18,
               "player_count": 18,
-              "adoption_rate": 12.3,
+              "adoption_rate": 12.4,
               "rank": 3,
               "change": {
                 "periods": {
@@ -7007,16 +7007,16 @@
           "hour": {
             "comparable": true,
             "rank": 0,
-            "occurrence_count": 0,
+            "occurrence_count": -1,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
-            "occurrence_count": 2,
+            "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -8406,14 +8406,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -9443,14 +9443,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -10876,14 +10876,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -12093,14 +12093,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -12770,14 +12770,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -12800,34 +12800,34 @@
       "unit_code": "u1631e-sally",
       "name": "サリー",
       "image": "https://rangers.lerico.net/res/u1631e-sally/u1631e-sally-thum.png",
-      "occurrence_count": 63,
-      "player_count": 63,
-      "adoption_rate": 31.5,
-      "slot_rate": 3.19,
+      "occurrence_count": 62,
+      "player_count": 62,
+      "adoption_rate": 31,
+      "slot_rate": 3.14,
       "equipment_rankings": {
         "WEAPON": {
-          "equipped_occurrence_count": 63,
-          "equipped_player_count": 63,
+          "equipped_occurrence_count": 62,
+          "equipped_player_count": 62,
           "items": [
             {
               "item_code": "eq_2508_wpn_28",
               "image": "https://rangers.lerico.net/res/eq_2508_wpn_28/eq_2508_wpn_28-icon.png",
-              "occurrence_count": 26,
-              "player_count": 26,
-              "adoption_rate": 41.3,
+              "occurrence_count": 25,
+              "player_count": 25,
+              "adoption_rate": 40.3,
               "rank": 1,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": -1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 1,
+                    "occurrence_count": 0,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -12850,7 +12850,7 @@
               "image": "https://rangers.lerico.net/res/eq_2609_wpn_09/eq_2609_wpn_09-icon.png",
               "occurrence_count": 21,
               "player_count": 21,
-              "adoption_rate": 33.3,
+              "adoption_rate": 33.9,
               "rank": 2,
               "change": {
                 "periods": {
@@ -13208,28 +13208,28 @@
           ]
         },
         "ARMOR": {
-          "equipped_occurrence_count": 63,
-          "equipped_player_count": 63,
+          "equipped_occurrence_count": 62,
+          "equipped_player_count": 62,
           "items": [
             {
               "item_code": "eq_2504_amr_08",
               "image": "https://rangers.lerico.net/res/eq_2504_amr_08/eq_2504_amr_08-icon.png",
-              "occurrence_count": 37,
-              "player_count": 37,
-              "adoption_rate": 58.7,
+              "occurrence_count": 36,
+              "player_count": 36,
+              "adoption_rate": 58.1,
               "rank": 1,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": -1,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
                     "rank": 0,
-                    "occurrence_count": 0,
+                    "occurrence_count": -1,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -13252,7 +13252,7 @@
               "image": "https://rangers.lerico.net/res/eq_2510_amr_08/eq_2510_amr_08-icon.png",
               "occurrence_count": 10,
               "player_count": 10,
-              "adoption_rate": 15.9,
+              "adoption_rate": 16.1,
               "rank": 2,
               "change": {
                 "periods": {
@@ -13288,7 +13288,7 @@
               "image": "https://rangers.lerico.net/res/eq_2309_amr_18/eq_2309_amr_18-icon.png",
               "occurrence_count": 4,
               "player_count": 4,
-              "adoption_rate": 6.3,
+              "adoption_rate": 6.5,
               "rank": 3,
               "change": {
                 "periods": {
@@ -13574,15 +13574,15 @@
           ]
         },
         "ACC": {
-          "equipped_occurrence_count": 63,
-          "equipped_player_count": 63,
+          "equipped_occurrence_count": 62,
+          "equipped_player_count": 62,
           "items": [
             {
               "item_code": "eq_2601_acc_08",
               "image": "https://rangers.lerico.net/res/eq_2601_acc_08/eq_2601_acc_08-icon.png",
               "occurrence_count": 24,
               "player_count": 24,
-              "adoption_rate": 38.1,
+              "adoption_rate": 38.7,
               "rank": 1,
               "change": {
                 "periods": {
@@ -13618,7 +13618,43 @@
               "image": "https://rangers.lerico.net/res/eq_2506_acc_08/eq_2506_acc_08-icon.png",
               "occurrence_count": 9,
               "player_count": 9,
-              "adoption_rate": 14.3,
+              "adoption_rate": 14.5,
+              "rank": 2,
+              "change": {
+                "periods": {
+                  "hour": {
+                    "comparable": true,
+                    "rank": 0,
+                    "occurrence_count": 0,
+                    "from_updated_at": "2026-09-16T04:00:14.815Z"
+                  },
+                  "day": {
+                    "comparable": true,
+                    "rank": 1,
+                    "occurrence_count": 1,
+                    "from_updated_at": "2026-09-15T14:58:44.538Z"
+                  },
+                  "week": {
+                    "comparable": false,
+                    "rank": 0,
+                    "occurrence_count": 0,
+                    "from_updated_at": null
+                  },
+                  "month": {
+                    "comparable": false,
+                    "rank": 0,
+                    "occurrence_count": 0,
+                    "from_updated_at": null
+                  }
+                }
+              }
+            },
+            {
+              "item_code": "eq_acc_evt_138",
+              "image": "https://rangers.lerico.net/res/eq_acc_evt_138/eq_acc_evt_138-icon.png",
+              "occurrence_count": 9,
+              "player_count": 9,
+              "adoption_rate": 14.5,
               "rank": 2,
               "change": {
                 "periods": {
@@ -13652,58 +13688,22 @@
             {
               "item_code": "eq_2603_acc_28",
               "image": "https://rangers.lerico.net/res/eq_2603_acc_28/eq_2603_acc_28-icon.png",
-              "occurrence_count": 9,
-              "player_count": 9,
-              "adoption_rate": 14.3,
-              "rank": 2,
+              "occurrence_count": 8,
+              "player_count": 8,
+              "adoption_rate": 12.9,
+              "rank": 4,
               "change": {
                 "periods": {
                   "hour": {
                     "comparable": true,
-                    "rank": 0,
-                    "occurrence_count": 0,
-                    "from_updated_at": "2026-09-16T04:00:14.815Z"
-                  },
-                  "day": {
-                    "comparable": true,
-                    "rank": 0,
+                    "rank": -2,
                     "occurrence_count": -1,
-                    "from_updated_at": "2026-09-15T14:58:44.538Z"
-                  },
-                  "week": {
-                    "comparable": false,
-                    "rank": 0,
-                    "occurrence_count": 0,
-                    "from_updated_at": null
-                  },
-                  "month": {
-                    "comparable": false,
-                    "rank": 0,
-                    "occurrence_count": 0,
-                    "from_updated_at": null
-                  }
-                }
-              }
-            },
-            {
-              "item_code": "eq_acc_evt_138",
-              "image": "https://rangers.lerico.net/res/eq_acc_evt_138/eq_acc_evt_138-icon.png",
-              "occurrence_count": 9,
-              "player_count": 9,
-              "adoption_rate": 14.3,
-              "rank": 2,
-              "change": {
-                "periods": {
-                  "hour": {
-                    "comparable": true,
-                    "rank": 0,
-                    "occurrence_count": 0,
                     "from_updated_at": "2026-09-16T04:00:14.815Z"
                   },
                   "day": {
                     "comparable": true,
-                    "rank": 1,
-                    "occurrence_count": 1,
+                    "rank": -2,
+                    "occurrence_count": -2,
                     "from_updated_at": "2026-09-15T14:58:44.538Z"
                   },
                   "week": {
@@ -13726,7 +13726,7 @@
               "image": "https://rangers.lerico.net/res/eq_2606_acc_08/eq_2606_acc_08-icon.png",
               "occurrence_count": 5,
               "player_count": 5,
-              "adoption_rate": 7.9,
+              "adoption_rate": 8.1,
               "rank": 5,
               "change": {
                 "periods": {
@@ -13762,7 +13762,7 @@
               "image": "https://rangers.lerico.net/res/eq_acc_evt_067/eq_acc_evt_067-icon.png",
               "occurrence_count": 4,
               "player_count": 4,
-              "adoption_rate": 6.3,
+              "adoption_rate": 6.5,
               "rank": 6,
               "change": {
                 "periods": {
@@ -13913,16 +13913,16 @@
           "hour": {
             "comparable": true,
             "rank": 0,
-            "occurrence_count": 0,
+            "occurrence_count": -1,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
-            "occurrence_count": 1,
+            "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -14484,14 +14484,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -15593,14 +15593,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -16522,14 +16522,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -17019,14 +17019,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -17804,14 +17804,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": -2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -18589,14 +18589,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -18978,14 +18978,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -19583,14 +19583,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -20116,14 +20116,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 1,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -20685,14 +20685,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 4,
             "occurrence_count": 2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -21182,14 +21182,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 3,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -21823,14 +21823,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -22428,14 +22428,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -22889,14 +22889,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -5,
             "occurrence_count": -2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -23386,14 +23386,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -23739,14 +23739,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -3,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -24128,14 +24128,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -24553,14 +24553,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -25158,14 +25158,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -25619,14 +25619,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -26116,14 +26116,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 3,
             "occurrence_count": 2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -26577,14 +26577,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -26894,14 +26894,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -2,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -27175,14 +27175,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -27420,7 +27420,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": false,
@@ -27665,14 +27665,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -27946,14 +27946,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -28227,14 +28227,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -28508,14 +28508,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -28717,14 +28717,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -28998,14 +28998,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -29243,14 +29243,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -29524,14 +29524,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -29697,14 +29697,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -29870,14 +29870,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -29932,14 +29932,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -30105,14 +30105,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -30278,14 +30278,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -30451,14 +30451,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -30624,14 +30624,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -30797,14 +30797,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -30970,14 +30970,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
@@ -31032,14 +31032,14 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T04:00:14.815Z",
-            "interval_minutes": 11.9
+            "interval_minutes": 52.8
           },
           "day": {
             "comparable": true,
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 793.4
+            "interval_minutes": 834.3
           },
           "week": {
             "comparable": false,
