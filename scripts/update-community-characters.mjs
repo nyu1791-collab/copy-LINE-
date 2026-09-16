@@ -5,6 +5,7 @@ import {pathToFileURL} from 'node:url';
 const SNAPSHOT=resolve('public/pvp/data/character_usage.json');
 const HISTORY=resolve('public/pvp/data/character_usage_history.json');
 const REGISTRY=resolve('config/community-characters.json');
+const LEGACY_KNOWN=resolve('config/community-known-legacy-ids.json');
 const STATE=resolve('data/community-character-discovery.json');
 const TARGET=200;
 const REQUIRED_CONSECUTIVE=3;
@@ -18,6 +19,7 @@ function monthJST(value){const date=new Date(value);if(!Number.isFinite(date.get
 function safeImage(value,id){if(typeof value!=='string')return null;try{const url=new URL(value);if(url.protocol!=='https:'||url.hostname!==IMAGE_HOST)return null;if(!url.pathname.includes(`/${id}/`))return null;return url.toString();}catch{return null;}}
 function currentRows(snapshot){if(!snapshot||snapshot.complete_target!==true||snapshot.target_players!==TARGET||snapshot.sampled_players!==TARGET||!Array.isArray(snapshot.characters))throw new Error('refusing incomplete PvP snapshot');return snapshot.characters.filter(row=>row&&typeof row==='object'&&typeof row.unit_code==='string');}
 function historyIds(history){const output=new Set();for(const snapshot of Array.isArray(history?.snapshots)?history.snapshots:[]){for(const row of Array.isArray(snapshot?.characters)?snapshot.characters:[]){if(row&&typeof row.unit_code==='string')output.add(row.unit_code);}}return output;}
+function knownLegacyIds(raw){return new Set((Array.isArray(raw?.ids)?raw.ids:[]).filter(id=>typeof id==='string'&&/^u\d+[a-z]?-[a-z0-9_-]+$/i.test(id)));}
 function normalizeRegistry(raw){const rows=Array.isArray(raw?.characters)?raw.characters:[];const seen=new Set();const clean=[];for(const row of rows){if(!row||typeof row!=='object'||typeof row.id!=='string'||typeof row.name!=='string'||typeof row.image!=='string'||typeof row.releaseMonth!=='string'||row.confirmed!==true)continue;const key=`${row.releaseMonth}:${row.id}`;if(seen.has(key))continue;seen.add(key);clean.push({...row});}return {schemaVersion:1,characters:clean};}
 function candidateName(row){const value=typeof row.name==='string'?row.name.normalize('NFC').replace(/\s+/g,' ').trim():'';return value&&value!==row.unit_code&&[...value].length<=80?value:null;}
 function snapshotRank(row){return Number.isSafeInteger(row.rank)&&row.rank>0?row.rank:null;}
@@ -25,12 +27,15 @@ function adoptionRate(row){return typeof row.adoption_rate==='number'&&Number.is
 
 export async function probeImage(url,fetchImpl=fetch){try{const response=await fetchImpl(url,{headers:{Range:'bytes=0-31','User-Agent':'line-rangers-community-discovery/1.0'},redirect:'error',signal:AbortSignal.timeout(6000)});const type=response.headers.get('content-type')||'';await response.body?.cancel();return (response.ok||response.status===206)&&type.toLowerCase().startsWith('image/');}catch{return false;}}
 
-export async function updateCommunityCharacters({snapshot,history,registry,state,probe=probeImage}={}){
- const currentSnapshot=snapshot??await readJson(SNAPSHOT,null);const oldHistory=history??await readJson(HISTORY,{snapshots:[]});const currentRegistry=normalizeRegistry(registry??await readJson(REGISTRY,{schemaVersion:1,characters:[]}));const currentState=state??await readJson(STATE,{schemaVersion:1,initialized:false,initializedAt:null,knownIds:[],candidates:{}});
+export async function updateCommunityCharacters({snapshot,history,registry,state,legacyKnown,probe=probeImage}={}){
+ const currentSnapshot=snapshot??await readJson(SNAPSHOT,null);const oldHistory=history??await readJson(HISTORY,{snapshots:[]});const currentRegistry=normalizeRegistry(registry??await readJson(REGISTRY,{schemaVersion:1,characters:[]}));const legacy=knownLegacyIds(legacyKnown??await readJson(LEGACY_KNOWN,{ids:[]}));const currentState=state??await readJson(STATE,{schemaVersion:1,initialized:false,initializedAt:null,knownIds:[],candidates:{}});
  const rows=currentRows(currentSnapshot);const updatedAt=String(currentSnapshot.updated_at||'');if(!Number.isFinite(Date.parse(updatedAt)))throw new Error('invalid snapshot timestamp');const releaseMonth=monthJST(updatedAt);
  const rowMap=new Map(rows.map(row=>[row.unit_code,row]));const registeredIds=new Set(currentRegistry.characters.map(row=>row.id));
  const nextState={schemaVersion:1,initialized:currentState.initialized===true,initializedAt:currentState.initializedAt||null,lastSnapshotAt:updatedAt,knownIds:Array.isArray(currentState.knownIds)?[...new Set(currentState.knownIds.filter(x=>typeof x==='string'))]:[],candidates:currentState.candidates&&typeof currentState.candidates==='object'&&!Array.isArray(currentState.candidates)?structuredClone(currentState.candidates):{}};
- const known=new Set(nextState.knownIds);for(const id of registeredIds)known.add(id);
+ const known=new Set(nextState.knownIds);for(const id of registeredIds)known.add(id);for(const id of legacy)known.add(id);
+ // If the historical catalog expands later, immediately discard stale
+ // candidates for those IDs instead of allowing a previous streak to promote.
+ for(const id of known)delete nextState.candidates[id];
  if(!nextState.initialized){for(const id of historyIds(oldHistory))known.add(id);for(const row of rows)known.add(row.unit_code);nextState.initialized=true;nextState.initializedAt=updatedAt;nextState.knownIds=[...known].sort();return {registry:currentRegistry,state:nextState,promoted:[],initialized:true};}
  const previousSnapshotAt=typeof currentState.lastSnapshotAt==='string'&&Number.isFinite(Date.parse(currentState.lastSnapshotAt))?currentState.lastSnapshotAt:null;
  const promoted=[];
@@ -40,12 +45,12 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
   let consecutive=Number.isSafeInteger(prior.consecutive)?prior.consecutive:0;let imageVerified=prior.imageVerified===true;
   if(eligible&&!sameSnapshot){if(!imageVerified)imageVerified=await probe(image);if(imageVerified){const followsPrevious=previousSnapshotAt&&prior.lastSeenAt===previousSnapshotAt&&gapOk;consecutive=followsPrevious?consecutive+1:1;}else consecutive=0;}
   const record={id,name:name||String(row.name||id),image:image||String(row.image||''),firstSeenAt:prior.firstSeenAt||updatedAt,firstSeenMonth:prior.firstSeenMonth||releaseMonth,lastSeenAt:updatedAt,consecutive,eligible,imageVerified,pvpRank:snapshotRank(row),adoptionRate:adoptionRate(row)};nextState.candidates[id]=record;
-  if(eligible&&imageVerified&&consecutive>=REQUIRED_CONSECUTIVE&&record.firstSeenMonth===releaseMonth){const topic={id,name, image,releaseMonth,confirmed:true,source:'pvp-auto',confirmedAt:updatedAt,pvpRank:snapshotRank(row),adoptionRate:adoptionRate(row)};currentRegistry.characters.push(topic);registeredIds.add(id);known.add(id);promoted.push(topic);delete nextState.candidates[id];}
+  if(eligible&&imageVerified&&consecutive>=REQUIRED_CONSECUTIVE&&record.firstSeenMonth===releaseMonth){const topic={id,name,image,releaseMonth,confirmed:true,source:'pvp-auto',confirmedAt:updatedAt,pvpRank:snapshotRank(row),adoptionRate:adoptionRate(row)};currentRegistry.characters.push(topic);registeredIds.add(id);known.add(id);promoted.push(topic);delete nextState.candidates[id];}
  }
  // Refresh ordering metadata only for the active month. Missing PvP data becomes
  // null so a confirmed character naturally moves behind characters with data.
  for(const topic of currentRegistry.characters){if(topic.releaseMonth!==releaseMonth)continue;const row=rowMap.get(topic.id);topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}
- currentRegistry.characters.sort((a,b)=>a.releaseMonth.localeCompare(b.releaseMonth)||((a.pvpRank??Number.MAX_SAFE_INTEGER)-(b.pvpRank??Number.MAX_SAFE_INTEGER))||a.id.localeCompare(b.id));
+ currentRegistry.characters.sort((a,b)=>a.releaseMonth.localeCompare(b.releaseMonth)||((a.pvpRank??Number.MAX_SAFE_INTEGER)-(b.pvpRank??Number.MAX_SAFE_INTEGER))||((b.adoptionRate??-1)-(a.adoptionRate??-1))||a.id.localeCompare(b.id));
  nextState.knownIds=[...known].sort();return {registry:currentRegistry,state:nextState,promoted,initialized:false};
 }
 
