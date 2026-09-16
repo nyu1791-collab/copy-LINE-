@@ -4,11 +4,14 @@ name: migrate-original-community-production
 # Worker and isolated original-site D1/R2 resources. Future copy commits do not
 # deploy here unless this workflow is deliberately changed or dispatched.
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/migrate-original-community-production.yml'
+  # This workflow can never run from a normal copy commit. Promotion is an
+  # explicitly authorized, manual operation with a typed confirmation.
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type PROMOTE_COPY_TO_ISOLATED_PRODUCTION to authorize this one-time promotion'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -25,6 +28,8 @@ env:
 
 jobs:
   deploy:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.confirm == 'PROMOTE_COPY_TO_ISOLATED_PRODUCTION' }}
+    environment: original-production-promotion
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
