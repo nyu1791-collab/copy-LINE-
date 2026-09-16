@@ -27,11 +27,12 @@ export async function POST(request:Request){
  if(!origin||origin!==new URL(request.url).origin||h.get('sec-fetch-site')==='cross-site')return Response.json({error:'forbidden'},{status:403,headers:common});
  try{
   // Bound guesses by a privacy-preserving HMAC of Cloudflare's network source,
-  // never by a raw IP. A second coarse global ceiling limits distributed abuse
-  // without letting one address consume the entire Owner login budget.
+  // never by a raw IP. The global ceiling is deliberately much looser than
+  // the per-network ceiling so distributed noise cannot cheaply lock out the
+  // legitimate Owner while still bounding pathological aggregate traffic.
   const network=await abuseNetworkBucket(h);
   if(network)await enforceLimit('owner-net:'+network,10,600);else await enforceLimit('owner-activation',10,600);
-  await enforceLimit('owner-global',60,600);
+  await enforceLimit('owner-global',600,600);
   const key=await readAccessKey(request);
   const activated=await activateOwner(key);
   if(!activated)return Response.json({error:'forbidden'},{status:403,headers:common});
