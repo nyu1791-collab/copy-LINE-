@@ -86,6 +86,7 @@ test('resumable upload routes keep same-origin, expiry, size and completion gate
   assert.match(partSource,/captureAndCount\(request\.body,expected,16\)/);
   assert.match(partSource,/headerMatches\(session\.media_type,monitored\.getPrefix\(\)\)/);
   assert.match(partSource,/await upload\.abort\(\)/);
+  assert.match(partSource,/status='failed'/);assert.match(partSource,/e\.message==='invalid_media'/);
 
   assert.match(completeSource,/rows\.length!==count/);
   assert.match(completeSource,/row\.part_number!==index\+1/);
