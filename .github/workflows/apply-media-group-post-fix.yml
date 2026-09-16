@@ -20,7 +20,7 @@ jobs:
           node-version: '22.13.0'
           cache: npm
       - name: Apply grouped media post patch
-        run: node scripts/apply-media-group-post-fix.mjs
+        run: node scripts/apply-media-group-post-fix-v2.mjs
       - name: Reject malformed diff
         run: git diff --check
       - name: Install locked dependencies
