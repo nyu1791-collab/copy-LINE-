@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "updated_at": "2026-09-16T18:53:27.995Z",
+  "updated_at": "2026-09-16T22:08:40.616Z",
   "source": {
     "name": "LINE Rangers Handbook PvP Tracker",
     "url": "https://rangers.lerico.net/ja/pvp-tracker"
@@ -17,8 +17,8 @@
     "equipment_slots_missing": 9,
     "detail_fetch_failures": 0,
     "invalid_player_records": 0,
-    "collection_started_at": "2026-09-16T18:53:11.035Z",
-    "collection_duration_seconds": 16.97
+    "collection_started_at": "2026-09-16T22:08:28.743Z",
+    "collection_duration_seconds": 11.88
   },
   "characters": [
     {
@@ -1831,7 +1831,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -2724,7 +2724,7 @@
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -3725,7 +3725,7 @@
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -4942,7 +4942,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -5979,7 +5979,7 @@
             "rank": 0,
             "occurrence_count": -2,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -7376,7 +7376,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -8341,7 +8341,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -9414,7 +9414,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -10811,7 +10811,7 @@
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -11488,7 +11488,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -12705,7 +12705,7 @@
             "rank": -1,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -13886,7 +13886,7 @@
             "rank": 0,
             "occurrence_count": 2,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -14455,7 +14455,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -15600,7 +15600,7 @@
             "rank": 0,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -16529,7 +16529,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -17026,7 +17026,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -17811,7 +17811,7 @@
             "rank": 0,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -18596,7 +18596,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -19201,7 +19201,7 @@
             "rank": 1,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -19806,7 +19806,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -20195,7 +20195,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -20836,7 +20836,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -21333,7 +21333,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -21830,7 +21830,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -22399,7 +22399,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -22860,7 +22860,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -23213,7 +23213,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -23602,7 +23602,7 @@
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -24027,7 +24027,7 @@
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -24632,7 +24632,7 @@
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -25093,7 +25093,7 @@
             "rank": -2,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -25554,7 +25554,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -26051,7 +26051,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -26476,7 +26476,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -26757,7 +26757,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -27038,7 +27038,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -27319,7 +27319,7 @@
             "rank": 2,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -27672,7 +27672,7 @@
             "rank": 2,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -27953,7 +27953,7 @@
             "rank": -2,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -28198,7 +28198,7 @@
             "rank": -2,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -28479,7 +28479,7 @@
             "rank": -2,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -28688,7 +28688,7 @@
             "rank": -2,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -28969,7 +28969,7 @@
             "rank": -2,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -29214,7 +29214,7 @@
             "rank": -2,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -29495,7 +29495,7 @@
             "rank": -2,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -29704,7 +29704,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -29877,7 +29877,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -30050,7 +30050,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -30223,7 +30223,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -30396,7 +30396,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -30569,7 +30569,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -30742,7 +30742,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -30915,7 +30915,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
@@ -30977,7 +30977,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-16T14:57:50.532Z",
-            "interval_minutes": 235.6
+            "interval_minutes": 430.8
           },
           "week": {
             "comparable": false,
