@@ -189,7 +189,7 @@ jobs:
           upload() {
             local file="$1" type="$2" request_id
             request_id="$(cat /proc/sys/kernel/random/uuid)"
-            curl --location --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 \
+            curl --request PUT --location --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 \
               -b "$jar" -c "$jar" -H "Origin: $BASE" \
               -F "board=$board" -F "body=$marker" -F "request=$request_id" -F "group=$group" \
               -F "file=@$file;type=$type" "$BASE/api/upload"
