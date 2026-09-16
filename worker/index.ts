@@ -12,9 +12,11 @@ interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void;
   passThroughOnException(): void;
 }
+interface ScheduledControllerLike {scheduledTime:number;cron:string;noRetry():void;}
 
 type MutationBudget={max:number;seconds:number};
 const encoder=new TextEncoder();
+const DAY_MS=24*60*60*1000;
 
 function mutationBudget(request:Request,path:string):MutationBudget|null{
   const method=request.method.toUpperCase();
@@ -47,6 +49,24 @@ async function allowMutation(request:Request,env:Env,path:string){
   return !!result;
 }
 
+async function housekeeping(env:Env,now:number){
+  // Abort only bounded, expired multipart sessions. This never removes a
+  // successfully posted R2 object; completed posts own those objects through
+  // posts.media_key independently of the temporary upload session rows.
+  const expired=(await env.DB.prepare("SELECT id,media_key,upload_id FROM upload_sessions WHERE status IN ('uploading','failed') AND created<? ORDER BY created ASC LIMIT 50").bind(now-DAY_MS).all()).results as {id:string;media_key:string;upload_id:string}[];
+  for(const row of expired){
+    try{await env.BUCKET.resumeMultipartUpload(row.media_key,row.upload_id).abort();}catch{}
+    await env.DB.prepare("UPDATE upload_sessions SET status='failed',updated=? WHERE id=? AND status<>'completed'").bind(now,row.id).run();
+  }
+  const sessionCutoff=now-7*DAY_MS;
+  const limitCutoff=now-DAY_MS;
+  await env.DB.batch([
+    env.DB.prepare("DELETE FROM upload_parts WHERE session IN (SELECT id FROM upload_sessions WHERE status IN ('failed','completed') AND updated<?)").bind(sessionCutoff),
+    env.DB.prepare("DELETE FROM upload_sessions WHERE status IN ('failed','completed') AND updated<?").bind(sessionCutoff),
+    env.DB.prepare("DELETE FROM limits WHERE until<?").bind(limitCutoff),
+  ]);
+}
+
 const worker = {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url=new URL(request.url);
@@ -66,6 +86,9 @@ const worker = {
       console.error("edge_rate_limit_unavailable");
     }
     return secureResponse(await handler.fetch(request, env, ctx));
+  },
+  scheduled(event:ScheduledControllerLike,env:Env,ctx:ExecutionContext){
+    ctx.waitUntil(housekeeping(env,Number.isFinite(event.scheduledTime)?event.scheduledTime:Date.now()).catch(()=>console.error("housekeeping_failed")));
   },
 };
 
