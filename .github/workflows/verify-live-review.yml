@@ -2,6 +2,8 @@ name: verify-live-review
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
   workflow_run:
     workflows: ["deploy-cloudflare-review"]
     types: [completed]
@@ -95,7 +97,7 @@ jobs:
           echo 'OK: live review routes, storage and browser assets verified'
 
       - name: Exercise anonymous post, idempotency, reactions and cleanup
-        if: ${{ github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch' }}
+        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -153,3 +155,70 @@ jobs:
           post_id=''
           trap - EXIT
           echo 'OK: live smoke post was removed from public view'
+
+      - name: Exercise one mixed media post through the public Worker
+        if: ${{ github.event_name == 'push' || github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar="$(mktemp)"
+          image_one="$(mktemp --suffix=.png)"
+          image_two="$(mktemp --suffix=.png)"
+          video="$(mktemp --suffix=.mp4)"
+          post_id=''
+          marker="CI mixed media ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          group="$(cat /proc/sys/kernel/random/uuid)"
+          cleanup() {
+            if [ -n "${post_id:-}" ]; then
+              payload="$(jq -cn --arg id "$post_id" '{action:"moderate",operation:"delete",target:$id}')"
+              curl --location --silent --show-error --connect-timeout 10 --max-time 30 \
+                -b "$jar" -c "$jar" -H "Origin: $BASE" -H 'Content-Type: application/json' \
+                --data "$payload" "$BASE/api/board" >/dev/null 2>&1 || true
+            fi
+          }
+          trap cleanup EXIT
+          python3 - "$image_one" "$image_two" "$video" <<'PY'
+          import sys
+          from pathlib import Path
+          Path(sys.argv[1]).write_bytes(b"\\x89PNG\\r\\n\\x1a\\n" + b"\\0" * 40)
+          Path(sys.argv[2]).write_bytes(b"\\x89PNG\\r\\n\\x1a\\n" + b"\\0" * 40)
+          Path(sys.argv[3]).write_bytes(b"\\0\\0\\0\\x18ftypisom" + b"\\0" * 40)
+          PY
+          initial="$(mktemp)"
+          curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+            -b "$jar" -c "$jar" -o "$initial" "$BASE/api/board"
+          board="$(jq -er '.board // .boards[0].id' "$initial")"
+          upload() {
+            local file="$1" type="$2" request_id
+            request_id="$(cat /proc/sys/kernel/random/uuid)"
+            curl --location --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 \
+              -b "$jar" -c "$jar" -H "Origin: $BASE" \
+              -F "board=$board" -F "body=$marker" -F "request=$request_id" -F "group=$group" \
+              -F "file=@$file;type=$type" "$BASE/api/upload"
+          }
+          first="$(upload "$image_one" image/png)"
+          post_id="$(jq -er '.id' <<< "$first")"
+          upload "$image_two" image/png >/dev/null
+          upload "$video" video/mp4 >/dev/null
+          listed="$(mktemp)"
+          curl --location --fail --silent --show-error -b "$jar" -c "$jar" -G \
+            --data-urlencode "board=$board" --data-urlencode 'sort=newest' -o "$listed" "$BASE/api/board"
+          jq -e --arg marker "$marker" '([.posts[] | select(.body==$marker)] | length) == 1 and ([.posts[] | select(.body==$marker)][0].mediaItems | length) == 3' "$listed" >/dev/null || {
+            echo 'FAIL: mixed media did not collapse to one post card with three media items'
+            jq . "$listed"
+            exit 1
+          }
+          echo 'OK: public mixed media post is one logical card with three media items'
+          delete_payload="$(jq -cn --arg id "$post_id" '{action:"moderate",operation:"delete",target:$id}')"
+          curl --location --fail-with-body --silent --show-error -b "$jar" -c "$jar" \
+            -H "Origin: $BASE" -H 'Content-Type: application/json' --data "$delete_payload" "$BASE/api/board" >/dev/null
+          after="$(mktemp)"
+          curl --location --fail --silent --show-error -b "$jar" -c "$jar" -G \
+            --data-urlencode "board=$board" --data-urlencode 'sort=newest' -o "$after" "$BASE/api/board"
+          jq -e --arg marker "$marker" 'all(.posts[]; .body != $marker)' "$after" >/dev/null || {
+            echo 'FAIL: deleted mixed media post remained publicly visible'
+            exit 1
+          }
+          post_id=''
+          trap - EXIT
+          echo 'OK: mixed media post and all three attachments were removed from public view'
