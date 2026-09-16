@@ -26,10 +26,10 @@ test('media byte ranges support suffixes and reject malformed requests',()=>{
 });
 test('comment UI keeps reactions private, opens replies on demand, and marks a selected reply target',()=>{
  assert.doesNotMatch(communitySource,/openReactors|setLikers|translate\.google\.com/);
- assert.match(communitySource,/replyTarget/);assert.match(communitySource,/toggleReplies/);assert.match(communitySource,/返信を表示/);assert.doesNotMatch(communitySource,/translatePost|<Languages/);assert.match(communitySource,/replyingTo/);
- assert.match(communitySource,/media-picker-title/);assert.match(communitySource,/mediaLimitHint/);assert.match(communitySource,/multiple type="file"/);assert.match(communitySource,/maxVideosPerPost/);assert.match(communitySource,/maxImagesPerPost/);assert.match(communitySource,/新キャラに関する感想・情報/);assert.doesNotMatch(communitySource,/media-picker.*<small>/s);
- assert.match(communitySource,/mine/);assert.match(communitySource,/composer-reply/);assert.match(communitySource,/返信先/);assert.match(communitySource,/権限・バッジ管理（Owner専用）/);assert.match(communitySource,/動画制作貢献者/);assert.match(communitySource,/有益情報貢献者/);assert.match(communitySource,/（運営）/);assert.doesNotMatch(communitySource,/運営バッジ/);assert.match(communitySource,/data\?\.me\?\.role==='owner'/);
- assert.match(communitySource,/line-rangers-display-name/);assert.match(communitySource,/function uiName/);assert.match(communitySource,/匿名ユーザー/);assert.match(communitySource,/uiName\(replyTarget\.name\)/);assert.match(communitySource,/profileRestoreSubject/);assert.match(communitySource,/profileRestoreInFlight/);assert.doesNotMatch(communitySource,/profileRestoreAttempted/);assert.match(communitySource,/運営アクセス/);assert.match(communitySource,/one-time-code/);
+ assert.match(communitySource,/replyTarget/);assert.match(communitySource,/toggleReplies/);assert.match(communitySource,/t\.showReplies\.replace/);assert.doesNotMatch(communitySource,/translatePost|<Languages/);assert.match(communitySource,/replyingTo/);
+ assert.match(communitySource,/media-picker-title/);assert.match(communitySource,/mediaLimitHint/);assert.match(communitySource,/multiple type="file"/);assert.match(communitySource,/maxVideosPerPost/);assert.match(communitySource,/maxImagesPerPost/);assert.match(communitySource,/t\.newCharacterNote/);assert.doesNotMatch(communitySource,/media-picker.*<small>/s);
+ assert.match(communitySource,/mine/);assert.match(communitySource,/composer-reply/);assert.match(communitySource,/t\.replyTargetLabel/);assert.match(communitySource,/権限・バッジ管理（Owner専用）/);assert.match(communitySource,/動画制作貢献者/);assert.match(communitySource,/有益情報貢献者/);assert.match(communitySource,/（運営）/);assert.doesNotMatch(communitySource,/運営バッジ/);assert.match(communitySource,/data\?\.me\?\.role==='owner'/);
+ assert.match(communitySource,/line-rangers-display-name/);assert.match(communitySource,/function uiName/);assert.match(communitySource,/匿名ユーザー/);assert.match(communitySource,/uiName\(replyTarget\.name,t\.anonymousUser\)/);assert.match(communitySource,/profileRestoreSubject/);assert.match(communitySource,/profileRestoreInFlight/);assert.doesNotMatch(communitySource,/profileRestoreAttempted/);assert.match(communitySource,/運営アクセス/);assert.match(communitySource,/one-time-code/);
  assert.match(communitySource,/\.\.\.\(p\.mine\?\[\]:\['delete'\]\)/);assert.ok(communitySource.indexOf('<p className="post-body">')<communitySource.indexOf('{detail&&(p.video||p.mediaType?.startsWith(\'video/\'))'));
  assert.doesNotMatch(communitySource,/value=\{month\}.*onChange/);
  assert.match(communitySource,/VideoThumbnail id=\{item\.id\}/);assert.match(videoThumbnailSource,/<video/);assert.match(videoThumbnailSource,/\/api\/media/);assert.match(videoThumbnailSource,/IntersectionObserver/);assert.match(videoThumbnailSource,/preload="metadata"/);assert.doesNotMatch(videoThumbnailSource,/autoPlay/);assert.match(videoThumbnailSource,/タップして再生/);assert.match(videoPlayerSource,/preload="metadata"/);assert.match(videoPlayerSource,/onLoadedData/);assert.match(videoPlayerSource,/onError=\{reportFailure\}/);
@@ -313,4 +313,24 @@ test('community board is Japanese-English only with ten-image five-video media c
   assert.match(source, /else void uploadImage\(fileToSend,description,request,uploadBoard,group\)/);
   assert.match(directUpload, /groupLimit=video\?maxVideosPerPost:maxImagesPerPost/);
   assert.match(videoSession, /maxVideosPerPost/);
+});
+
+
+test('public board chrome localizes Japanese-English status and interaction copy', () => {
+  const source = readFileSync(new URL('app/community.tsx', root), 'utf8');
+  const labelsSource = readFileSync(new URL('lib/labels.ts', root), 'utf8');
+  assert.match(labelsSource, /staleData:'Could not refresh the latest data/);
+  assert.match(labelsSource, /newCharacterNote:'Share impressions or useful information/);
+  assert.match(labelsSource, /showReplies:'Show \{count\} replies'/);
+  assert.match(labelsSource, /reportReceived:'Report received\. The moderation team will review it\.'/);
+  assert.match(source, /t\.staleData/);
+  assert.match(source, /t\.offlineNotice/);
+  assert.match(source, /t\.newCharacterNote/);
+  assert.match(source, /t\.showReplies\.replace/);
+  assert.match(source, /t\.videoContributor/);
+  assert.match(source, /t\.reportReceived/);
+  assert.match(source, /uiName\(replyTarget\.name,t\.anonymousUser\)/);
+  assert.doesNotMatch(source, /新キャラに関する感想・情報を投稿してください。/);
+  assert.doesNotMatch(source, /現在オフラインです。入力内容はこの端末に保存されます。/);
+  assert.doesNotMatch(source, /最新データを取得できません。前回の表示を続けています。/);
 });

@@ -35,7 +35,7 @@ test('PvP ranking remains home and the copy is the improvement staging surface',
 
 test('board remains available, does not fetch hidden PvP ranking data, and cannot write canonical PvP',()=>{
  assert.match(board,/u1631e-sally/);
- assert.match(board,/新キャラに関する感想・情報/);
+ assert.match(board,/t\.newCharacterNote/);
  assert.doesNotMatch(board,/\/api\/pvp/);
  assert.doesNotMatch(board,/pvpRankingCard|PvpData|pvpSequence/);
  assert.match(sourceProxy,/raw\.githubusercontent\.com\/line-rangers-fan\/line-rangers-pvp\/main\/docs\/data/);
