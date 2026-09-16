@@ -2,6 +2,9 @@ import * as communityCharacterRegistryModule from '@/config/community-characters
 
 export const languages = ['ja','en'] as const;
 export type Language = typeof languages[number];
+// The Owner's public display name is presentation-only. The Owner role still
+// comes exclusively from the server-verified subject and signed cookie.
+export const ownerDisplayName='LINEレンジャーは神ゲー';
 export function requestUUID(){const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const s=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');return `${s.slice(0,8)}-${s.slice(8,12)}-${s.slice(12,16)}-${s.slice(16,20)}-${s.slice(20)}`;}
 export function monthJST(now = new Date()) { return new Date(now.getTime()+9*3600000).toISOString().slice(0,7); }
 export function validMonth(value: unknown): value is string { return typeof value==='string' && /^20\d{2}-(0[1-9]|1[0-2])$/.test(value); }

@@ -1,4 +1,5 @@
 import {env} from 'cloudflare:workers';
+import {ownerDisplayName} from '@/lib/rules';
 
 /**
  * Anonymous access deliberately does not use device fingerprints, IMEI, or
@@ -112,20 +113,20 @@ export async function abuseNetworkBucket(h:Headers){
  return base64url(new Uint8Array(signature)).slice(0,24);
 }
 
-export type AnonymousSession={sub:string;anonymous:boolean;owner?:boolean;displayName?:string;setCookie?:string};
+export type AnonymousSession={sub:string;anonymous:boolean;owner?:boolean;displayName?:string;setCookie?:string;setCookies?:string[]};
 
 export async function activateOwner(accessToken:string){
  const configuredToken=(env as unknown as Record<string,unknown>).BOARD_OWNER_ACCESS_TOKEN;
  const configuredSubject=(env as unknown as Record<string,unknown>).BOARD_OWNER_SUBJECT;
  if(typeof configuredToken!=='string'||typeof configuredSubject!=='string'||!configuredToken||!configuredSubject)return null;
  if(configuredSubject.length>512||!(await constantTimeTokenEqual(accessToken,configuredToken)))return null;
- return {sub:configuredSubject,setCookie:await ownerCookie(configuredSubject)};
+ return {sub:configuredSubject,owner:true,displayName:ownerDisplayName,setCookie:await ownerCookie(configuredSubject),setCookies:[displayNameCookie(ownerDisplayName)]};
 }
 
 export async function sessionFromHeaders(h:Headers):Promise<AnonymousSession>{
  const savedDisplayName=displayNameValue(h.get('cookie'))||undefined;
  const ownerExisting=cookieValue(h.get('cookie'),ownerCookieName);
- if(ownerExisting){const sub=await verifyOwner(ownerExisting);if(sub)return {sub,anonymous:false,owner:true,displayName:savedDisplayName,setCookie:await ownerCookie(sub)};}
+ if(ownerExisting){const sub=await verifyOwner(ownerExisting);if(sub)return {sub,anonymous:false,owner:true,displayName:ownerDisplayName,setCookie:await ownerCookie(sub),setCookies:[displayNameCookie(ownerDisplayName)]};}
  const authenticated=trustedUpstreamSubject(h);
  if(authenticated)return {sub:authenticated,anonymous:false,displayName:savedDisplayName};
  const existing=cookieValue(h.get('cookie'),guestCookieName);

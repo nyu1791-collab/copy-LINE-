@@ -36,7 +36,7 @@ export async function POST(request:Request){
   const key=await readAccessKey(request);
   const activated=await activateOwner(key);
   if(!activated)return Response.json({error:'forbidden'},{status:403,headers:common});
-  const responseHeaders=new Headers(common);responseHeaders.set('Set-Cookie',activated.setCookie);return Response.json({ok:true},{status:200,headers:responseHeaders});
+  const responseHeaders=new Headers(common);responseHeaders.append('Set-Cookie',activated.setCookie);for(const cookie of activated.setCookies||[])responseHeaders.append('Set-Cookie',cookie);return Response.json({ok:true},{status:200,headers:responseHeaders});
  }catch(e){const status=e instanceof Error&&e.message==='rate_limited'?429:403;return Response.json({error:status===429?'rate_limited':'forbidden'},{status,headers:common});}
 }
 
