@@ -68,5 +68,9 @@ jobs:
             [ -s "$b" ] || { echo "FAIL: empty asset: $asset"; exit 1; }
             ctype="$(grep -i '^content-type:' "$h" | tail -1 | tr -d '\r' || true)"
             echo "OK: $asset :: ${ctype:-content-type-missing}"
-            grep -qi '^content-type:.*text/html' "$h" && { echo "FAIL: browser asset served as HTML: $asset"; exit 1; }
+            if grep -qi '^content-type:.*text/html' "$h"; then
+              echo "FAIL: browser asset served as HTML: $asset"
+              exit 1
+            fi
           done <<< "$refs"
+          echo 'OK: live review routes and browser assets verified'
