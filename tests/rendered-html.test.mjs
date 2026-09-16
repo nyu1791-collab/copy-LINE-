@@ -33,7 +33,13 @@ test("Workers runtime keeps the PvP shell free of the obsolete community entry a
     const publicBoard=await api.json();assert.equal(publicBoard.me.role,'user');assert.match(api.headers.get('set-cookie')??'',/^__Host-lr_guest=v1\./);
     const publicActivity=await mf.dispatchFetch('https://review.example/api/activity');
     assert.equal(publicActivity.status,200);
-    assert.deepEqual(await publicActivity.json(),{unread:0,featured:null});
+    const activityPayload=await publicActivity.json();
+    assert.equal(activityPayload.unread,0);
+    assert.equal(activityPayload.featured,null);
+    assert.ok(Array.isArray(activityPayload.topics));
+    assert.deepEqual(activityPayload.topics.map(topic=>({id:topic.id,character:topic.character,month:topic.month})),[
+      {id:'2026-09:u1631e-sally',character:'u1631e-sally',month:'2026-09'},
+    ]);
     const headers={'oai-authenticated-user-id':'isolated-worker-test','oai-authenticated-user-email':'test@example.invalid',origin:'https://review.example','Content-Type':'application/json'};
     const call=async(body)=>{const r=await mf.dispatchFetch('https://review.example/api/board'+(body?'':'?month=2026-09'),{method:body?'POST':'GET',headers,...(body?{body:JSON.stringify(body)}:{})});assert.equal(r.status,200);return r.json();};
     await call({action:'profile',name:'Local D1 test'});
