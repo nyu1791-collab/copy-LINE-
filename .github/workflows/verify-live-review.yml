@@ -5,6 +5,10 @@ on:
   workflow_run:
     workflows: ["deploy-cloudflare-review"]
     types: [completed]
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/verify-live-review.yml'
   schedule:
     - cron: '23 * * * *'
 
@@ -15,7 +19,7 @@ jobs:
   live:
     if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 7
     env:
       BASE: https://line-rangers-pvp-community-review.n-yu1791.workers.dev
     steps:
@@ -89,3 +93,63 @@ jobs:
             fi
           done <<< "$refs"
           echo 'OK: live review routes, storage and browser assets verified'
+
+      - name: Exercise anonymous post, idempotency, reactions and cleanup
+        if: ${{ github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          jar="$(mktemp)"
+          initial="$(mktemp)"
+          response="$(mktemp)"
+          post_id=''
+
+          cleanup() {
+            if [ -n "${post_id:-}" ]; then
+              payload="$(jq -cn --arg id "$post_id" '{action:"moderate",operation:"delete",target:$id}')"
+              curl --location --silent --show-error --connect-timeout 10 --max-time 30 \
+                -b "$jar" -c "$jar" -H "Origin: $BASE" -H 'Content-Type: application/json' \
+                --data "$payload" "$BASE/api/board" >/dev/null 2>&1 || true
+            fi
+          }
+          trap cleanup EXIT
+
+          curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+            -b "$jar" -c "$jar" -o "$initial" "$BASE/api/board"
+          board="$(jq -er '.board // .boards[0].id' "$initial")"
+          request_id="$(cat /proc/sys/kernel/random/uuid)"
+          marker="CI live smoke ${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          payload="$(jq -cn --arg board "$board" --arg body "$marker" --arg request "$request_id" '{action:"post",board:$board,body:$body,request:$request}')"
+
+          curl --location --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 \
+            -b "$jar" -c "$jar" -H "Origin: $BASE" -H 'Content-Type: application/json' \
+            --data "$payload" -o "$response" "$BASE/api/board"
+          post_id="$(jq -er '.id' "$response")"
+
+          retry="$(mktemp)"
+          curl --location --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 \
+            -b "$jar" -c "$jar" -H "Origin: $BASE" -H 'Content-Type: application/json' \
+            --data "$payload" -o "$retry" "$BASE/api/board"
+          retry_id="$(jq -er '.id' "$retry")"
+          [ "$retry_id" = "$post_id" ] || { echo 'FAIL: idempotent retry created a different post'; exit 1; }
+          echo 'OK: live post creation and idempotent retry'
+
+          like_payload="$(jq -cn --arg id "$post_id" '{action:"like",post:$id,liked:true}')"
+          helpful_payload="$(jq -cn --arg id "$post_id" '{action:"helpful",post:$id,selected:true}')"
+          curl --location --fail-with-body --silent --show-error -b "$jar" -c "$jar" -H "Origin: $BASE" -H 'Content-Type: application/json' --data "$like_payload" "$BASE/api/board" >/dev/null
+          curl --location --fail-with-body --silent --show-error -b "$jar" -c "$jar" -H "Origin: $BASE" -H 'Content-Type: application/json' --data "$helpful_payload" "$BASE/api/board" >/dev/null
+
+          listed="$(mktemp)"
+          curl --location --fail --silent --show-error -b "$jar" -c "$jar" -G --data-urlencode "board=$board" --data-urlencode 'sort=newest' -o "$listed" "$BASE/api/board"
+          jq -e --arg id "$post_id" 'any(.posts[]; .id==$id and .liked==1 and .helped==true and .likes>=1 and .helpful>=1)' "$listed" >/dev/null || { echo 'FAIL: live reactions were not reflected'; exit 1; }
+          echo 'OK: live like/helpful state reflected'
+
+          delete_payload="$(jq -cn --arg id "$post_id" '{action:"moderate",operation:"delete",target:$id}')"
+          curl --location --fail-with-body --silent --show-error -b "$jar" -c "$jar" -H "Origin: $BASE" -H 'Content-Type: application/json' --data "$delete_payload" "$BASE/api/board" >/dev/null
+
+          after="$(mktemp)"
+          curl --location --fail --silent --show-error -b "$jar" -c "$jar" -G --data-urlencode "board=$board" --data-urlencode 'sort=newest' -o "$after" "$BASE/api/board"
+          jq -e --arg id "$post_id" 'all(.posts[]; .id!=$id)' "$after" >/dev/null || { echo 'FAIL: smoke post remained publicly visible after cleanup'; exit 1; }
+          post_id=''
+          trap - EXIT
+          echo 'OK: live smoke post was removed from public view'
