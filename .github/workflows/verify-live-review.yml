@@ -7,6 +7,7 @@ on:
     paths:
       - '.github/workflows/verify-live-review.yml'
       - 'app/boards/**'
+      - 'app/api/health/**'
 
 permissions:
   contents: read
@@ -18,7 +19,7 @@ jobs:
     env:
       BASE: https://line-rangers-pvp-community-review.n-yu1791.workers.dev
     steps:
-      - name: Inspect live review routes and browser assets
+      - name: Inspect live review routes, D1/R2 health and browser assets
         shell: bash
         run: |
           set -euo pipefail
@@ -26,12 +27,14 @@ jobs:
           board_headers="$(mktemp)"; board_body="$(mktemp)"
           api_headers="$(mktemp)"; api_body="$(mktemp)"
           snapshot_body="$(mktemp)"
+          health_body="$(mktemp)"
           board_css="$(mktemp)"
 
           curl --location --fail --silent --show-error -D "$pvp_headers" -o "$pvp_body" "$BASE/pvp/index.html"
           curl --location --fail --silent --show-error -D "$board_headers" -o "$board_body" "$BASE/boards"
           curl --location --fail --silent --show-error -D "$api_headers" -o "$api_body" "$BASE/api/board"
           curl --location --fail --silent --show-error -o "$snapshot_body" "$BASE/pvp/data/character_usage.json"
+          curl --location --fail --silent --show-error -o "$health_body" "$BASE/api/health"
 
           if ! grep -q 'レジェンド帯 キャラ集計' "$pvp_body"; then
             echo 'FAIL: PvP marker missing'
@@ -55,9 +58,13 @@ jobs:
           echo 'OK: board SSR title'
           jq -e '.target_players == 200 and .sampled_players == 200 and .complete_target == true' "$snapshot_body" >/dev/null || { echo 'FAIL: snapshot is not complete 200/200'; exit 1; }
           echo 'OK: complete 200/200 snapshot'
+          jq -e '.ok == true and .checks.d1 == true and .checks.r2 == true' "$health_body" >/dev/null || { echo 'FAIL: runtime D1/R2 health check failed'; exit 1; }
+          echo 'OK: D1 and R2 runtime bindings'
+          jq -e '.boards | type == "array"' "$api_body" >/dev/null || { echo 'FAIL: board API JSON shape invalid'; exit 1; }
+          echo 'OK: board API JSON shape'
           grep -qi '^x-content-type-options: nosniff' "$api_headers" || { echo 'FAIL: API security header missing'; sed -n '1,30p' "$api_headers"; exit 1; }
           echo 'OK: API security header'
-          if grep -qi '^set-cookie: __Host-lr_guest=' "$api_headers"; then echo 'OK: anonymous guest cookie'; else echo 'WARN: anonymous guest cookie was not set on this request'; fi
+          if grep -qi '^set-cookie: __Host-lr_guest=' "$api_headers"; then echo 'OK: anonymous guest cookie'; else echo 'FAIL: anonymous guest cookie was not set'; exit 1; fi
 
           echo 'Board asset refs:'
           refs="$({ grep -oE '(href|src)="[^"]+\.(css|js)(\?[^"]*)?"' "$board_body" | sed -E 's/^(href|src)="([^"]+)"/\2/' | grep '^/' | sort -u; } || true)"
@@ -78,4 +85,4 @@ jobs:
           done <<< "$refs"
           grep -Eq '\.pvp-ranking[^}]*display:none!important' "$board_css" || { echo 'FAIL: board CSS does not hide PvP ranking card'; exit 1; }
           echo 'OK: boards hide PvP ranking card'
-          echo 'OK: live review routes and browser assets verified'
+          echo 'OK: live review routes, storage and browser assets verified'
