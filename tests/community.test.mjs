@@ -371,3 +371,19 @@ test('grouped media count as one logical post across listing stats and new-post 
  const counted=await call(null,'test-a','?board='+encodeURIComponent(state.board)+'&newerThan='+(start-1)+'&countOnly=1');
  assert.equal(counted.status,200);assert.equal(counted.data.count,1);
 });
+
+
+test('media groups stay isolated by board and author even if a UUID is reused',async()=>{
+ const {call,sql}=setup();await call({action:'profile',name:'Scoped Group Owner'});const state=(await call()).data;const group=crypto.randomUUID();const now=Date.now();const other=crypto.randomUUID();
+ sql.prepare("INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,?,?,?)").run(other,'other:'+other,'Other uploader',1,'user',now);
+ const mine=[crypto.randomUUID(),crypto.randomUUID()];for(let i=0;i<mine.length;i++)sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?,?,'visible',0,?,?)").run(mine[i],state.board,state.me.id,'mine',`media/${mine[i]}`,'image/jpeg',`mine-${i}.jpg`,100,group,now+i,crypto.randomUUID());
+ const otherId=crypto.randomUUID();sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?,?,'visible',0,?,?)").run(otherId,state.board,other,'other',`media/${otherId}`,'image/jpeg','other.jpg',100,group,now+10,crypto.randomUUID());
+ const listed=(await call()).data.posts.filter(post=>post.mediaGroup===group);assert.equal(listed.length,2);const minePost=listed.find(post=>post.mine);const otherPost=listed.find(post=>!post.mine);assert.ok(minePost);assert.ok(otherPost);assert.deepEqual(minePost.mediaItems.map(item=>item.id),mine);assert.deepEqual(otherPost.mediaItems.map(item=>item.id),[otherId]);
+});
+
+test('grouped-media optimistic accounting and scope indexes stay aligned with server semantics',()=>{
+ const communitySource=readFileSync(new URL('app/community.tsx',root),'utf8');const boardSource=readFileSync(new URL('app/api/board/route.ts',root),'utf8');const direct=readFileSync(new URL('app/api/upload/route.ts',root),'utf8');const session=readFileSync(new URL('app/api/upload/session/route.ts',root),'utf8');const schemaSource=readFileSync(new URL('db/schema.ts',root),'utf8');const migration=readFileSync(new URL('drizzle/0011_grouped_media_scope_indexes.sql',root),'utf8');
+ assert.match(communitySource,/function applyLocalMediaPost/);assert.match(communitySource,/item=>item.mediaGroup===post.mediaGroup/);assert.doesNotMatch(communitySource,/comments:current.stats.comments+1,todayComments:current.stats.todayComments+1/);
+ assert.match(boardSource,/SELECT id,board,author,parent,video/);assert.match(boardSource,/byScope/);assert.match(direct,/SELECT author,board FROM posts WHERE media_group=?/);assert.match(session,/SELECT user,board FROM upload_sessions WHERE media_group=?/);
+ assert.match(schemaSource,/posts_media_group_scope/);assert.match(schemaSource,/upload_sessions_media_group_scope/);assert.match(migration,/posts_media_group_scope/);assert.match(migration,/upload_sessions_media_group_scope/);
+});
