@@ -172,15 +172,17 @@ test('a verified owner is promoted on read without requiring a profile edit',asy
  const {call,sql}=setup();sql.prepare('INSERT INTO users(id,subject,name,role,created) VALUES(?,?,?,?,?)').run(crypto.randomUUID(),'owner-subject','Existing Owner','user',Date.now());
  const result=await call(null,'owner-subject','','different@example.invalid');assert.equal(result.status,200);assert.equal(result.data.me.role,'owner');
 });
-test('owner-only feature flags keep reads available and enforce read-only writes server-side',async()=>{
+test('moderators and owners persist feature-flag permissions while reads stay available',async()=>{
  const {call,sql}=setup();await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');await call({action:'profile',name:'Member'},'member','','member@example.invalid');
  const initial=(await call(null,'owner-subject','','owner@example.invalid')).data;assert.deepEqual(initial.flags,{commentsEnabled:true,videoUploadEnabled:true,translationEnabled:true,votingEnabled:true,readOnly:false});
- const memberToggle=await call({action:'feature_flag',name:'commentsEnabled',enabled:false},'member','','member@example.invalid');assert.equal(memberToggle.status,403);
+ const memberState=(await call(null,'member','','member@example.invalid')).data;
+ assert.equal((await call({action:'moderate',operation:'moderator',target:memberState.me.id},'owner-subject','','owner@example.invalid')).status,200);
+ const memberToggle=await call({action:'feature_flag',name:'commentsEnabled',enabled:false},'member','','member@example.invalid');assert.equal(memberToggle.status,200);assert.deepEqual(memberToggle.data,{ok:true,name:'commentsEnabled',enabled:false});
  const disabled=await call({action:'feature_flag',name:'commentsEnabled',enabled:false},'owner-subject','','owner@example.invalid');assert.equal(disabled.status,200);assert.deepEqual(disabled.data,{ok:true,name:'commentsEnabled',enabled:false});
  const stoppedPost=await call({action:'post',board:initial.board,body:'Blocked while comments are disabled',request:crypto.randomUUID()},'owner-subject','','owner@example.invalid');assert.equal(stoppedPost.status,503);assert.equal(stoppedPost.data.error,'feature_disabled');
  assert.equal((await call({action:'feature_flag',name:'commentsEnabled',enabled:true},'owner-subject','','owner@example.invalid')).status,200);
  const posted=await call({action:'post',board:initial.board,body:'Existing content remains readable',request:crypto.randomUUID()},'owner-subject','','owner@example.invalid');assert.equal(posted.status,200);
- assert.equal((await call({action:'feature_flag',name:'readOnly',enabled:true},'owner-subject','','owner@example.invalid')).status,200);
+ assert.equal((await call({action:'feature_flag',name:'readOnly',enabled:true},'member','','member@example.invalid')).status,200);
  const readable=await call(null,'owner-subject','','owner@example.invalid');assert.equal(readable.status,200);assert.equal(readable.data.posts.length,1);assert.equal(readable.data.flags.readOnly,true);
  for(const action of [
   {action:'post',board:initial.board,body:'Blocked by read only',request:crypto.randomUUID()},
