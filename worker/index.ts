@@ -50,12 +50,14 @@ async function allowMutation(request:Request,env:Env,path:string){
 }
 
 async function housekeeping(env:Env,now:number){
-  // Abort only bounded, expired multipart sessions. This never removes a
-  // successfully posted R2 object; completed posts own those objects through
-  // posts.media_key independently of the temporary upload session rows.
+  // Abort only bounded, expired multipart sessions. If a multipart complete
+  // succeeded but D1 finalization failed, also remove the key only when no post
+  // owns it; completed, hidden, and deleted posts remain restorable.
   const expired=(await env.DB.prepare("SELECT id,media_key,upload_id FROM upload_sessions WHERE status IN ('uploading','failed') AND created<? ORDER BY created ASC LIMIT 50").bind(now-DAY_MS).all()).results as {id:string;media_key:string;upload_id:string}[];
   for(const row of expired){
     try{await env.BUCKET.resumeMultipartUpload(row.media_key,row.upload_id).abort();}catch{}
+    const owner=await env.DB.prepare('SELECT 1 FROM posts WHERE media_key=? LIMIT 1').bind(row.media_key).first();
+    if(!owner){try{await env.BUCKET.delete(row.media_key);}catch{}}
     await env.DB.prepare("UPDATE upload_sessions SET status='failed',updated=? WHERE id=? AND status<>'completed'").bind(now,row.id).run();
   }
   const sessionCutoff=now-7*DAY_MS;

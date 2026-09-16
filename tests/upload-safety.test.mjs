@@ -24,6 +24,7 @@ const legacySource=readFileSync(new URL('app/api/upload/route.ts',root),'utf8');
 const sessionSource=readFileSync(new URL('app/api/upload/session/route.ts',root),'utf8');
 const partSource=readFileSync(new URL('app/api/upload/part/route.ts',root),'utf8');
 const completeSource=readFileSync(new URL('app/api/upload/complete/route.ts',root),'utf8');
+const workerSource=readFileSync(new URL('worker/index.ts',root),'utf8');
 
 async function drain(stream){
   const reader=stream.getReader();
@@ -80,6 +81,7 @@ test('resumable upload routes keep same-origin, expiry, size and completion gate
   assert.match(sessionSource,/uploadSessionExpired\(existing\)/);
   assert.match(sessionSource,/createMultipartUpload/);
   assert.match(sessionSource,/resumeMultipartUpload\(row\.media_key,row\.upload_id\)\.abort\(\)/);
+  assert.match(workerSource,/SELECT 1 FROM posts WHERE media_key=\?/);assert.match(workerSource,/BUCKET\.delete\(row\.media_key\)/);
   assert.match(partSource,/expectedPartSize\(part,session\.media_size\)/);
   assert.match(partSource,/captureAndCount\(request\.body,expected,16\)/);
   assert.match(partSource,/headerMatches\(session\.media_type,monitored\.getPrefix\(\)\)/);
