@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Inspect Cloudflare resource names without exposing IDs or secrets
+      - name: Inspect Cloudflare resource and secret-name presence safely
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         shell: bash
@@ -45,3 +45,19 @@ jobs:
           printf '%s' "$d1" | jq -e '.result | any(.name == "line-rangers-copy-review-db")' >/dev/null
           printf '%s' "$r2" | jq -e '[(.result.buckets // .result)[]?.name] | any(. == "line-rangers-copy-review-media")' >/dev/null
           printf '%s' "$workers" | jq -e '.result | any(.id == "line-rangers-pvp-community-review")' >/dev/null
+
+          secret_meta="$(curl --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 --retry 3 --retry-all-errors "${auth[@]}" "https://api.cloudflare.com/client/v4/accounts/$account_id/workers/scripts/line-rangers-pvp-community-review/secrets")"
+          secret_names="$(printf '%s' "$secret_meta" | jq -r '.result[]?.name' | sort)"
+          report_secret() {
+            local key="$1"
+            if grep -Fxq "$key" <<< "$secret_names"; then
+              printf '%s: PRESENT\n' "$key"
+            else
+              printf '%s: MISSING\n' "$key"
+            fi
+          }
+          echo 'Review Worker secret-name presence (values never requested or printed):'
+          report_secret BOARD_ANON_COOKIE_SECRET
+          report_secret BOARD_OWNER_ACCESS_TOKEN
+          report_secret BOARD_OWNER_SUBJECT
+          report_secret GOOGLE_TRANSLATE_API_KEY
