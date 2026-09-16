@@ -45,3 +45,11 @@ test('PvP adapter only exposes the confirmed Sally ranking projection', async ()
     globalThis.fetch = originalFetch;
   }
 });
+
+
+test('PvP upstream JSON is bounded before parsing',()=>{
+ const routeSource=readFileSync(new URL('../app/api/pvp/route.ts',import.meta.url),'utf8');
+ assert.match(routeSource,/UPSTREAM_MAX_BYTES=4\*1024\*1024/);
+ assert.match(routeSource,/response\.body\.getReader\(\)/);
+ assert.match(routeSource,/size>UPSTREAM_MAX_BYTES/);
+});
