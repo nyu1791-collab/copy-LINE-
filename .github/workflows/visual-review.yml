@@ -1,41 +1,56 @@
 name: visual-review
 
-# The live Worker is a public surface, so visual review is manual-only.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/visual-review.yml'
 
 permissions:
   contents: read
+
 jobs:
   screenshot:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      REVIEW_URL: https://line-rangers-pvp-community-review.n-yu1791.workers.dev/pvp/index.html
+      REVIEW_BASE_URL: https://line-rangers-pvp-community-review.n-yu1791.workers.dev
     steps:
       - uses: actions/checkout@v4
       - name: Install Chromium for visual review
         run: |
           npx -y playwright@1.55.0 install --with-deps chromium
-      - name: Capture mobile and tablet review screenshots
+      - name: Capture PvP and board screenshots at phone, tablet and desktop sizes
+        shell: bash
         run: |
           set -euo pipefail
           mkdir -p visual-review
-          npx -y playwright@1.55.0 screenshot --browser=chromium --viewport-size='390,844' --full-page --wait-for-timeout=5000 "$REVIEW_URL" visual-review/pvp-mobile.png
-          npx -y playwright@1.55.0 screenshot --browser=chromium --viewport-size='1024,1366' --full-page --wait-for-timeout=5000 "$REVIEW_URL" visual-review/pvp-tablet.png
-          test -s visual-review/pvp-mobile.png
-          test -s visual-review/pvp-tablet.png
+          capture() {
+            local name="$1" viewport="$2" url="$3"
+            npx -y playwright@1.55.0 screenshot --browser=chromium --viewport-size="$viewport" --full-page --wait-for-timeout=5000 "$url" "visual-review/$name.png"
+            test -s "visual-review/$name.png"
+          }
+          capture pvp-mobile '390,844' "$REVIEW_BASE_URL/pvp/"
+          capture pvp-tablet '1024,1366' "$REVIEW_BASE_URL/pvp/"
+          capture pvp-desktop '1440,1000' "$REVIEW_BASE_URL/pvp/"
+          capture boards-mobile '390,844' "$REVIEW_BASE_URL/boards"
+          capture boards-tablet '1024,1366' "$REVIEW_BASE_URL/boards"
+          capture boards-desktop '1440,1000' "$REVIEW_BASE_URL/boards"
       - name: Verify live PvP and board contract
+        shell: bash
         run: |
           set -euo pipefail
-          pvp="$(curl --fail --silent --show-error --retry 5 --retry-delay 2 "$REVIEW_URL")"
-          board="$(curl --fail --silent --show-error --retry 5 --retry-delay 2 "${REVIEW_URL%/pvp/index.html}/boards")"
+          pvp="$(curl --location --fail --silent --show-error --retry 5 --retry-delay 2 "$REVIEW_BASE_URL/pvp/")"
+          board="$(curl --location --fail --silent --show-error --retry 5 --retry-delay 2 "$REVIEW_BASE_URL/boards")"
+          health="$(curl --location --fail --silent --show-error --retry 5 --retry-delay 2 "$REVIEW_BASE_URL/api/health")"
           grep -q 'UNOFFICIAL STATISTICS' <<< "$pvp"
           grep -q 'レジェンド帯 キャラ集計' <<< "$pvp"
           grep -q '新キャラ情報掲示板' <<< "$board"
+          printf '%s' "$health" | jq -e '.ok == true and .checks.d1 == true and .checks.r2 == true' >/dev/null
       - uses: actions/upload-artifact@v4
         with:
-          name: pvp-visual-review
+          name: pvp-community-visual-review
           path: visual-review/*.png
           if-no-files-found: error
           retention-days: 7
