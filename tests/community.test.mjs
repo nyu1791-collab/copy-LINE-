@@ -238,16 +238,20 @@ test('server moderation, owner-only role changes and audit records',async()=>{
  assert.equal((await call({action:'moderate',operation:'hide',target:post},'member','','member@example.invalid')).status,200);assert.equal((await call()).data.posts.length,0);assert.equal((await call(null,'test-a','?likers='+post)).status,404);
  clearLimits();assert.equal((await call({action:'moderate',operation:'restore',target:post},'member','','member@example.invalid')).status,200);assert.equal((await call()).data.posts.length,1);assert.equal(sql.prepare('SELECT COUNT(*) n FROM audit').get().n,4);
 });
-test('owner-only badges stay separate from roles and moderators can manage videos',async()=>{
- const {call,sql,clearLimits}=setup();await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');await call({action:'profile',name:'Member'},'member','','member@example.invalid');
- const ownerState=(await call(null,'owner-subject','','owner@example.invalid')).data;const memberState=(await call(null,'member','','member@example.invalid')).data;
+test('badges are manageable by Owner and moderators while roles stay protected',async()=>{
+ const {call,sql,clearLimits}=setup();await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');await call({action:'profile',name:'Member'},'member','','member@example.invalid');await call({action:'profile',name:'Target'},'target','','target@example.invalid');
+ const ownerState=(await call(null,'owner-subject','','owner@example.invalid')).data;const memberState=(await call(null,'member','','member@example.invalid')).data;const targetState=(await call(null,'target','','target@example.invalid')).data;
  assert.equal((await call({action:'badge',target:memberState.me.id,badge:'helpful_contributor',enabled:true},'member','','member@example.invalid')).status,403);
  assert.equal((await call({action:'badge',target:memberState.me.id,badge:'helpful_contributor',enabled:true},'owner-subject','','owner@example.invalid')).status,200);
  const textPost=(await call({action:'post',board:ownerState.board,body:'Useful information',request:crypto.randomUUID()},'member','','member@example.invalid')).data.id;
  const listed=(await call(null,'member','','member@example.invalid')).data.posts.find(p=>p.id===textPost);assert.deepEqual(listed.badges,['helpful_contributor']);
  const admin=(await call(null,'owner-subject','?admin=1','owner@example.invalid')).data;assert.deepEqual(admin.users.find(u=>u.id===memberState.me.id).badges,['helpful_contributor']);
  clearLimits();assert.equal((await call({action:'moderate',operation:'moderator',target:memberState.me.id},'owner-subject','','owner@example.invalid')).status,200);
- const video=crypto.randomUUID();sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?, 'visible',0,?,?)").run(video,ownerState.board,memberState.me.id,'Uploaded video',`media/${video}`,'video/mp4','clip.mp4',100,Date.now(),crypto.randomUUID());
+ assert.equal((await call({action:'badge',target:targetState.me.id,badge:'video_contributor',enabled:true},'member','','member@example.invalid')).status,200);
+ assert.equal((await call({action:'badge',target:ownerState.me.id,badge:'video_contributor',enabled:true},'member','','member@example.invalid')).status,403);
+ const moderatorAdmin=(await call(null,'member','?admin=1','member@example.invalid')).data;assert.deepEqual(moderatorAdmin.users.find(u=>u.id===targetState.me.id).badges,['video_contributor']);
+ assert.equal((await call({action:'badge',target:targetState.me.id,badge:'video_contributor',enabled:false},'member','','member@example.invalid')).status,200);
+ clearLimits();const video=crypto.randomUUID();sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?, 'visible',0,?,?)").run(video,ownerState.board,memberState.me.id,'Uploaded video',`media/${video}`,'video/mp4','clip.mp4',100,Date.now(),crypto.randomUUID());
  clearLimits();assert.equal((await call({action:'moderate',operation:'delete',target:video},'member','','member@example.invalid')).status,200);assert.equal(sql.prepare("SELECT status FROM posts WHERE id=?").get(video).status,'deleted');
 });
 test('Owner permission list includes named loginless users but excludes anonymous sessions',async()=>{
