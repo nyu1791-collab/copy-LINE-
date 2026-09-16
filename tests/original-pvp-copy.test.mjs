@@ -33,12 +33,14 @@ test('PvP ranking remains home and the copy is the improvement staging surface',
  assert.match(communityEntry,/url: "\/boards"/);
 });
 
-test('board remains available and isolated from canonical PvP writes',()=>{
+test('board remains available, does not fetch hidden PvP ranking data, and cannot write canonical PvP',()=>{
  assert.match(board,/u1631e-sally/);
+ assert.match(board,/新キャラに関する感想・情報/);
+ assert.doesNotMatch(board,/\/api\/pvp/);
+ assert.doesNotMatch(board,/pvpRankingCard|PvpData|pvpSequence/);
  assert.match(sourceProxy,/raw\.githubusercontent\.com\/line-rangers-fan\/line-rangers-pvp\/main\/docs\/data/);
  assert.match(sourceProxy,/cache:'no-store'/);
  assert.doesNotMatch(sourceProxy,/method:\s*['"]POST['"]/);
- assert.match(board,/ランキングを取得できません。掲示板の投稿・投票はそのまま利用できます。/);
 });
 
 test('successful comment posts clear persisted drafts while failures preserve them',()=>{
