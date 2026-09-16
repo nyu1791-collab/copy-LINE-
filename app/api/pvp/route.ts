@@ -13,6 +13,7 @@ const CACHE_TTL_MS=60_000;
 const STALE_TTL_MS=5*60_000;
 const LEGEND_TARGET=200;
 const MAX_COMPOSITION_OCCURRENCES=4000;
+const UPSTREAM_MAX_BYTES=4*1024*1024;
 const cache=new Map<string,{data:PvpResponse;expires:number;staleUntil:number}>();
 
 type EquipmentItem={itemCode:string;image:string|null;rank:number;occurrenceCount:number;playerCount:number;adoptionRate:number};
@@ -87,9 +88,19 @@ function copiedFallback(month:string,character:string){
  if(month===COPIED_SALLY_SNAPSHOT.month&&character===COPIED_SALLY_SNAPSHOT.character.unitCode)return COPIED_SALLY_SNAPSHOT;
  return null;
 }
+async function readUpstreamJson(response:Response){
+ const declared=Number(response.headers.get('content-length')||0);
+ if(declared&&!Number.isSafeInteger(declared)||declared>UPSTREAM_MAX_BYTES)throw new Error('upstream_too_large');
+ if(!response.body)throw new Error('upstream_empty');
+ const reader=response.body.getReader();let raw='';let size=0;const decoder=new TextDecoder();
+ try{
+  for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>UPSTREAM_MAX_BYTES){await reader.cancel();throw new Error('upstream_too_large');}raw+=decoder.decode(value,{stream:true});}
+  raw+=decoder.decode();return JSON.parse(raw) as unknown;
+ }finally{reader.releaseLock();}
+}
 async function loadSnapshot(month:string,topic:{id:string;name:string;image:string}){
  for(const source of SOURCE_URLS){
-  try{const upstream=await fetch(source,{headers:{accept:'application/json'},cache:'no-store',signal:AbortSignal.timeout(2500)});if(!upstream.ok)continue;const result=compactSnapshot(await upstream.json(),month,topic);if(result)return result;}catch{}
+  try{const upstream=await fetch(source,{headers:{accept:'application/json'},cache:'no-store',signal:AbortSignal.timeout(2500)});if(!upstream.ok)continue;const result=compactSnapshot(await readUpstreamJson(upstream),month,topic);if(result)return result;}catch{}
  }
  return null;
 }
