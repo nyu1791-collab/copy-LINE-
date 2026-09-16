@@ -172,7 +172,7 @@ export async function POST(request:Request){try{
  if(b.action==='seen'){if(!Number.isSafeInteger(b.until)||Number(b.until)<0||Number(b.until)>now)throw new Error('invalid_request');await db.prepare('INSERT INTO visits(subject,seen) VALUES(?,?) ON CONFLICT(subject) DO UPDATE SET seen=MAX(seen,excluded.seen)').bind(sub,b.until).run();return reply({ok:true});}
  const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName,!!session.owner));if(!me)throw new Error('profile_required');const flags=await loadCommunityFeatureFlags(db);
  if(b.action==='feature_flag'){
-  if(!['owner','moderator'].includes(me.role))throw new Error('forbidden');if(!isCommunityFeatureName(b.name)||typeof b.enabled!=='boolean')throw new Error('invalid_request');
+  if(me.role!=='owner')throw new Error('forbidden');if(!isCommunityFeatureName(b.name)||typeof b.enabled!=='boolean')throw new Error('invalid_request');
   await db.batch([
    db.prepare('INSERT INTO feature_flags(name,enabled,updated,actor) VALUES(?,?,?,?) ON CONFLICT(name) DO UPDATE SET enabled=excluded.enabled,updated=excluded.updated,actor=excluded.actor').bind(b.name,b.enabled?1:0,now,me.id),
    db.prepare('INSERT INTO audit(id,actor,action,target,created) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),me.id,'feature_flag',`${b.name}:${b.enabled?'enabled':'disabled'}`,now),
