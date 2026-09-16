@@ -73,7 +73,7 @@ jobs:
           echo "::add-mask::$account_id"
           echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
 
-      - name: Provision and verify isolated D1 and R2 resources
+      - name: Verify existing isolated D1 and R2 resources
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
@@ -81,9 +81,8 @@ jobs:
           db_list="$(npx wrangler d1 list --json)"
           db_id="$(printf '%s' "$db_list" | jq -r --arg name "$D1_NAME" '[.[] | select(.name == $name) | .uuid][0] // empty')"
           if [ -z "$db_id" ]; then
-            npx wrangler d1 create "$D1_NAME" --location apac
-            db_list="$(npx wrangler d1 list --json)"
-            db_id="$(printf '%s' "$db_list" | jq -r --arg name "$D1_NAME" '[.[] | select(.name == $name) | .uuid][0] // empty')"
+            echo "Required review D1 database is missing; refusing to create a new resource automatically."
+            exit 78
           fi
           if ! [[ "$db_id" =~ ^[A-Fa-f0-9-]{36}$ ]]; then
             echo "Unable to resolve the isolated D1 database ID."
@@ -92,9 +91,9 @@ jobs:
           echo "::add-mask::$db_id"
 
           if ! npx wrangler r2 bucket info "$R2_BUCKET" --json >/dev/null 2>&1; then
-            npx wrangler r2 bucket create "$R2_BUCKET"
+            echo "Required review R2 bucket is missing; refusing to create a new resource automatically."
+            exit 78
           fi
-          npx wrangler r2 bucket info "$R2_BUCKET" --json >/dev/null
 
           tmp="$(mktemp)"
           jq --arg id "$db_id" '(.d1_databases[] | select(.binding == "DB").database_id) = $id' wrangler.jsonc > "$tmp"
@@ -160,11 +159,15 @@ jobs:
           health="$(curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 "$REVIEW_BASE_URL/api/health")"
           api_headers="$(mktemp)"
           api_body="$(mktemp)"
-          board_css="$(mktemp)"
           curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 -D "$api_headers" -o "$api_body" "$REVIEW_BASE_URL/api/board"
 
           grep -q 'レジェンド帯 キャラ集計' <<< "$pvp" || { echo 'PvP marker missing after deploy.'; exit 1; }
+          grep -q '20260916-ui-1' <<< "$pvp" || { echo 'Latest PvP UI bundle marker missing after deploy.'; exit 1; }
           grep -q '新キャラ情報掲示板' <<< "$board" || { echo 'Board title missing after deploy.'; exit 1; }
+          if grep -q 'PvPランキング' <<< "$board"; then
+            echo 'Board unexpectedly renders the removed PvP ranking card.'
+            exit 1
+          fi
           printf '%s' "$snapshot" | jq -e '.target_players == 200 and .sampled_players == 200 and .complete_target == true and (.characters | length > 0)' >/dev/null || { echo 'PvP snapshot is not a complete validated 200/200 sample.'; exit 1; }
           printf '%s' "$health" | jq -e '.ok == true and .checks.d1 == true and .checks.r2 == true' >/dev/null || { echo 'Runtime D1/R2 health check failed.'; exit 1; }
           jq -e '.boards | type == "array"' "$api_body" >/dev/null || { echo 'Board API did not return a valid boards array.'; exit 1; }
@@ -194,8 +197,6 @@ jobs:
               echo "Board browser asset was incorrectly served as HTML: $asset"
               exit 1
             fi
-            if [[ "$asset" == *.css* ]]; then cat "$asset_body" >> "$board_css"; fi
           done <<< "$board_assets"
 
-          grep -Eq '\.pvp-ranking[^}]*display:none!important' "$board_css" || { echo 'Board CSS no longer hides the PvP ranking card.'; exit 1; }
           echo "Cloudflare review fully verified: $REVIEW_BASE_URL"
