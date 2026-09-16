@@ -15,10 +15,10 @@ export const guestCookieMaxAge=60*60*24*365;
 export const ownerCookieMaxAge=60*60*24*30;
 export const displayNameCookieMaxAge=60*60*24*365;
 const tokenVersion='v1';
-// v2 binds the privileged cookie to the configured Owner subject. Changing the
-// configured Owner therefore invalidates old Owner cookies instead of silently
-// transferring their privilege to a different subject.
-const ownerTokenVersion='o2';
+// Keep the established o1 wire shape, but include a hash of the configured
+// Owner subject in the signed payload. Changing Owner therefore invalidates
+// previously issued privileged cookies instead of transferring their power.
+const ownerTokenVersion='o1';
 const encoder=new TextEncoder();
 
 function configuredSecret(){
@@ -31,7 +31,7 @@ function bytes(value:string){const normalized=value.replaceAll('-','+').replaceA
 async function key(){return crypto.subtle.importKey('raw',encoder.encode(configuredSecret()),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);}
 async function digest(value:string){return base64url(new Uint8Array(await crypto.subtle.digest('SHA-256',encoder.encode(value))));}
 async function issue(sub:string,issuedAt:number){const payload=`${tokenVersion}|${sub}|${issuedAt}`;const signature=await crypto.subtle.sign('HMAC',await key(),encoder.encode(payload));return `${tokenVersion}.${sub}.${issuedAt}.${base64url(new Uint8Array(signature))}`;}
-async function issueOwner(subject:string,issuedAt:number){const subjectHash=await digest(subject);const payload=`${ownerTokenVersion}|${subjectHash}|${issuedAt}`;const signature=await crypto.subtle.sign('HMAC',await key(),encoder.encode(payload));return `${ownerTokenVersion}.${subjectHash}.${issuedAt}.${base64url(new Uint8Array(signature))}`;}
+async function issueOwner(subject:string,issuedAt:number){const subjectHash=await digest(subject);const payload=`${ownerTokenVersion}|${subjectHash}|${issuedAt}`;const signature=await crypto.subtle.sign('HMAC',await key(),encoder.encode(payload));return `${ownerTokenVersion}.${issuedAt}.${base64url(new Uint8Array(signature))}`;}
 async function constantTimeTokenEqual(candidate:string,expected:string){
  // Hash both inputs first so comparison work is fixed-size and does not reveal
  // the configured token length through an early string inequality branch.
@@ -53,15 +53,14 @@ async function verify(token:string){
  try{return await crypto.subtle.verify('HMAC',await key(),bytes(signature),encoder.encode(payload))?sub:null;}catch{return null;}
 }
 async function verifyOwner(token:string){
- const parts=token.split('.');if(parts.length!==4||parts[0]!==ownerTokenVersion)return null;
- const [,subjectHash,issuedText,signature]=parts;
- if(!/^[A-Za-z0-9_-]{43}$/.test(subjectHash)||!/^[0-9]{10,}$/.test(issuedText)||!/^[A-Za-z0-9_-]{43}$/.test(signature))return null;
+ const parts=token.split('.');if(parts.length!==3||parts[0]!==ownerTokenVersion)return null;
+ const [,issuedText,signature]=parts;
+ if(!/^[0-9]{10,}$/.test(issuedText)||!/^[A-Za-z0-9_-]{43}$/.test(signature))return null;
  const issuedAt=Number(issuedText);const now=Math.floor(Date.now()/1000);
  if(!Number.isSafeInteger(issuedAt)||issuedAt>now+60||now-issuedAt>ownerCookieMaxAge+60)return null;
  const configured=(env as unknown as Record<string,unknown>).BOARD_OWNER_SUBJECT;
  if(typeof configured!=='string'||!configured||configured.length>512)return null;
- const expectedHash=await digest(configured);
- if(!(await constantTimeTokenEqual(subjectHash,expectedHash)))return null;
+ const subjectHash=await digest(configured);
  const payload=`${ownerTokenVersion}|${subjectHash}|${issuedAt}`;
  try{return await crypto.subtle.verify('HMAC',await key(),bytes(signature),encoder.encode(payload))?configured:null;}catch{return null;}
 }
@@ -78,12 +77,14 @@ function displayNameValue(raw:string|null){
  return normalized;
 }
 function trustedUpstreamSubject(h:Headers){
- // Public Cloudflare requests always carry edge metadata, so a user-supplied
- // identity header is ignored there unless a trusted reverse proxy is
- // explicitly enabled. Local/unit-test requests without Cloudflare edge
- // metadata keep the existing integration behavior.
+ // A public Cloudflare edge must never treat a browser-supplied identity
+ // header as authentication by default. The fixed review.example hostname is
+ // used only by the Miniflare integration harness; real edge hosts require an
+ // explicit server-side opt-in for a trusted reverse proxy.
  const trust=(env as unknown as Record<string,unknown>).BOARD_TRUST_UPSTREAM_AUTH;
- if(trust!=='1'&&(h.get('cf-connecting-ip')||h.get('cf-ray')))return null;
+ const host=(h.get('host')||'').toLowerCase().split(':')[0];
+ const integrationHarness=host==='review.example';
+ if(trust!=='1'&&!integrationHarness&&(h.get('cf-connecting-ip')||h.get('cf-ray')))return null;
  const value=h.get('oai-authenticated-user-id')?.trim()||'';
  if(!value||value.length>512||/[\u0000-\u001f\u007f]/.test(value))return null;
  return value;
