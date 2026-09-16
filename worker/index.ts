@@ -52,13 +52,17 @@ async function allowMutation(request:Request,env:Env,path:string){
 async function housekeeping(env:Env,now:number){
   // Abort only bounded, expired multipart sessions. If a multipart complete
   // succeeded but D1 finalization failed, also remove the key only when no post
-  // owns it; completed, hidden, and deleted posts remain restorable.
+  // owns it. Deleted post media is handled by the durable cleanup queue below.
   const expired=(await env.DB.prepare("SELECT id,media_key,upload_id FROM upload_sessions WHERE status IN ('uploading','failed') AND created<? ORDER BY created ASC LIMIT 50").bind(now-DAY_MS).all()).results as {id:string;media_key:string;upload_id:string}[];
   for(const row of expired){
     try{await env.BUCKET.resumeMultipartUpload(row.media_key,row.upload_id).abort();}catch{}
     const owner=await env.DB.prepare('SELECT 1 FROM posts WHERE media_key=? LIMIT 1').bind(row.media_key).first();
     if(!owner){try{await env.BUCKET.delete(row.media_key);}catch{}}
     await env.DB.prepare("UPDATE upload_sessions SET status='failed',updated=? WHERE id=? AND status<>'completed'").bind(now,row.id).run();
+  }
+  const pendingMedia=(await env.DB.prepare("SELECT media_key FROM media_cleanup ORDER BY created ASC LIMIT 50").all()).results as {media_key:string}[];
+  for(const row of pendingMedia){
+    try{await env.BUCKET.delete(row.media_key);await env.DB.prepare("DELETE FROM media_cleanup WHERE media_key=?").bind(row.media_key).run();}catch{}
   }
   const sessionCutoff=now-7*DAY_MS;
   const limitCutoff=now-DAY_MS;
