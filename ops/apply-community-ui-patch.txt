@@ -1,1 +1,1 @@
-Apply the guarded Japanese-English community patch: keep only Japanese and English on the board, show localized per-post limits, allow up to 5 videos and 10 images, run the complete regression suite, and commit only verified board changes.
+Apply the guarded Japanese-English community patch: keep only Japanese and English on the board, show localized per-post limits, allow up to 5 videos and 10 images, align the legacy UI contract test with localized labels, run the complete regression suite, and commit only verified board changes.
