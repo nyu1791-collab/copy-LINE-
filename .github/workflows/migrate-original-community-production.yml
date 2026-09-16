@@ -72,10 +72,8 @@ jobs:
             ][0] // empty
           ')"
           if [ -z "$db_id" ]; then
-            created="$(npx wrangler d1 create "$D1_NAME" --json)"
-            db_id="$(printf '%s' "$created" | jq -er '
-              .uuid // .database_id // .result.uuid // .result.database_id
-            ')"
+            created="$(npx wrangler d1 create "$D1_NAME" 2>&1)"
+            db_id="$(printf '%s' "$created" | grep -Eo '[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}' | head -n1 || true)"
           fi
           if ! [[ "$db_id" =~ ^[A-Fa-f0-9-]{36}$ ]]; then
             echo "Unable to resolve the original production D1 database ID."
