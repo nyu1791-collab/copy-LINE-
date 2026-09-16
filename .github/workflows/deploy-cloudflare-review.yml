@@ -3,6 +3,9 @@ name: deploy-cloudflare-review
 # Isolated public review Worker. The canonical production site is not modified here.
 on:
   workflow_dispatch:
+  workflow_run:
+    workflows: ["refresh-pvp-data"]
+    types: [completed]
   push:
     branches:
       - main
@@ -37,6 +40,7 @@ env:
 
 jobs:
   deploy:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
