@@ -125,7 +125,7 @@ export async function activateOwner(accessToken:string){
 export async function sessionFromHeaders(h:Headers):Promise<AnonymousSession>{
  const savedDisplayName=displayNameValue(h.get('cookie'))||undefined;
  const ownerExisting=cookieValue(h.get('cookie'),ownerCookieName);
- if(ownerExisting){const sub=await verifyOwner(ownerExisting);if(sub)return {sub,anonymous:false,owner:true,displayName:savedDisplayName};}
+ if(ownerExisting){const sub=await verifyOwner(ownerExisting);if(sub)return {sub,anonymous:false,owner:true,displayName:savedDisplayName,setCookie:await ownerCookie(sub)};}
  const authenticated=trustedUpstreamSubject(h);
  if(authenticated)return {sub:authenticated,anonymous:false,displayName:savedDisplayName};
  const existing=cookieValue(h.get('cookie'),guestCookieName);
