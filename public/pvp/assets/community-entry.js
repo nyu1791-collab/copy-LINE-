@@ -94,7 +94,7 @@ function buildFeaturedCharacter(topic) {
   const image = document.createElement("img");
   image.className = "community-board-entry-character-image";
   image.src = topic.image;
-  image.alt = `${topic.name}のキャラクター画像`;
+  image.alt = "New character image";
   image.width = 88;
   image.height = 88;
   image.loading = "lazy";
@@ -102,10 +102,7 @@ function buildFeaturedCharacter(topic) {
 
   const copy = document.createElement("div");
   copy.className = "community-board-entry-character-copy";
-  copy.append(
-    textElement("span", "community-board-entry-character-badge", "NEW CHARACTER"),
-    textElement("strong", "community-board-entry-character-name", topic.name),
-  );
+  copy.append(textElement("span", "community-board-entry-character-badge", "NEW CHARACTER"));
   character.append(image, copy);
   return character;
 }
