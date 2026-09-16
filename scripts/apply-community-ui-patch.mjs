@@ -1,10 +1,7 @@
 import {readFile,writeFile} from 'node:fs/promises';
 
 const communityPath='app/community.tsx';
-const rulesPath='lib/rules.ts';
 const labelsPath='lib/labels.ts';
-const activityLabelsPath='lib/activity-labels.ts';
-const translatePath='app/api/translate/route.ts';
 const testsPath='tests/community.test.mjs';
 
 function replaceExactlyOnce(source,before,after,label){
@@ -13,108 +10,59 @@ function replaceExactlyOnce(source,before,after,label){
  return source.slice(0,first)+after+source.slice(first+before.length);
 }
 
-let rules=await readFile(rulesPath,'utf8');
-rules=replaceExactlyOnce(
- rules,
- "export const languages = ['ja','en','zh','ko','th','id','vi'] as const;",
- "export const languages = ['ja','en'] as const;",
- 'board languages',
-);
-await writeFile(rulesPath,rules,'utf8');
-
 let labels=await readFile(labelsPath,'utf8');
 labels=replaceExactlyOnce(
  labels,
- "export const localeNames={ja:'🇯🇵 日本語',en:'🇺🇸 English',zh:'🇹🇼 繁體中文',ko:'🇰🇷 한국어',th:'🇹🇭 ไทย',id:'🇮🇩 Indonesia',vi:'🇻🇳 Tiếng Việt'};",
- "export const localeNames={ja:'🇯🇵 日本語',en:'🇺🇸 English'};",
- 'locale names',
+ "loading:'読み込み中…',entry:'投票・コメント・写真・動画で、新キャラについて話そう！'};",
+ "loading:'読み込み中…',entry:'投票・コメント・写真・動画で、新キャラについて話そう！',anonymousUser:'匿名ユーザー',setDisplayName:'表示名を設定',staleData:'最新データを取得できません。前回の表示を続けています。',communitySummary:'新キャラの盛り上がり',communityRating:'みんなの評価',videoUnit:'本',commentUnit:'件',today:'今日',readOnlyNotice:'現在メンテナンス中のため、新規投稿・反応・投票・動画投稿を一時停止しています。閲覧は通常通り利用できます。',commentsPausedNotice:'現在、コメント投稿と反応を一時停止しています。閲覧・動画視聴・投票は利用できます。',videoPausedNotice:'現在、動画投稿を一時停止しています。既存動画の視聴、コメント、投票は利用できます。',votingPausedNotice:'現在、投票を一時停止しています。コメントと動画は利用できます。',offlineNotice:'現在オフラインです。入力内容はこの端末に保存されます。',replyInput:'返信を入力',commentInput:'コメントを入力',replyTargetLabel:'返信先',resumeUploadNotice:'前回の動画送信を、保存済みの説明文で再開します。',newCharacterNote:'新キャラに関する感想・情報を投稿してください。',yourVideo:'あなたの動画',uploadFailed:'アップロード失敗',retryFailedPart:'失敗した部分を再試行',newComments:'↑ 新しいコメント {count}件',sending:'送信中…',sendFailed:'送信に失敗しました',retrySend:'再試行',report:'報告',reportPost:'投稿を報告',closeReplies:'返信を閉じる',showReplies:'{count}件の返信を表示',videoList:'動画一覧',videoContributor:'動画制作貢献者',helpfulContributor:'有益情報貢献者',reselectVideoNotice:'動画ファイルをもう一度選ぶと、送信済みの部分から再開できます。',uploadWaitNotice:'動画の投稿が完了するまで、次の投稿はお待ちください。',offlineDraftNotice:'現在オフラインです。入力内容はこの端末に残っています。',ownerShort:'運営',moderatorShort:'モデレーター'};",
+ 'Japanese public labels',
 );
 labels=replaceExactlyOnce(
  labels,
- "mediaPicker:'写真・動画を選ぶ',mediaNote:",
- "mediaPicker:'写真・動画を選ぶ',mediaLimitHint:'ここをタップ（1投稿につき動画5本・画像10枚まで）',mediaLimitError:'1投稿につき、動画は5本・画像は10枚までです。',mediaNote:",
- 'Japanese media limit labels',
+ "loading:'Loading…',entry:'Talk about new characters with votes, comments, photos and videos.'};",
+ "loading:'Loading…',entry:'Talk about new characters with votes, comments, photos and videos.',anonymousUser:'Anonymous user',setDisplayName:'Set display name',staleData:'Could not refresh the latest data. Showing the previous view.',communitySummary:'New character activity',communityRating:'Community rating',videoUnit:' videos',commentUnit:' comments',today:'Today',readOnlyNotice:'Maintenance is active. New posts, reactions, votes and video uploads are temporarily paused. Browsing is still available.',commentsPausedNotice:'Comments and reactions are temporarily paused. Video viewing and voting are still available.',videoPausedNotice:'Video uploads are temporarily paused. Existing videos, comments and voting are still available.',votingPausedNotice:'Voting is temporarily paused. Comments and videos are still available.',offlineNotice:'You are offline. Your draft is saved on this device.',replyInput:'Write a reply',commentInput:'Write a comment',replyTargetLabel:'Replying to',resumeUploadNotice:'Resuming the previous video upload with the saved description.',newCharacterNote:'Share impressions or useful information about the new character.',yourVideo:'Your video',uploadFailed:'Upload failed',retryFailedPart:'Retry failed part',newComments:'↑ {count} new comments',sending:'Sending…',sendFailed:'Failed to send',retrySend:'Retry',report:'Report',reportPost:'Report post',closeReplies:'Hide replies',showReplies:'Show {count} replies',videoList:'Video list',videoContributor:'Video contributor',helpfulContributor:'Helpful contributor',reselectVideoNotice:'Select the same video again to resume from the uploaded parts.',uploadWaitNotice:'Please wait for the current video upload to finish before posting again.',offlineDraftNotice:'You are offline. Your draft is still saved on this device.',ownerShort:'Owner',moderatorShort:'Moderator'};",
+ 'English public labels',
 );
-labels=replaceExactlyOnce(
- labels,
- "mediaPicker:'Choose photo or video',mediaNote:",
- "mediaPicker:'Choose photo or video',mediaLimitHint:'Tap here (up to 5 videos and 10 images per post)',mediaLimitError:'Each post can include up to 5 videos and 10 images.',mediaNote:",
- 'English media limit labels',
-);
-const overridesStart=labels.indexOf("const overrides:Partial<Record<Language,Partial<Labels>>>={");
-const errorTextStart=labels.indexOf('export function errorText');
-if(overridesStart<0||errorTextStart<0||errorTextStart<=overridesStart)throw new Error('multilingual label block: expected source markers');
-labels=labels.slice(0,overridesStart)+"export function labels(lang:Language):Labels{return lang==='ja'?ja:en;}\n"+labels.slice(errorTextStart);
 await writeFile(labelsPath,labels,'utf8');
 
-const activity=await readFile(activityLabelsPath,'utf8');
-if(!activity.includes("zh:{helpful:'有幫助'")||!activity.includes("vi:{helpful:'Hữu ích'"))throw new Error('activity labels: expected multilingual source');
-await writeFile(activityLabelsPath,`import type {Language} from './rules';
-const copy={
- ja:{helpful:'役に立った',helpers:'役に立ったを押した人',sort:'役に立った順',featured:'注目コメント',title:'動画投稿者'},
- en:{helpful:'Helpful',helpers:'People who found this helpful',sort:'Most helpful',featured:'Featured comment',title:'Video contributor'}
-} satisfies Record<Language,{helpful:string;helpers:string;sort:string;featured:string;title:string}>;
-export function activityLabels(lang:Language){return copy[lang];}
-`,'utf8');
-
-let translate=await readFile(translatePath,'utf8');
-translate=replaceExactlyOnce(
- translate,
- "const googleLanguage:Record<Language,string>={ja:'ja',en:'en',zh:'zh-TW',ko:'ko',th:'th',id:'id',vi:'vi'};",
- "const googleLanguage:Record<Language,string>={ja:'ja',en:'en'};",
- 'translation languages',
-);
-await writeFile(translatePath,translate,'utf8');
-
 let source=await readFile(communityPath,'utf8');
-source=replaceExactlyOnce(
- source,
- "import {contributionBadges,languages,legacyMultipartMediaBytes,maxMediaBytes,mediaPartAttempts,monthJST,requestUUID,type Language,type Role,type ContributionBadge} from '@/lib/rules';",
- "import {contributionBadges,languages,legacyMultipartMediaBytes,maxImagesPerPost,maxMediaBytes,maxVideosPerPost,mediaPartAttempts,monthJST,requestUUID,type Language,type Role,type ContributionBadge} from '@/lib/rules';",
- 'media-limit import',
-);
-source=replaceExactlyOnce(
- source,
- "useEffect(()=>{document.documentElement.lang=lang==='zh'?'zh-Hant':lang;try{localStorage.setItem('line-rangers-language',lang);}catch{}},[lang]);",
- "useEffect(()=>{document.documentElement.lang=lang;try{localStorage.setItem('line-rangers-language',lang);}catch{}},[lang]);",
- 'document language',
-);
-source=replaceExactlyOnce(
- source,
- "toLocaleString(lang==='zh'?'zh-TW':lang,",
- "toLocaleString(lang,",
- 'post timestamp locale',
-);
-source=replaceExactlyOnce(
- source,
- '<span className="media-picker-hint">ここをタップ（動画は最大5本）</span>',
- '<span className="media-picker-hint">{t.mediaLimitHint}</span>',
- 'media picker hint',
-);
-source=replaceExactlyOnce(
- source,
- "const selected=Array.from(e.currentTarget.files||[]);if(selected.length>5||selected.some(file=>!file.type.startsWith('video/')&&selected.length>1)){setFiles([]);e.currentTarget.value='';setNotice('動画は最大5本まで。画像を添付する場合は1枚までです。');return;}",
- "const selected=Array.from(e.currentTarget.files||[]);const videoCount=selected.filter(file=>file.type.startsWith('video/')).length;const imageCount=selected.filter(file=>file.type.startsWith('image/')).length;if(videoCount>maxVideosPerPost||imageCount>maxImagesPerPost||videoCount+imageCount!==selected.length){setFiles([]);e.currentTarget.value='';setNotice(t.mediaLimitError);return;}",
- 'media picker validation',
-);
-source=replaceExactlyOnce(
- source,
- "}else if(index===0)void uploadImage(fileToSend,description,request,uploadBoard,group);",
- "}else void uploadImage(fileToSend,description,request,uploadBoard,group);",
- 'multi-image uploader',
-);
+source=replaceExactlyOnce(source,"function uiName(value:string|undefined|null){if(!value)return '';return isGuestName(value)?'匿名ユーザー':value;}","function uiName(value:string|undefined|null,anonymousLabel='匿名ユーザー'){if(!value)return '';return isGuestName(value)?anonymousLabel:value;}",'anonymous display label');
+source=replaceExactlyOnce(source,"const q=new URLSearchParams(location.search);const candidate=q.get('lang')||saved||navigator.language.split('-')[0];setLang(languages.includes(candidate as Language)?candidate as Language:'en');","const q=new URLSearchParams(location.search);const requested=q.get('lang');const browser=navigator.language.split('-')[0];const candidate=languages.includes(requested as Language)?requested:languages.includes(saved as Language)?saved:languages.includes(browser as Language)?browser:'en';setLang(candidate as Language);",'language fallback');
+source=replaceExactlyOnce(source,"else setNotice('動画ファイルをもう一度選ぶと、送信済みの部分から再開できます。');","else setNotice(t.reselectVideoNotice);",'reselect video notice');
+source=replaceExactlyOnce(source,"setNotice('動画の投稿が完了するまで、次の投稿はお待ちください。');","setNotice(t.uploadWaitNotice);",'upload wait notice');
+source=replaceExactlyOnce(source,"setNotice('現在オフラインです。入力内容はこの端末に残っています。');","setNotice(t.offlineDraftNotice);",'offline draft notice');
+source=replaceExactlyOnce(source,"visibleName=uiName(p.name);","visibleName=uiName(p.name,t.anonymousUser);",'post anonymous label');
+source=replaceExactlyOnce(source,"aria-label=\"運営\">（運営）</span>}{p.role==='moderator'&&<span className=\"role role-moderator\" aria-label=\"モデレーター\">（モデレーター）</span>","aria-label={t.ownerShort}>{t.owner}</span>}{p.role==='moderator'&&<span className=\"role role-moderator\" aria-label={t.moderatorShort}>{t.moderator}</span>",'post role labels');
+source=replaceExactlyOnce(source,"{badge==='video_contributor'?'動画制作貢献者':badge==='helpful_contributor'?'有益情報貢献者':a.title}","{badge==='video_contributor'?t.videoContributor:badge==='helpful_contributor'?t.helpfulContributor:a.title}",'contribution labels');
+source=replaceExactlyOnce(source,'<SectionBoundary name="動画">','<SectionBoundary name={t.video}>','video section label');
+source=replaceExactlyOnce(source,'<div className="video-carousel" aria-label="動画一覧">','<div className="video-carousel" aria-label={t.videoList}>','video list aria');
+source=replaceExactlyOnce(source,"{p.localState==='sending'?'送信中…':<><span>送信に失敗しました</span><Button variant=\"ghost\" disabled={features.readOnly||!features.commentsEnabled} onClick={()=>void retryPost(p)}><RotateCcw size={15}/>再試行</Button></>}","{p.localState==='sending'?t.sending:<><span>{t.sendFailed}</span><Button variant=\"ghost\" disabled={features.readOnly||!features.commentsEnabled} onClick={()=>void retryPost(p)}><RotateCcw size={15}/>{t.retrySend}</Button></>}",'local send state');
+source=replaceExactlyOnce(source,"aria-label=\"投稿を報告\" disabled={!!pending['report:'+p.id]} onClick={()=>void reportPost(p)}><Flag size={17}/>報告</Button>","aria-label={t.reportPost} disabled={!!pending['report:'+p.id]} onClick={()=>void reportPost(p)}><Flag size={17}/>{t.report}</Button>",'report labels');
+source=replaceExactlyOnce(source,"{replyPosts[p.id]?'返信を閉じる':`${p.replies}件の返信を表示`}","{replyPosts[p.id]?t.closeReplies:t.showReplies.replace('{count}',String(p.replies))}",'reply toggle labels');
+source=replaceExactlyOnce(source,"{isGuestName(data?.me?.name)?'表示名を設定':uiName(data?.me?.name)||t.profile}","{isGuestName(data?.me?.name)?t.setDisplayName:uiName(data?.me?.name,t.anonymousUser)||t.profile}",'profile navigation label');
+source=replaceExactlyOnce(source,"aria-label=\"運営\">（運営）</span>}{data?.me?.role==='moderator'&&<span className=\"role role-moderator\" aria-label=\"モデレーター\">（モデレーター）</span>","aria-label={t.ownerShort}>{t.owner}</span>}{data?.me?.role==='moderator'&&<span className=\"role role-moderator\" aria-label={t.moderatorShort}>{t.moderator}</span>",'navigation role labels');
+source=replaceExactlyOnce(source,'<span>最新データを取得できません。前回の表示を続けています。</span>','<span>{t.staleData}</span>','stale data notice');
+source=replaceExactlyOnce(source,'<section className="community-summary" aria-label="新キャラの盛り上がり"><div><span>みんなの評価</span>','<section className="community-summary" aria-label={t.communitySummary}><div><span>{t.communityRating}</span>','community summary labels');
+source=replaceExactlyOnce(source,'<span><Video size={16}/>{data.stats.videos}本</span><span><MessageCircle size={16}/>{data.stats.comments}件</span><span className="today-comments">💬 今日 +{data.stats.todayComments}</span>','<span><Video size={16}/>{data.stats.videos}{t.videoUnit}</span><span><MessageCircle size={16}/>{data.stats.comments}{t.commentUnit}</span><span className="today-comments">💬 {t.today} +{data.stats.todayComments}</span>','summary units');
+source=replaceExactlyOnce(source,'<p className="maintenance-notice" role="status">現在メンテナンス中のため、新規投稿・反応・投票・動画投稿を一時停止しています。閲覧は通常通り利用できます。</p>','<p className="maintenance-notice" role="status">{t.readOnlyNotice}</p>','read-only notice');
+source=replaceExactlyOnce(source,'<p className="maintenance-notice" role="status">現在、コメント投稿と反応を一時停止しています。閲覧・動画視聴・投票は利用できます。</p>','<p className="maintenance-notice" role="status">{t.commentsPausedNotice}</p>','comments pause notice');
+source=replaceExactlyOnce(source,'<p className="maintenance-notice" role="status">現在、動画投稿を一時停止しています。既存動画の視聴、コメント、投票は利用できます。</p>','<p className="maintenance-notice" role="status">{t.videoPausedNotice}</p>','video pause notice');
+source=replaceExactlyOnce(source,'<p className="maintenance-notice" role="status">現在、投票を一時停止しています。コメントと動画は利用できます。</p>','<p className="maintenance-notice" role="status">{t.votingPausedNotice}</p>','voting pause notice');
+source=replaceExactlyOnce(source,'<WifiOff size={16}/>現在オフラインです。入力内容はこの端末に保存されます。</p>','<WifiOff size={16}/>{t.offlineNotice}</p>','offline notice');
+source=replaceExactlyOnce(source,"aria-label={replyTarget?'返信を入力':'コメントを入力'}","aria-label={replyTarget?t.replyInput:t.commentInput}",'composer aria label');
+source=replaceExactlyOnce(source,'<span className="reply-target-label">返信先</span>{uiName(replyTarget.name)}','<span className="reply-target-label">{t.replyTargetLabel}</span>{uiName(replyTarget.name,t.anonymousUser)}','reply target label');
+source=replaceExactlyOnce(source,"setNotice('前回の動画送信を、保存済みの説明文で再開します。');","setNotice(t.resumeUploadNotice);",'resume upload notice');
+source=replaceExactlyOnce(source,'<p className="new-character-note">新キャラに関する感想・情報を投稿してください。</p>','<p className="new-character-note">{t.newCharacterNote}</p>','new character note');
+source=replaceExactlyOnce(source,'<strong>あなたの動画</strong>','<strong>{t.yourVideo}</strong>','your video label');
+source=replaceExactlyOnce(source,"{job.status==='failed'?'アップロード失敗':job.status==='finalizing'?t.uploadFinalizing:`${t.uploading} ${job.progress}%`}","{job.status==='failed'?t.uploadFailed:job.status==='finalizing'?t.uploadFinalizing:`${t.uploading} ${job.progress}%`}",'upload failed label');
+source=replaceExactlyOnce(source,'<RotateCcw size={15}/>失敗した部分を再試行</Button>','<RotateCcw size={15}/>{t.retryFailedPart}</Button>','retry failed part');
+source=replaceExactlyOnce(source,'>↑ 新しいコメント {newPosts}件</Button>','>{t.newComments.replace(\'{count}\',String(newPosts))}</Button>','new comments label');
 await writeFile(communityPath,source,'utf8');
 
 let tests=await readFile(testsPath,'utf8');
-tests=replaceExactlyOnce(
- tests,
- " assert.match(communitySource,/media-picker-title/);assert.match(communitySource,/ここをタップ/);assert.match(communitySource,/multiple type=\"file\"/);assert.match(communitySource,/最大5本/);assert.match(communitySource,/新キャラに関する感想・情報/);assert.doesNotMatch(communitySource,/media-picker.*<small>/s);",
- " assert.match(communitySource,/media-picker-title/);assert.match(communitySource,/mediaLimitHint/);assert.match(communitySource,/multiple type=\"file\"/);assert.match(communitySource,/maxVideosPerPost/);assert.match(communitySource,/maxImagesPerPost/);assert.match(communitySource,/新キャラに関する感想・情報/);assert.doesNotMatch(communitySource,/media-picker.*<small>/s);",
- 'legacy media composer assertion',
-);
-const marker="test('community board is Japanese-English only with ten-image five-video media caps'";
+const marker="test('public board chrome localizes Japanese-English status and interaction copy'";
 if(!tests.includes(marker)){
- tests+=`\n\ntest('community board is Japanese-English only with ten-image five-video media caps', () => {\n  const source = readFileSync(new URL('app/community.tsx', root), 'utf8');\n  const labelsSource = readFileSync(new URL('lib/labels.ts', root), 'utf8');\n  const activitySource = readFileSync(new URL('lib/activity-labels.ts', root), 'utf8');\n  const translationSource = readFileSync(new URL('app/api/translate/route.ts', root), 'utf8');\n  const directUpload = readFileSync(new URL('app/api/upload/route.ts', root), 'utf8');\n  const videoSession = readFileSync(new URL('app/api/upload/session/route.ts', root), 'utf8');\n  assert.deepEqual(rules.languages, ['ja','en']);\n  assert.equal(rules.maxImagesPerPost, 10);\n  assert.equal(rules.maxVideosPerPost, 5);\n  assert.match(labelsSource, /localeNames=\\{ja:'🇯🇵 日本語',en:'🇺🇸 English'\\}/);\n  assert.doesNotMatch(labelsSource, /🇹🇼|🇰🇷|🇹🇭|🇮🇩|🇻🇳/);\n  assert.doesNotMatch(activitySource, /zh:|ko:|th:|id:|vi:/);\n  assert.match(translationSource, /googleLanguage:Record<Language,string>=\\{ja:'ja',en:'en'\\}/);\n  assert.match(source, /media-picker-hint\\">\\{t\\.mediaLimitHint\\}/);\n  assert.match(labelsSource, /ここをタップ（1投稿につき動画5本・画像10枚まで）/);\n  assert.match(labelsSource, /Tap here \\(up to 5 videos and 10 images per post\\)/);\n  assert.match(source, /videoCount>maxVideosPerPost/);\n  assert.match(source, /imageCount>maxImagesPerPost/);\n  assert.match(source, /else void uploadImage\\(fileToSend,description,request,uploadBoard,group\\)/);\n  assert.match(directUpload, /groupLimit=video\\?maxVideosPerPost:maxImagesPerPost/);\n  assert.match(videoSession, /maxVideosPerPost/);\n});\n`;
+ tests+=`\n\ntest('public board chrome localizes Japanese-English status and interaction copy', () => {\n  const source = readFileSync(new URL('app/community.tsx', root), 'utf8');\n  const labelsSource = readFileSync(new URL('lib/labels.ts', root), 'utf8');\n  assert.match(labelsSource, /staleData:'Could not refresh the latest data/);\n  assert.match(labelsSource, /newCharacterNote:'Share impressions or useful information/);\n  assert.match(labelsSource, /showReplies:'Show \\{count\\} replies'/);\n  assert.match(source, /t\\.staleData/);\n  assert.match(source, /t\\.offlineNotice/);\n  assert.match(source, /t\\.newCharacterNote/);\n  assert.match(source, /t\\.showReplies\\.replace/);\n  assert.match(source, /t\\.videoContributor/);\n  assert.match(source, /t\\.reportPost/);\n  assert.doesNotMatch(source, /新キャラに関する感想・情報を投稿してください。/);\n  assert.doesNotMatch(source, /現在オフラインです。入力内容はこの端末に保存されます。/);\n  assert.doesNotMatch(source, /最新データを取得できません。前回の表示を続けています。/);\n});\n`;
  await writeFile(testsPath,tests,'utf8');
 }
-console.log('Community Japanese-English and media-cap patch applied safely.');
+console.log('Public Japanese-English board localization cleanup applied safely.');
