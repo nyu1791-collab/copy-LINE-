@@ -30,7 +30,7 @@ test('comment UI keeps reactions private, opens replies on demand, and marks a s
  assert.match(communitySource,/media-picker-title/);assert.match(communitySource,/mediaLimitHint/);assert.match(communitySource,/multiple type="file"/);assert.match(communitySource,/maxVideosPerPost/);assert.match(communitySource,/maxImagesPerPost/);assert.match(communitySource,/t\.newCharacterNote/);assert.doesNotMatch(communitySource,/media-picker.*<small>/s);
  assert.match(communitySource,/mine/);assert.match(communitySource,/composer-reply/);assert.match(communitySource,/t\.replyTargetLabel/);assert.match(communitySource,/権限・バッジ管理（Owner専用）/);assert.match(communitySource,/動画制作貢献者/);assert.match(communitySource,/有益情報貢献者/);assert.match(communitySource,/（運営）/);assert.doesNotMatch(communitySource,/運営バッジ/);assert.match(communitySource,/data\?\.me\?\.role==='owner'/);
  assert.match(communitySource,/line-rangers-display-name/);assert.match(communitySource,/function uiName/);assert.match(communitySource,/匿名ユーザー/);assert.match(communitySource,/uiName\(replyTarget\.name,t\.anonymousUser\)/);assert.match(communitySource,/profileRestoreSubject/);assert.match(communitySource,/profileRestoreInFlight/);assert.doesNotMatch(communitySource,/profileRestoreAttempted/);assert.match(communitySource,/運営アクセス/);assert.match(communitySource,/one-time-code/);
- assert.match(communitySource,/\.\.\.\(p\.mine\?\[\]:\['delete'\]\)/);assert.ok(communitySource.indexOf('<p className="post-body">')<communitySource.indexOf('{detail&&(p.video||p.mediaType?.startsWith(\'video/\'))'));
+ assert.match(communitySource,/\.\.\.\(p\.mine\?\[\]:\['delete'\]\)/);assert.ok(communitySource.indexOf('<p className="post-body">')<communitySource.indexOf('{detail&&videoItems.length>0'));
  assert.doesNotMatch(communitySource,/value=\{month\}.*onChange/);
  assert.match(communitySource,/VideoThumbnail id=\{item\.id\}/);assert.match(videoThumbnailSource,/<video/);assert.match(videoThumbnailSource,/\/api\/media/);assert.match(videoThumbnailSource,/IntersectionObserver/);assert.match(videoThumbnailSource,/preload="metadata"/);assert.doesNotMatch(videoThumbnailSource,/autoPlay/);assert.match(videoThumbnailSource,/タップして再生/);assert.match(videoPlayerSource,/preload="metadata"/);assert.match(videoPlayerSource,/onLoadedData/);assert.match(videoPlayerSource,/onError=\{reportFailure\}/);
  assert.match(communityCss,/\.composer\.composer-reply\{position:fixed!important/);assert.match(communityCss,/\.role-owner/);assert.match(communityCss,/border:0!important/);assert.doesNotMatch(pageSource,/\/boards(?:\?|["'])/);assert.doesNotMatch(pageSource,/line-rangers-fan\.github\.io\/line-rangers-pvp/);assert.doesNotMatch(communitySource,/entry-actions|ranking-link|line-rangers-fan\.github\.io\/line-rangers-pvp/);
@@ -333,4 +333,25 @@ test('public board chrome localizes Japanese-English status and interaction copy
   assert.doesNotMatch(source, /新キャラに関する感想・情報を投稿してください。/);
   assert.doesNotMatch(source, /現在オフラインです。入力内容はこの端末に保存されます。/);
   assert.doesNotMatch(source, /最新データを取得できません。前回の表示を続けています。/);
+});
+
+
+test('media groups render as one mixed post and open a shared comparison page',()=>{
+ assert.match(communitySource,/media-image-grid/);
+ assert.match(communitySource,/media-video-grid/);
+ assert.match(communitySource,/media-video-compare-grid/);
+ assert.match(communitySource,/group:p\.mediaGroup/);
+ assert.match(communitySource,/data\?\.video\?\.id\|\|video/);
+ assert.match(communityCss,/\.media-image-grid\.media-count-3\{grid-template-columns:repeat\(3,minmax\(0,1fr\)\)\}/);
+ assert.match(communityCss,/\.media-video-compare-grid\{display:grid;grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+});
+
+test('group detail returns every sibling media item and group moderation stays atomic',async()=>{
+ const {call,sql,clearLimits}=setup();await call({action:'profile',name:'Group Tester'});const state=(await call()).data;const group=crypto.randomUUID();let now=Date.now();
+ const ids=[crypto.randomUUID(),crypto.randomUUID(),crypto.randomUUID(),crypto.randomUUID()];
+ const rows=[[ids[0],'image/jpeg','a.jpg'],[ids[1],'image/png','b.png'],[ids[2],'image/webp','c.webp'],[ids[3],'video/mp4','clip.mp4']];
+ for(const [id,type,name] of rows)sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?,?,'visible',0,?,?)").run(id,state.board,state.me.id,'Grouped media',`media/${id}`,type,name,100,group,now++,crypto.randomUUID());
+ const detail=await call(null,'test-a','?board='+encodeURIComponent(state.board)+'&group='+group);assert.equal(detail.status,200);assert.equal(detail.data.mediaGroup,group);assert.equal(detail.data.mediaItems.length,4);assert.equal(detail.data.video.id,ids[3]);
+ const listed=await call();const anchor=listed.data.posts.find(post=>post.id===ids[3]);assert.equal(anchor.mediaItems.length,4);
+ clearLimits();assert.equal((await call({action:'moderate',operation:'delete',target:ids[3]})).status,200);assert.deepEqual(sql.prepare('SELECT DISTINCT status FROM posts WHERE media_group=?').all(group).map(row=>row.status),['deleted']);
 });
