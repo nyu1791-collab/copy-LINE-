@@ -61,14 +61,14 @@ jobs:
 
       - name: Resolve Cloudflare account safely
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_BOARD_API_TOKEN: ${{ secrets.CLOUDFLARE_BOARD_API_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
-            echo "CLOUDFLARE_API_TOKEN is not configured for copy-LINE-."
+          if [ -z "${CLOUDFLARE_BOARD_API_TOKEN:-}" ]; then
+            echo "CLOUDFLARE_BOARD_API_TOKEN is not configured for copy-LINE-."
             exit 78
           fi
-          response="$(curl --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 --retry 3 --retry-all-errors --header "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts?per_page=50")"
+          response="$(curl --fail-with-body --silent --show-error --connect-timeout 10 --max-time 30 --retry 3 --retry-all-errors --header "Authorization: Bearer $CLOUDFLARE_BOARD_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts?per_page=50")"
           account_id="$(printf '%s' "$response" | jq -er '.result | if length == 1 then .[0].id else error("Token must access exactly one Cloudflare account") end')"
           if ! [[ "$account_id" =~ ^[A-Fa-f0-9]{32}$ ]]; then
             echo "Cloudflare returned an invalid account ID."
@@ -79,7 +79,7 @@ jobs:
 
       - name: Verify existing isolated D1 and R2 resources
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_BOARD_API_TOKEN: ${{ secrets.CLOUDFLARE_BOARD_API_TOKEN }}
         run: |
           set -euo pipefail
           db_list="$(npx wrangler d1 list --json)"
@@ -106,19 +106,19 @@ jobs:
 
       - name: Build and run regression tests
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_BOARD_API_TOKEN: ${{ secrets.CLOUDFLARE_BOARD_API_TOKEN }}
         run: npm test
 
       - name: Apply D1 migrations
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_BOARD_API_TOKEN: ${{ secrets.CLOUDFLARE_BOARD_API_TOKEN }}
         run: |
           set -euo pipefail
           npx wrangler d1 migrations apply DB --remote --config wrangler.jsonc
 
       - name: Deploy isolated public review Worker
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_BOARD_API_TOKEN: ${{ secrets.CLOUDFLARE_BOARD_API_TOKEN }}
         run: |
           set -euo pipefail
           output_config="$(find dist -type f -name wrangler.json -print -quit)"
@@ -132,7 +132,7 @@ jobs:
 
       - name: Preserve or initialize anonymous signing secret
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_BOARD_API_TOKEN: ${{ secrets.CLOUDFLARE_BOARD_API_TOKEN }}
         run: |
           set -euo pipefail
           secrets_json="$(npx wrangler secret list --name "$WORKER_NAME" --format json)"
@@ -142,7 +142,7 @@ jobs:
 
       - name: Apply optional Owner secrets without exposing them
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_BOARD_API_TOKEN: ${{ secrets.CLOUDFLARE_BOARD_API_TOKEN }}
           BOARD_OWNER_ACCESS_TOKEN: ${{ secrets.BOARD_OWNER_ACCESS_TOKEN }}
           BOARD_OWNER_SUBJECT: ${{ secrets.BOARD_OWNER_SUBJECT }}
         run: |
