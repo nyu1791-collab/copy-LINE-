@@ -1,15 +1,34 @@
 name: deploy-cloudflare-review
 
-# Public Worker deployment is never automatic. Owner must explicitly dispatch it.
+# This is the isolated public review Worker, not the canonical production site.
+# Keep manual dispatch available, and auto-deploy main changes so reviewed UI/data
+# commits are actually visible on the review URL without a separate owner click.
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/deploy-cloudflare-review.yml'
+      - 'app/**'
+      - 'components/**'
+      - 'db/**'
+      - 'drizzle/**'
+      - 'lib/**'
+      - 'public/pvp/**'
+      - 'scripts/**'
+      - 'worker/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.ts'
+      - 'wrangler.jsonc'
 
 permissions:
   contents: read
 
 concurrency:
   group: line-rangers-copy-cloudflare-review
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 env:
   WORKER_NAME: line-rangers-pvp-community-review
