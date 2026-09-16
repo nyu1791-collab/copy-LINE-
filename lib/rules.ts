@@ -1,4 +1,4 @@
-import communityCharacterRegistry from '@/config/community-characters.json';
+import * as communityCharacterRegistryModule from '@/config/community-characters.json';
 
 export const languages = ['ja','en','zh','ko','th','id','vi'] as const;
 export type Language = typeof languages[number];
@@ -90,7 +90,21 @@ function isSafeTopic(value:unknown):value is CharacterTopic{
  return true;
 }
 
-const registryRows=Array.isArray(communityCharacterRegistry.characters)?communityCharacterRegistry.characters:[];
+// The JSON registry is canonical. A few isolated test/build loaders intentionally
+// omit JSON modules; only the already manually confirmed September topic is allowed
+// as a conservative bootstrap fallback. Auto-promoted characters remain registry-only.
+const bootstrapConfirmedTopics:readonly CharacterTopic[]=Object.freeze([Object.freeze({
+ id:'u1631e-sally',
+ name:'かに座 サリー',
+ image:'https://rangers.lerico.net/res/u1631e-sally/u1631e-sally-thum.png',
+ releaseMonth:'2026-09',
+ confirmed:true,
+ source:'manual' as const,
+})]);
+const registryModule=communityCharacterRegistryModule as unknown as {default?:{characters?:unknown},characters?:unknown};
+const importedRegistry=registryModule.default??registryModule;
+const importedRows=Array.isArray(importedRegistry.characters)?importedRegistry.characters:null;
+const registryRows=importedRows??bootstrapConfirmedTopics;
 const safeRows=registryRows.filter(isSafeTopic);
 const topicKeys=new Set<string>();
 export const characters:readonly CharacterTopic[]=Object.freeze(safeRows.filter(topic=>{
