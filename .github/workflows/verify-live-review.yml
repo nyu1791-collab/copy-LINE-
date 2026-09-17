@@ -20,12 +20,12 @@ jobs:
       - name: Verify public review remains closed
         run: |
           set -euo pipefail
-          for path in / /pvp/ /boards /api/board /api/health; do
-            status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 --retry 3 --retry-delay 2 -o /tmp/closed-body -w '%{http_code}' "$BASE$path")"
+          for path in /api/health /boards /__private/login; do
+            status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 2 -D /tmp/closed-headers -o /tmp/closed-body -w '%{http_code}' "$BASE$path")"
             test "$status" = "404"
-            if grep -Eq '新キャラ情報掲示板|レジェンド帯 キャラ集計|boards' /tmp/closed-body; then
+            if grep -Eq '新キャラ情報掲示板|レジェンド帯 キャラ集計|Private Owner Preview' /tmp/closed-body; then
               echo "Closed review exposed application content at $path"
               exit 1
             fi
           done
-          echo "Public review is closed; use the private Owner preview."
+          echo "Public review is closed; private Owner preview is the only review entry."

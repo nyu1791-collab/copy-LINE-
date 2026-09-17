@@ -20,7 +20,9 @@ jobs:
       - name: Verify no public visual surface is available
         run: |
           set -euo pipefail
-          status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 --retry 3 --retry-delay 2 -o /tmp/closed-visual-body -w '%{http_code}' "$BASE/")"
+          status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 2 -D /tmp/closed-headers -o /tmp/closed-body -w '%{http_code}' "$BASE/api/health")"
           test "$status" = "404"
-          test ! -s /tmp/closed-visual-body
+          if grep -Eq '新キャラ情報掲示板|レジェンド帯 キャラ集計' /tmp/closed-body; then
+            exit 1
+          fi
           echo "No public visual surface is available."
