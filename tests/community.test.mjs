@@ -21,8 +21,8 @@ const layoutSource=readFileSync(new URL('app/layout.tsx',root),'utf8');
 test('public board has no review-only chrome and is indexable',()=>{
  assert.doesNotMatch(communitySource,/review-tag/);
  assert.match(communitySource,/footer/);
- assert.doesNotMatch(layoutSource,/index:\\s*false|確認版|非公開・評価用|Development review/);
- assert.match(layoutSource,/index:\\s*true/);
+ assert.doesNotMatch(layoutSource,/index:\s*false|確認版|非公開・評価用|Development review/);
+ assert.match(layoutSource,/index:\s*true/);
  assert.match(labelsSource,/ja\\.evaluation='LINE Rangers ファンコミュニティ'/);
  assert.match(labelsSource,/en\\.evaluation='LINE Rangers fan community'/);
 });
