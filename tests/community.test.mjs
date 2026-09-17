@@ -343,6 +343,10 @@ test('community board is Japanese-English only with ten-image five-video media c
   assert.match(source, /media-picker-hint\">\{t\.mediaLimitHint\}/);
   assert.match(labelsSource, /ここをタップ（1投稿につき動画5本・画像10枚まで）/);
   assert.match(labelsSource, /Tap here \(up to 5 videos and 10 images per post\)/);
+  assert.match(labelsSource, /openImage:'Open image'/);
+  assert.match(labelsSource, /owner:'Owner'/);
+  assert.match(source, /function boardName\(board:Board,lang:Language\)/);
+  assert.match(source, /boardName\(b,lang\)/);
   assert.match(source, /videoCount>maxVideosPerPost/);
   assert.match(source, /imageCount>maxImagesPerPost/);
   assert.match(source, /else void uploadImage\(fileToSend,description,request,uploadBoard,group\)/);
@@ -370,6 +374,15 @@ test('public board chrome localizes Japanese-English status and interaction copy
   assert.doesNotMatch(source, /最新データを取得できません。前回の表示を続けています。/);
 });
 
+
+test('media images open one selected item in an accessible lightbox',()=>{
+ assert.match(communitySource,/media-image-button/);
+ assert.match(communitySource,/setLightbox\(\{src,alt\}\)/);
+ assert.match(communitySource,/role="dialog" aria-modal="true"/);
+ assert.match(communitySource,/event\.key==='Escape'/);
+ assert.match(communityCss,/\.media-lightbox-image/);
+ assert.match(communityCss,/\.media-image-button:focus-visible/);
+});
 
 test('media groups render as one mixed post and open a shared comparison page',()=>{
  assert.match(communitySource,/media-image-grid/);
