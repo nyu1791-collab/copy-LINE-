@@ -26,7 +26,7 @@ test("Workers runtime keeps the PvP shell free of the obsolete community entry a
     assert.doesNotMatch(html,/line-rangers-fan\.github\.io\/line-rangers-pvp/);
     assert.doesNotMatch(html,/codex-preview/);
     const db=await mf.getD1Database('DB');
-    const migrations=['../drizzle/0000_clumsy_penance.sql','../drizzle/0001_talented_gabe_jones.sql','../drizzle/0002_true_purifiers.sql','../drizzle/0003_thankful_firestar.sql','../drizzle/0004_yummy_warbird.sql','../drizzle/0005_bumpy_hellcat.sql','../drizzle/0006_quick_zuras.sql','../drizzle/0007_overjoyed_scorpion.sql','../drizzle/0008_free_phalanx.sql','../drizzle/0009_horizontal_media_groups.sql'].map(path=>readFileSync(new URL(path,import.meta.url),'utf8'));
+    const migrations=['../drizzle/0000_clumsy_penance.sql','../drizzle/0001_talented_gabe_jones.sql','../drizzle/0002_true_purifiers.sql','../drizzle/0003_thankful_firestar.sql','../drizzle/0004_yummy_warbird.sql','../drizzle/0005_bumpy_hellcat.sql','../drizzle/0006_quick_zuras.sql','../drizzle/0007_overjoyed_scorpion.sql','../drizzle/0008_free_phalanx.sql','../drizzle/0009_horizontal_media_groups.sql','../drizzle/0012_character_name_en.sql'].map(path=>readFileSync(new URL(path,import.meta.url),'utf8'));
     await db.batch(migrations.flatMap(migration=>migration.split(';').map(s=>s.replaceAll('--> statement-breakpoint','').trim()).filter(Boolean).map(s=>db.prepare(s))));
     const api=await mf.dispatchFetch("https://review.example/api/board");
     assert.equal(api.status,200);
