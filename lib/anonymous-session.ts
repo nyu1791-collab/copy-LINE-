@@ -111,7 +111,7 @@ export async function abuseNetworkBucket(h:Headers){
  return base64url(new Uint8Array(signature)).slice(0,24);
 }
 
-export type AnonymousSession={sub:string;anonymous:boolean;owner?:boolean;displayName?:string;setCookie?:string;setCookies?:string[]};
+export type AnonymousSession={sub:string;anonymous:boolean;owner?:boolean;displayName?:string;setCookie?:string;setCookies?:string[];newGuest?:boolean};
 
 export async function activateOwner(accessToken:string){
  const configuredToken=(env as unknown as Record<string,unknown>).BOARD_OWNER_ACCESS_TOKEN;
@@ -128,7 +128,7 @@ export async function sessionFromHeaders(h:Headers):Promise<AnonymousSession>{
  const authenticated=trustedUpstreamSubject(h);
  if(authenticated)return {sub:authenticated,anonymous:false,displayName:savedDisplayName};
  const existing=cookieValue(h.get('cookie'),guestCookieName);
- if(existing){const sub=await verify(existing);if(sub)return {sub,anonymous:true,displayName:savedDisplayName};}
+ if(existing){const sub=await verify(existing);if(sub)return {sub,anonymous:true,displayName:savedDisplayName,setCookie:await guestCookie(sub),setCookies:savedDisplayName?[displayNameCookie(savedDisplayName)]:[],newGuest:false};}
  const sub=crypto.randomUUID();
- return {sub,anonymous:true,displayName:savedDisplayName,setCookie:await guestCookie(sub)};
+ return {sub,anonymous:true,displayName:savedDisplayName,setCookie:await guestCookie(sub),newGuest:true};
 }

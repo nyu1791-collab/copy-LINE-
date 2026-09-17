@@ -26,7 +26,7 @@ export function assertSameOrigin(request:Request,h:Headers){
  if(!origin||origin!==new URL(request.url).origin||h.get('sec-fetch-site')==='cross-site')throw new Error('forbidden');
 }
 export async function currentUser(h:Headers){
- const session=await sessionFromHeaders(h);const {sub}=session;const freshAnonymous=session.anonymous===true&&!!session.setCookie;const network=await abuseNetworkBucket(h);if(freshAnonymous&&network)await enforceLimit('identity-new:'+network,120,60);const db=database();let user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();
+ const session=await sessionFromHeaders(h);const {sub}=session;const freshAnonymous=session.anonymous===true&&session.newGuest===true;const network=await abuseNetworkBucket(h);if(freshAnonymous&&network)await enforceLimit('identity-new:'+network,120,60);const db=database();let user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();
  // A read-only first visit must not create a durable user implicitly. The
  // caller can save a display name first, after which the same signed guest
  // subject is allowed to upload or react.
