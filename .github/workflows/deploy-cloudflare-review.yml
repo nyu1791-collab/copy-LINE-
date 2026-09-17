@@ -100,7 +100,7 @@ jobs:
           fi
 
           tmp="$(mktemp)"
-          jq --arg id "$db_id" '(.d1_databases[] | select(.binding == "DB").database_id) = $id' wrangler.jsonc > "$tmp"
+          jq --arg id "$db_id" '(.d1_databases[] | select(.binding == "DB").database_id) = $id | .vars = ((.vars // {}) + {PUBLIC_REVIEW_DISABLED: "1"})' wrangler.jsonc > "$tmp"
           mv "$tmp" wrangler.jsonc
           grep -q "$db_id" wrangler.jsonc
 
