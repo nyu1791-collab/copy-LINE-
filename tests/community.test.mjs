@@ -334,7 +334,7 @@ test('read marker is persistent, monotonic and rejects future timestamps',async(
 test('badge administration persists and refreshes both owner state and admin rows',()=>{
   const source=readFileSync(new URL('app/community.tsx',root),'utf8');
   assert.match(source,/credentials:'same-origin'/);
-  assert.match(source,/await Promise\\.all\\(\\[reload\\(\\),loadAdmin\\(\\)\\]\\)/);
+  assert.ok(source.includes('await Promise.all([reload(),loadAdmin()])'));
 });
 
 test('community board is Japanese-English only with ten-image five-video media caps', () => {
