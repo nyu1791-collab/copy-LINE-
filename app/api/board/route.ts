@@ -7,7 +7,7 @@ import {loadCommunityFeatureFlags,requireCommunityFeature} from '@/lib/community
 import {isCommunityFeatureName} from '@/lib/community-features';
 import { confirmedCharactersForMonth,isConfirmedCharacterForMonth,isVideoMedia,monthJST,validMonth,textInput,validateReply,mayModerate,contributionBadges,ownerDisplayName,type Role } from '@/lib/rules';
 export const dynamic='force-dynamic';
-type User={id:string;name:string;display_name_set:number;role:Role};
+type User={id:string;name:string;display_name_set:number;role:Role;badges?:string[]};
 type BoardStats={videos:number;comments:number;todayComments:number;latestCreated:number;latestId:string|null};
 type Session=AnonymousSession;
 function response(data:unknown,status=200,setCookie?:string,setCookies:string[]=[]){const responseHeaders=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});if(setCookie)responseHeaders.append('Set-Cookie',setCookie);for(const cookie of setCookies)responseHeaders.append('Set-Cookie',cookie);return Response.json(data,{status,headers:responseHeaders});}
@@ -64,7 +64,7 @@ async function setLogicalReaction(table:'likes'|'helpful',post:VisiblePost,userI
 }
 function error(e:unknown){const message=e instanceof Error?e.message:'';const codes=['signin_required','profile_required','invalid_text','invalid_media','text_only','rate_limited','not_found','forbidden','invalid_request','duplicate_post','translation_unavailable','feature_disabled','read_only','archive_readonly','anonymous_unavailable'];if(!codes.includes(message)){console.error('board_request_failed');return response({error:'unavailable'},503);}return response({error:message},message==='signin_required'?401:message==='forbidden'?403:message==='rate_limited'?429:message==='not_found'?404:['feature_disabled','read_only','anonymous_unavailable'].includes(message)?503:message==='archive_readonly'?409:400);}
 export async function GET(request:Request){try{
- const viewUntil=Date.now();const session=await identity();const sub=session.sub;const db=database();const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName,!!session.owner));const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);const flags=await loadCommunityFeatureFlags(db);const u=new URL(request.url);
+ const viewUntil=Date.now();const session=await identity();const sub=session.sub;const db=database();const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName,!!session.owner));const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);const flags=await loadCommunityFeatureFlags(db);const meBadges=me?(await db.prepare('SELECT badge FROM user_badges WHERE user=? ORDER BY badge').bind(me.id).all()).results.map(row=>String(row.badge)):[];const publicMe=me?{...me,badges:meBadges}:null;const u=new URL(request.url);
  // Reaction totals stay visible, but the people behind them are intentionally
  // private.  Keep the saved reactions for uniqueness and moderation without
  // exposing a name-list API that could be called outside the screen.
@@ -147,7 +147,7 @@ export async function GET(request:Request){try{
  let publicVideo=null;if(video){const detail=await db.prepare('SELECT p.id,p.author,p.body,p.video,p.pinned,p.media_type mediaType,p.media_name mediaName,p.media_size mediaSize,p.media_group mediaGroup,p.created,u.name,u.role,(SELECT COUNT(*) FROM likes l WHERE l.post=p.id) likes,EXISTS(SELECT 1 FROM likes l WHERE l.post=p.id AND l.user=?) liked FROM posts p JOIN users u ON u.id=p.author WHERE p.id=?').bind(me?.id||'',video.id).first();if(detail)publicVideo=(await enrichPosts([detail],me?.id||''))[0];}
  const previousSeen=(await db.prepare('SELECT seen FROM visits WHERE subject=?').bind(sub).first<{seen:number}>())?.seen||0;
  const pageRows=result.results.slice(0,20) as Record<string,unknown>[];const lastRow=pageRows[pageRows.length-1] as {pinned:number;created:number;id:string}|undefined;const nextCursor=!selectedSort&&result.results.length>20&&lastRow?cursorFor(lastRow):null;
- return reply({me,anonymous:session.anonymous,month:requested,boards,board,posts:await withMediaItems(pageRows,me?.id||''),nextCursor,poll,mine,video:publicVideo,mediaGroup:requestedGroup||null,mediaItems,stats,previousSeen,viewUntil,flags});
+ return reply({me:publicMe,anonymous:session.anonymous,month:requested,boards,board,posts:await withMediaItems(pageRows,me?.id||''),nextCursor,poll,mine,video:publicVideo,mediaGroup:requestedGroup||null,mediaItems,stats,previousSeen,viewUntil,flags});
  }catch(e){return error(e);}}
 export async function POST(request:Request){try{
  const h=await headers();const origin=h.get('origin');if(!origin||origin!==new URL(request.url).origin||h.get('sec-fetch-site')==='cross-site')throw new Error('forbidden');
@@ -182,7 +182,7 @@ export async function POST(request:Request){try{
  if(b.action==='badge'){
   if(me.role!=='owner'&&me.role!=='moderator')throw new Error('forbidden');
   const target=String(b.target||'');const badge=String(b.badge||'');if(!contributionBadges.includes(badge as typeof contributionBadges[number])||typeof b.enabled!=='boolean')throw new Error('invalid_request');
-  const targetUser=await db.prepare("SELECT role FROM users WHERE id=? AND role<>'owner'").bind(target).first();if(!targetUser)throw new Error('forbidden');
+  const targetUser=await db.prepare('SELECT role FROM users WHERE id=?').bind(target).first<{role:Role}>();if(!targetUser||targetUser.role==='owner'&&me.role!=='owner')throw new Error('forbidden');
   const mutation=b.enabled?db.prepare('INSERT OR IGNORE INTO user_badges(user,badge,granted_by,created) VALUES(?,?,?,?)').bind(target,badge,me.id,now):db.prepare('DELETE FROM user_badges WHERE user=? AND badge=?').bind(target,badge);
   await db.batch([mutation,db.prepare('INSERT INTO audit(id,actor,action,target,created) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),me.id,b.enabled?'badge_grant':'badge_revoke',`${target}:${badge}`,now)]);
   return reply({ok:true,target,badge,enabled:b.enabled});
