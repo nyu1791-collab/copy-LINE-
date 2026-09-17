@@ -1,6 +1,6 @@
 name: deploy-cloudflare-review
 
-# Isolated public review Worker. The canonical production site is not modified here.
+# The public review hostname is intentionally disabled. Owner access is provided only by the separate private preview Worker.
 on:
   workflow_dispatch:
   workflow_run:
@@ -130,77 +130,17 @@ jobs:
           echo "Deploying generated config: $output_config"
           npx wrangler deploy --config "$output_config"
 
-      - name: Preserve or initialize anonymous signing secret
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_BOARD_API_TOKEN }}
+      - name: Verify disabled review Worker
         run: |
           set -euo pipefail
-          secrets_json="$(npx wrangler secret list --name "$WORKER_NAME" --format json)"
-          if ! printf '%s' "$secrets_json" | jq -e '.[] | select(.name == "BOARD_ANON_COOKIE_SECRET")' >/dev/null; then
-            openssl rand -hex 48 | npx wrangler secret put BOARD_ANON_COOKIE_SECRET --name "$WORKER_NAME"
-          fi
-
-      - name: Apply optional Owner secrets without exposing them
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_BOARD_API_TOKEN }}
-          BOARD_OWNER_ACCESS_TOKEN: ${{ secrets.BOARD_OWNER_ACCESS_TOKEN }}
-          BOARD_OWNER_SUBJECT: ${{ secrets.BOARD_OWNER_SUBJECT }}
-        run: |
-          set -euo pipefail
-          if [ -n "${BOARD_OWNER_ACCESS_TOKEN:-}" ] && [ -n "${BOARD_OWNER_SUBJECT:-}" ]; then
-            printf '%s' "$BOARD_OWNER_ACCESS_TOKEN" | npx wrangler secret put BOARD_OWNER_ACCESS_TOKEN --name "$WORKER_NAME"
-            printf '%s' "$BOARD_OWNER_SUBJECT" | npx wrangler secret put BOARD_OWNER_SUBJECT --name "$WORKER_NAME"
-          else
-            echo "Owner bootstrap secrets are not configured; public/anonymous review remains available."
-          fi
-
-      - name: Verify deployed ranking, board, D1, R2, assets and security headers
-        run: |
-          set -euo pipefail
-          pvp="$(curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 "$REVIEW_BASE_URL/pvp/index.html")"
-          board="$(curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 "$REVIEW_BASE_URL/boards")"
-          snapshot="$(curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 "$REVIEW_BASE_URL/pvp/data/character_usage.json")"
-          health="$(curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 "$REVIEW_BASE_URL/api/health")"
-          api_headers="$(mktemp)"
-          api_body="$(mktemp)"
-          curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 -D "$api_headers" -o "$api_body" "$REVIEW_BASE_URL/api/board"
-
-          grep -q 'レジェンド帯 キャラ集計' <<< "$pvp" || { echo 'PvP marker missing after deploy.'; exit 1; }
-          grep -q '20260916-ui-1' <<< "$pvp" || { echo 'Latest PvP UI bundle marker missing after deploy.'; exit 1; }
-          grep -q '新キャラ情報掲示板' <<< "$board" || { echo 'Board title missing after deploy.'; exit 1; }
-          if grep -q 'PvPランキング' <<< "$board"; then
-            echo 'Board unexpectedly renders the removed PvP ranking card.'
+          headers="$(mktemp)"
+          body="$(mktemp)"
+          status="$(curl --silent --show-error --connect-timeout 10 --max-time 30 --retry 8 --retry-delay 3 -D "$headers" -o "$body" -w '%{http_code}' "$REVIEW_BASE_URL/")"
+          test "$status" = "404"
+          grep -qi '^x-robots-tag: noindex' "$headers"
+          grep -qi '^cache-control: no-store' "$headers"
+          if grep -q '新キャラ情報掲示板' "$body" || grep -q 'レジェンド帯 キャラ集計' "$body"; then
+            echo "Disabled review Worker exposed application content."
             exit 1
           fi
-          printf '%s' "$snapshot" | jq -e '.target_players == 200 and .sampled_players == 200 and .complete_target == true and (.characters | length > 0)' >/dev/null || { echo 'PvP snapshot is not a complete validated 200/200 sample.'; exit 1; }
-          printf '%s' "$health" | jq -e '.ok == true and .checks.d1 == true and .checks.r2 == true' >/dev/null || { echo 'Runtime D1/R2 health check failed.'; exit 1; }
-          jq -e '.boards | type == "array"' "$api_body" >/dev/null || { echo 'Board API did not return a valid boards array.'; exit 1; }
-          grep -qi '^x-content-type-options: nosniff' "$api_headers" || { echo 'Board API security header missing.'; exit 1; }
-          grep -qi '^strict-transport-security: max-age=31536000' "$api_headers" || { echo 'HSTS header missing.'; exit 1; }
-          grep -qi '^set-cookie: __Host-lr_guest=' "$api_headers" || { echo 'Anonymous signed cookie was not issued.'; exit 1; }
-          if grep -q '現在、サイトを改修しています。' <<< "$pvp"; then
-            echo "Review Worker unexpectedly returned maintenance mode."
-            exit 1
-          fi
-
-          board_assets="$({ printf '%s' "$board" | grep -oE '(href|src)="[^"]+\.(css|js)(\?[^"]*)?"' | sed -E 's/^(href|src)="([^"]+)"/\2/' | grep '^/' | sort -u; } || true)"
-          if [ -z "$board_assets" ]; then
-            echo "Board HTML did not expose any same-origin browser CSS/JS assets."
-            exit 1
-          fi
-          while IFS= read -r asset; do
-            [ -z "$asset" ] && continue
-            asset_headers="$(mktemp)"
-            asset_body="$(mktemp)"
-            curl --location --fail --silent --show-error --connect-timeout 10 --max-time 30 --retry 5 --retry-delay 2 -D "$asset_headers" -o "$asset_body" "$REVIEW_BASE_URL$asset"
-            if [ ! -s "$asset_body" ]; then
-              echo "Board browser asset is empty: $asset"
-              exit 1
-            fi
-            if grep -qi '^content-type:.*text/html' "$asset_headers"; then
-              echo "Board browser asset was incorrectly served as HTML: $asset"
-              exit 1
-            fi
-          done <<< "$board_assets"
-
-          echo "Cloudflare review fully verified: $REVIEW_BASE_URL"
+          echo "Public review Worker is closed; private Owner preview is the only review entry."
