@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/strengthen-display-name-persistence.yml'
+      - '.github/scripts/strengthen_display_name.py'
 
 permissions:
   contents: write
@@ -45,7 +46,7 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/community.tsx lib/anonymous-session.ts tests/display-name-persistence.test.mjs
+          git add app/community.tsx app/api/board/route.ts lib/anonymous-session.ts lib/upload-session.ts tests/display-name-persistence.test.mjs
           git diff --cached --check
           git diff --cached --quiet && { echo 'No persistence changes to commit.'; exit 0; }
           git commit -m 'Strengthen returning display-name persistence'
