@@ -15,3 +15,17 @@ export function mediaRange(value:string|null,size:number){
  if(!Number.isSafeInteger(start)||start<0||end<start||start>=size)throw new Error('range');
  return {start,end};
 }
+
+// Keep a no-Range video response deliberately small, but do not force every
+// explicit browser Range request into that same tiny window. Native players
+// commonly ask for larger sequential ranges; allowing a bounded larger window
+// cuts Worker/D1/R2 round trips while still preventing a single request from
+// streaming an entire large video.
+export function boundedMediaRange(value:string|null,size:number,initialBytes:number,maxRequestedBytes:number){
+ if(!Number.isSafeInteger(size)||size<=0||!Number.isSafeInteger(initialBytes)||initialBytes<=0||!Number.isSafeInteger(maxRequestedBytes)||maxRequestedBytes<initialBytes)throw new Error('range');
+ const parsed=mediaRange(value,size);
+ const start=parsed?.start??0;
+ const requestedEnd=parsed?.end??size-1;
+ const limit=parsed?maxRequestedBytes:initialBytes;
+ return {start,end:Math.min(requestedEnd,size-1,start+limit-1)};
+}
