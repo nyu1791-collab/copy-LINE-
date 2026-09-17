@@ -23,8 +23,8 @@ test('public board has no review-only chrome and is indexable',()=>{
  assert.match(communitySource,/footer/);
  assert.doesNotMatch(layoutSource,/index:\s*false|確認版|非公開・評価用|Development review/);
  assert.match(layoutSource,/index:\s*true/);
- assert.match(labelsSource,/ja\\.evaluation='LINE Rangers ファンコミュニティ'/);
- assert.match(labelsSource,/en\\.evaluation='LINE Rangers fan community'/);
+ assert.match(labelsSource,/ja\.evaluation='LINE Rangers ファンコミュニティ'/);
+ assert.match(labelsSource,/en\.evaluation='LINE Rangers fan community'/);
 });
 test('media byte ranges support suffixes and reject malformed requests',()=>{
  assert.deepEqual(mediaRange('bytes=-3',10),{start:7,end:9});
