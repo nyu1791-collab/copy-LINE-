@@ -71,6 +71,7 @@ export function mayModerate(role:Role, action:string){
 export type CharacterTopic={
  id:string;
  name:string;
+ nameEn?:string;
  image:string;
  releaseMonth:string;
  confirmed:boolean;
@@ -85,6 +86,7 @@ function isSafeTopic(value:unknown):value is CharacterTopic{
  const topic=value as Record<string,unknown>;
  if(typeof topic.id!=='string'||!/^u\d+[a-z]?-[a-z0-9_-]+$/i.test(topic.id))return false;
  if(typeof topic.name!=='string'||!topic.name.trim()||[...topic.name].length>80)return false;
+ if(topic.nameEn!==undefined&& (typeof topic.nameEn!=='string'||!topic.nameEn.trim()||[...topic.nameEn].length>80))return false;
  if(!validMonth(topic.releaseMonth)||topic.confirmed!==true)return false;
  if(typeof topic.image!=='string')return false;
  try{const url=new URL(topic.image);if(url.protocol!=='https:'||url.hostname!=='rangers.lerico.net')return false;}catch{return false;}
@@ -99,6 +101,7 @@ function isSafeTopic(value:unknown):value is CharacterTopic{
 const bootstrapConfirmedTopics:readonly CharacterTopic[]=Object.freeze([Object.freeze({
  id:'u1631e-sally',
  name:'かに座 サリー',
+ nameEn:'Cancer Sally',
  image:'https://rangers.lerico.net/res/u1631e-sally/u1631e-sally-thum.png',
  releaseMonth:'2026-09',
  confirmed:true,
