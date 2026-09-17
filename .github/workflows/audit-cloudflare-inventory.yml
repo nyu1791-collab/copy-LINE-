@@ -61,3 +61,5 @@ jobs:
           report_secret BOARD_OWNER_ACCESS_TOKEN
           report_secret BOARD_OWNER_SUBJECT
           report_secret GOOGLE_TRANSLATE_API_KEY
+
+          # 2026-09-17: audit rerun marker only; no runtime behavior change.
