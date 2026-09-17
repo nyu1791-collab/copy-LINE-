@@ -21,16 +21,6 @@ type EquipmentGroup={equippedOccurrenceCount:number;equippedPlayerCount:number;i
 type PvpResponse={status:'fresh'|'stale';source:'pvp_character_usage';month:string;character:{unitCode:string;name:string;image:string;rank:number;occurrenceCount:number;playerCount:number;adoptionRate:number;slotRate:number;equipmentRankings:Record<string,EquipmentGroup>};snapshot:{updatedAt:string;targetPlayers:number;sampledPlayers:number;completeTarget:boolean;collectionQuality:number|null}};
 type JsonRecord=Record<string,unknown>;
 
-const COPIED_SALLY_SNAPSHOT:PvpResponse={
- status:'stale',source:'pvp_character_usage',month:'2026-09',
- character:{
-  unitCode:'u1631e-sally',name:'かに座 サリー',
-  image:'https://rangers.lerico.net/res/u1631e-sally/u1631e-sally-thum.png',
-  rank:0,occurrenceCount:64,playerCount:64,adoptionRate:32.0,slotRate:3.22,equipmentRankings:{}
- },
- snapshot:{updatedAt:'2026-09-15T03:01:07.466207+00:00',targetPlayers:200,sampledPlayers:200,completeTarget:true,collectionQuality:100.0}
-};
-
 function strictInteger(value:unknown,min:number,max:number){return typeof value==='number'&&Number.isSafeInteger(value)&&value>=min&&value<=max?value:null;}
 function strictRate(value:unknown){return typeof value==='number'&&Number.isFinite(value)&&value>=0&&value<=100?value:null;}
 function optionalCoverage(value:unknown){return value===undefined||value===null?null:strictRate(value);}
@@ -84,10 +74,6 @@ function compactSnapshot(raw:unknown,month:string,topic:{id:string;name:string;i
 function json(data:unknown,status=200,cacheControl='private, no-store'){
  return Response.json(data,{status,headers:{'Cache-Control':cacheControl,'X-Content-Type-Options':'nosniff','X-Robots-Tag':'noindex, nofollow, noarchive','Vary':'Accept-Encoding'}});
 }
-function copiedFallback(month:string,character:string){
- if(month===COPIED_SALLY_SNAPSHOT.month&&character===COPIED_SALLY_SNAPSHOT.character.unitCode)return COPIED_SALLY_SNAPSHOT;
- return null;
-}
 async function readUpstreamJson(response:Response){
  const declared=Number(response.headers.get('content-length')||0);
  if(declared&&!Number.isSafeInteger(declared)||declared>UPSTREAM_MAX_BYTES)throw new Error('upstream_too_large');
@@ -114,7 +100,5 @@ export async function GET(request:Request){
  const result=await loadSnapshot(month,topic);
  if(result){const fresh={data:result,expires:now+CACHE_TTL_MS,staleUntil:now+STALE_TTL_MS};cache.set(key,fresh);return json(result);}
  if(existing&&existing.staleUntil>now)return json({...existing.data,status:'stale'});
- const copied=copiedFallback(month,topic.id);
- if(copied)return json(copied,200,'private, no-store');
  return json({status:'unavailable',error:'unavailable'},503,'no-store');
 }

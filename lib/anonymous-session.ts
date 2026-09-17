@@ -83,14 +83,12 @@ function displayNameValue(raw:string|null){
 }
 function trustedUpstreamSubject(h:Headers){
  // A public Cloudflare edge must never treat a browser-supplied identity
- // header as authentication by default. Miniflare uses a loopback connection
- // in the integration harness; real edge hosts require an explicit server-side
- // opt-in for a trusted reverse proxy.
+ // header as authentication. The only accepted header path is an explicit
+ // test-harness mode; production never enables it, even if an obsolete
+ // BOARD_TRUST_UPSTREAM_AUTH=1 variable is left behind.
  const trust=(env as unknown as Record<string,unknown>).BOARD_TRUST_UPSTREAM_AUTH;
  const host=(h.get('host')||'').toLowerCase().split(':')[0];
- const edgeAddress=h.get('cf-connecting-ip')?.trim()||'';
- const integrationHarness=host==='review.example'||edgeAddress==='127.0.0.1'||edgeAddress==='::1';
- if(trust!=='1'&&!integrationHarness&&(edgeAddress||h.get('cf-ray')))return null;
+ if(trust!=='test'||host!=='review.example')return null;
  const value=h.get('oai-authenticated-user-id')?.trim()||'';
  if(!value||value.length>512||/[\u0000-\u001f\u007f]/.test(value))return null;
  return value;

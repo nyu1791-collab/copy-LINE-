@@ -1,6 +1,6 @@
 import {database} from '@/db/raw';
 import {mediaPartBytes,mediaPartCount,validMediaHeader,ownerDisplayName} from '@/lib/rules';
-import {guestName,sessionFromHeaders} from '@/lib/anonymous-session';
+import {abuseNetworkBucket,guestName,sessionFromHeaders} from '@/lib/anonymous-session';
 
 export type UploadUser={id:string;name?:string;display_name_set?:number;role?:string};
 export type UploadSession={id:string;user:string;board:string;body:string;request:string;media_key:string;media_type:string;media_name:string;media_size:number;media_group:string|null;upload_id:string;part_size:number;status:string;post:string|null;created:number;updated:number};
@@ -26,14 +26,20 @@ export function assertSameOrigin(request:Request,h:Headers){
  if(!origin||origin!==new URL(request.url).origin||h.get('sec-fetch-site')==='cross-site')throw new Error('forbidden');
 }
 export async function currentUser(h:Headers){
- const session=await sessionFromHeaders(h);const {sub}=session;const db=database();let user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();
+ const session=await sessionFromHeaders(h);const {sub}=session;const freshAnonymous=session.anonymous===true&&!!session.setCookie;const network=await abuseNetworkBucket(h);if(freshAnonymous&&network)await enforceLimit('identity-new:'+network,120,60);const db=database();let user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();
+ // A read-only first visit must not create a durable user implicitly. The
+ // caller can save a display name first, after which the same signed guest
+ // subject is allowed to upload or react.
+ if(!user&&!session.owner&&!session.displayName)return {sub,user:null,setCookie:session.setCookie,anonymous:session.anonymous,freshAnonymous,network};
  const fallbackName=session.owner?ownerDisplayName:session.anonymous?session.displayName||guestName(sub):guestName(sub);
  if(!user){await db.prepare("INSERT OR IGNORE INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?, ?,CASE WHEN ? AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner') THEN 'owner' ELSE 'user' END,?)").bind(crypto.randomUUID(),sub,fallbackName,session.owner||!!session.displayName?1:0,session.owner?1:0,Date.now()).run();user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();}
  else if(session.owner){await db.prepare("UPDATE users SET name=?,display_name_set=1,role=CASE WHEN role='user' AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner' AND subject<>?) THEN 'owner' ELSE role END WHERE subject=?").bind(ownerDisplayName,sub,sub).run();user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();}
  else if(user.role==='owner'){await db.prepare("UPDATE users SET name=?,display_name_set=1 WHERE subject=?").bind(ownerDisplayName,sub).run();user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();}
  else if((session.anonymous&&session.displayName&&user.name===guestName(sub))||session.displayName&&!user.display_name_set){await db.prepare("UPDATE users SET name=CASE WHEN ? IS NOT NULL AND name=? THEN ? ELSE name END,display_name_set=CASE WHEN ? THEN 1 ELSE display_name_set END WHERE subject=?").bind(session.displayName||null,guestName(sub),session.displayName||user.name,1,sub).run();user=await db.prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<UploadUser>();}
- return {sub,user,setCookie:session.setCookie};
+ return {sub,user,setCookie:session.setCookie,anonymous:session.anonymous,freshAnonymous,network};
 }
+export function profileReady(user:UploadUser|null){return !!user&&(user.role==='owner'||Number(user.display_name_set)===1);}
+export function sessionLimitKey(session:{freshAnonymous:boolean;network:string|null},prefix:string,id:string){return session.freshAnonymous&&session.network?`${prefix}-new:${session.network}`:`${prefix}:${id}`;}
 export async function enforceLimit(key:string,max:number,seconds=60){
  const now=Date.now();
  const result=await database().prepare('INSERT INTO limits(key,count,until) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN until<=? THEN 1 ELSE count+1 END, until=CASE WHEN until<=? THEN excluded.until ELSE until END WHERE until<=? OR count<? RETURNING count').bind(key,now+seconds*1000,now,now,now,max).first();

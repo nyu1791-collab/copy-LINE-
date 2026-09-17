@@ -8,7 +8,7 @@ function compile(path,require){const source=readFileSync(new URL(path,root),'utf
 const rules=compile('lib/rules.ts',()=>({}));
 
 test('public Cloudflare edge ignores client asserted authenticated-user headers',async()=>{
- const env={BOARD_ANON_COOKIE_SECRET:'test-anon-cookie-secret-0123456789012345',BOARD_OWNER_SUBJECT:'owner-subject',BOARD_OWNER_ACCESS_TOKEN:'owner-token'};
+ const env={BOARD_ANON_COOKIE_SECRET:'test-anon-cookie-secret-0123456789012345',BOARD_OWNER_SUBJECT:'owner-subject',BOARD_OWNER_ACCESS_TOKEN:'owner-token',BOARD_TRUST_UPSTREAM_AUTH:'test'};
  const session=compile('lib/anonymous-session.ts',id=>{if(id==='cloudflare:workers')return {env};if(id==='@/lib/rules')return rules;throw new Error('unexpected '+id);});
  const forged=await session.sessionFromHeaders(new Headers({host:'line-rangers-pvp-community-review.n-yu1791.workers.dev','cf-ray':'test-ray','cf-connecting-ip':'203.0.113.10','oai-authenticated-user-id':'owner-subject'}));
  assert.equal(forged.anonymous,true);
@@ -16,6 +16,13 @@ test('public Cloudflare edge ignores client asserted authenticated-user headers'
  const harness=await session.sessionFromHeaders(new Headers({host:'review.example','oai-authenticated-user-id':'integration-user'}));
  assert.equal(harness.anonymous,false);
  assert.equal(harness.sub,'integration-user');
+ env.BOARD_TRUST_UPSTREAM_AUTH='1';
+ const obsoleteOptIn=await session.sessionFromHeaders(new Headers({host:'review.example','oai-authenticated-user-id':'owner-subject'}));
+ assert.equal(obsoleteOptIn.anonymous,true);
+ assert.notEqual(obsoleteOptIn.sub,'owner-subject');
+ const loopbackSpoof=await session.sessionFromHeaders(new Headers({host:'line-rangers-pvp-community-production.n-yu1791.workers.dev','cf-connecting-ip':'127.0.0.1','oai-authenticated-user-id':'owner-subject'}));
+ assert.equal(loopbackSpoof.anonymous,true);
+ assert.notEqual(loopbackSpoof.sub,'owner-subject');
 });
 
 test('Owner cookie is cryptographically bound to the configured Owner subject',async()=>{

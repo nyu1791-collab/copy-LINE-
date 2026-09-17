@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import { bucket,database } from '@/db/raw';
 import {loadCommunityFeatureFlags,requireCommunityFeature} from '@/lib/community-flags';
 import { isConfirmedCharacterForMonth,isVideoMedia,legacyMultipartMediaBytes,maxImagesPerPost,maxVideosPerPost,monthJST,optionalTextInput,validateMedia } from '@/lib/rules';
-import {currentUser} from '@/lib/upload-session';
+import {currentUser,profileReady,sessionLimitKey} from '@/lib/upload-session';
 export const dynamic='force-dynamic';
 function reply(data:unknown,status=200,setCookie?:string){const responseHeaders=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});if(setCookie)responseHeaders.set('Set-Cookie',setCookie);return Response.json(data,{status,headers:responseHeaders});}
 function fail(e:unknown){const code=e instanceof Error?e.message:'';const known=['signin_required','profile_required','invalid_text','invalid_media','text_only','rate_limited','not_found','forbidden','invalid_request','media_group_full','feature_disabled','read_only','archive_readonly'];if(!known.includes(code)){console.error('media_upload_failed');return reply({error:'unavailable'},503);}return reply({error:code},code==='signin_required'?401:code==='forbidden'?403:code==='rate_limited'?429:code==='not_found'?404:code==='media_group_full'||code==='archive_readonly'?409:['feature_disabled','read_only'].includes(code)?503:400);}
@@ -15,10 +15,10 @@ export async function PUT(request:Request){try{
  // chunked session/part/complete flow so long videos never enter this buffer.
  const length=Number(request.headers.get('content-length')||0);if(length&&length>legacyMultipartMediaBytes+16000)throw new Error('invalid_media');
  if(!request.headers.get('content-type')?.startsWith('multipart/form-data'))throw new Error('invalid_request');
- const db=database();const session=await currentUser(h);const sub=session.sub;const me=session.user;if(!me)throw new Error('profile_required');const send=(data:unknown,status=200)=>reply(data,status,session.setCookie);const flags=await loadCommunityFeatureFlags(db);requireCommunityFeature(flags,'commentsEnabled');
+ const db=database();const session=await currentUser(h);const sub=session.sub;const me=session.user;if(!profileReady(me))throw new Error('profile_required');const send=(data:unknown,status=200)=>reply(data,status,session.setCookie);const flags=await loadCommunityFeatureFlags(db);requireCommunityFeature(flags,'commentsEnabled');
  // One legitimate image post may contain ten images. Keep the per-minute bound
  // slightly above that so one retry is possible without allowing unbounded use.
- await limit('write:'+sub,30,60);await limit('upload:'+me.id,12,60);
+ await limit(sessionLimitKey(session,'write',sub),30,60);await limit(sessionLimitKey(session,'upload',me.id),12,60);
  const reader=request.body?.getReader();if(!reader)throw new Error('invalid_request');const chunks:Uint8Array[]=[];let size=0;
  for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>legacyMultipartMediaBytes+16000){await reader.cancel();throw new Error('invalid_media');}chunks.push(value);}
  const form=await new Response(new Blob(chunks as BlobPart[]),{headers:{'Content-Type':request.headers.get('content-type')!}}).formData();const file=form.get('file');if(!(file instanceof File))throw new Error('invalid_media');
@@ -28,7 +28,7 @@ export async function PUT(request:Request){try{
  const topic=await db.prepare('SELECT character,month FROM boards WHERE id=?').bind(board).first<{character:string;month:string}>();
  if(!topic)throw new Error('not_found');if(topic.month!==monthJST())throw new Error('archive_readonly');if(!isConfirmedCharacterForMonth(topic.character,topic.month))throw new Error('not_found');
  const existing=await db.prepare('SELECT id FROM posts WHERE author=? AND request=?').bind(me.id,requestId).first<{id:string}>();if(existing)return send({ok:true,id:existing.id});
- if(mediaGroup){const groupPost=await db.prepare("SELECT author,board FROM posts WHERE media_group=? AND status='visible' ORDER BY created ASC,id ASC LIMIT 1").bind(mediaGroup).first<{author:string;board:string}>();const groupSession=await db.prepare("SELECT user,board FROM upload_sessions WHERE media_group=? AND status='uploading' ORDER BY created ASC,id ASC LIMIT 1").bind(mediaGroup).first<{user:string;board:string}>();if(groupPost&&(groupPost.author!==me.id||groupPost.board!==board))throw new Error('forbidden');if(groupSession&&(groupSession.user!==me.id||groupSession.board!==board))throw new Error('forbidden');}
+ if(mediaGroup){const groupPost=await db.prepare("SELECT author,board,body FROM posts WHERE media_group=? AND status='visible' ORDER BY created ASC,id ASC LIMIT 1").bind(mediaGroup).first<{author:string;board:string;body:string}>();const groupSession=await db.prepare("SELECT user,board,body FROM upload_sessions WHERE media_group=? AND status='uploading' ORDER BY created ASC,id ASC LIMIT 1").bind(mediaGroup).first<{user:string;board:string;body:string}>();if(groupPost&&(groupPost.author!==me.id||groupPost.board!==board||groupPost.body!==body))throw new Error('invalid_request');if(groupSession&&(groupSession.user!==me.id||groupSession.board!==board||groupSession.body!==body))throw new Error('invalid_request');}
  const extension=await validateMedia(file,legacyMultipartMediaBytes);const video=isVideoMedia(file.type);if(video)requireCommunityFeature(flags,'videoUploadEnabled');
  const groupLimit=video?maxVideosPerPost:maxImagesPerPost;const groupFilter=video?"media_type LIKE 'video/%'":"media_type LIKE 'image/%'";
  if(mediaGroup){const grouped=await db.prepare(`SELECT COUNT(*) count FROM posts WHERE author=? AND media_group=? AND status='visible' AND ${groupFilter}`).bind(me.id,mediaGroup).first<{count:number}>();if(Number(grouped?.count||0)>=groupLimit)throw new Error('media_group_full');}

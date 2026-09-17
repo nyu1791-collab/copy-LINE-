@@ -2,13 +2,13 @@ import {headers} from 'next/headers';
 import {bucket,database} from '@/db/raw';
 import {loadCommunityFeatureFlags,requireCommunityFeature} from '@/lib/community-flags';
 import {mediaPartCount} from '@/lib/rules';
-import {assertSameOrigin,currentUser,enforceLimit,expectedPartSize,fail,json,readJson,uploadSessionExpired,type UploadSession} from '@/lib/upload-session';
+import {assertSameOrigin,currentUser,enforceLimit,expectedPartSize,fail,json,profileReady,readJson,sessionLimitKey,uploadSessionExpired,type UploadSession} from '@/lib/upload-session';
 
 export const dynamic='force-dynamic';
 
 export async function POST(request:Request){try{
- const h=await headers();assertSameOrigin(request,h);const {sub,user,setCookie}=await currentUser(h);if(!user)throw new Error('profile_required');const reply=(data:unknown,status=200)=>json(data,status,setCookie);requireCommunityFeature(await loadCommunityFeatureFlags(database()),'videoUploadEnabled');
- await enforceLimit('write:'+sub,30);await enforceLimit('upload-complete:'+user.id,6,60);
+ const h=await headers();assertSameOrigin(request,h);const sessionUser=await currentUser(h);const {sub,user,setCookie}=sessionUser;if(!profileReady(user))throw new Error('profile_required');const reply=(data:unknown,status=200)=>json(data,status,setCookie);requireCommunityFeature(await loadCommunityFeatureFlags(database()),'videoUploadEnabled');
+ await enforceLimit(sessionLimitKey(sessionUser,'write',sub),30);await enforceLimit(sessionLimitKey(sessionUser,'upload-complete',user.id),6,60);
  const body=await readJson(request);const id=String(body.id||'');if(!/^[a-f0-9-]{36}$/.test(id))throw new Error('invalid_request');
  const db=database();const session=await db.prepare('SELECT * FROM upload_sessions WHERE id=? AND user=?').bind(id,user.id).first<UploadSession>();if(!session)throw new Error('not_found');
  if(session.status==='completed'&&session.post)return reply({ok:true,status:'completed',id:session.post});if(session.status!=='uploading')throw new Error('upload_busy');

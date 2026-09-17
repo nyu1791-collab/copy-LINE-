@@ -94,13 +94,13 @@ function setup(){
  });
  const requestContext=new AsyncLocalStorage();
  const anonymous=compile('lib/anonymous-session.ts',id=>{
-  if(id==='cloudflare:workers')return {env:{BOARD_ANON_COOKIE_SECRET:'test-anon-cookie-secret-0123456789012345',BOARD_OWNER_SUBJECT:'owner-subject',BOARD_OWNER_ACCESS_TOKEN:'test-owner-access-token'}};
+  if(id==='cloudflare:workers')return {env:{BOARD_ANON_COOKIE_SECRET:'test-anon-cookie-secret-0123456789012345',BOARD_OWNER_SUBJECT:'owner-subject',BOARD_OWNER_ACCESS_TOKEN:'test-owner-access-token',BOARD_TRUST_UPSTREAM_AUTH:'test'}};
   if(id==='@/lib/rules')return rules;
   throw new Error('Unexpected anonymous import '+id);
  });
  const api=compile('app/api/board/route.ts',id=>{
   if(id==='next/headers')return {headers:async()=>requestContext.getStore().headers};
-  if(id==='cloudflare:workers')return {env:{BOARD_OWNER_EMAIL:'owner@example.invalid',BOARD_OWNER_SUBJECT:'owner-subject',BOARD_OWNER_ACCESS_TOKEN:'test-owner-access-token',BOARD_ANON_COOKIE_SECRET:'test-anon-cookie-secret-0123456789012345'}};
+  if(id==='cloudflare:workers')return {env:{BOARD_OWNER_EMAIL:'owner@example.invalid',BOARD_OWNER_SUBJECT:'owner-subject',BOARD_OWNER_ACCESS_TOKEN:'test-owner-access-token',BOARD_ANON_COOKIE_SECRET:'test-anon-cookie-secret-0123456789012345',BOARD_TRUST_UPSTREAM_AUTH:'test'}};
   if(id==='@/db/raw')return {database:()=>db,bucket:()=>({async delete(keys){deletedObjects.push(...(Array.isArray(keys)?keys:[keys]));}})};
   if(id==='@/lib/rules')return rules;
   if(id==='@/lib/community-activity')return activity;
@@ -118,10 +118,10 @@ function setup(){
   throw new Error('Unexpected activity import '+id);
  });
  const call=async(body=null,who='test-a',path='',email='test@example.invalid',origin='https://review.example',cookie='')=>{
-  const request=new Request('https://review.example/api/board'+path,{method:body?'POST':'GET',headers:{...(who?{'oai-authenticated-user-id':who,'oai-authenticated-user-email':email}:{}),...(cookie?{cookie}:{}),origin,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
+  const request=new Request('https://review.example/api/board'+path,{method:body?'POST':'GET',headers:{host:'review.example',...(who?{'oai-authenticated-user-id':who,'oai-authenticated-user-email':email}:{}),...(cookie?{cookie}:{}),origin,'Content-Type':'application/json'},...(body?{body:JSON.stringify(body)}:{})});
   return requestContext.run(request,async()=>{const r=await (body?api.POST(request):api.GET(request));return {status:r.status,data:await r.json(),headers:r.headers};});};
  const activityCall=async(who='test-a',cookie='')=>{
-  const request=new Request('https://review.example/api/activity',{headers:{...(who?{'oai-authenticated-user-id':who,'oai-authenticated-user-email':'test@example.invalid'}:{}),...(cookie?{cookie}:{}),origin:'https://review.example'}});
+  const request=new Request('https://review.example/api/activity',{headers:{host:'review.example',...(who?{'oai-authenticated-user-id':who,'oai-authenticated-user-email':'test@example.invalid'}:{}),...(cookie?{cookie}:{}),origin:'https://review.example'}});
   return requestContext.run(request,async()=>{const r=await activityApi.GET();return {status:r.status,data:await r.json(),headers:r.headers};});
  };
  return {sql,call,activityCall,anonymous,deletedObjects,clearLimits(){sql.exec('DELETE FROM limits');}};
@@ -140,7 +140,7 @@ test('permission matrix does not grant management based on a name',()=>{
  assert.equal(rules.mayModerate('user','pin',false),false);assert.equal(rules.mayModerate('moderator','moderator',false),false);assert.equal(rules.mayModerate('moderator','delete',true),true);assert.equal(rules.mayModerate('moderator','delete',false),true);assert.equal(rules.mayModerate('owner','delete',true),true);
 });
 test('public browsing and anonymous mutations work while cross-origin writes fail closed',async()=>{
- const {call}=setup();const guest=await call(null,'');assert.equal(guest.status,200);assert.equal(guest.data.me.role,'user');assert.match(guest.data.me.name,/^ゲスト-/);const cookie=guest.headers.get('set-cookie');assert.match(cookie??'',/^__Host-lr_guest=v1\./);const same=await call(null,'','','test@example.invalid','https://review.example',cookie);assert.equal(same.data.me.id,guest.data.me.id);const forged=cookie.replace(/(v1\.[^;]+\.)[^;]+/,'$1x');const rotated=await call(null,'','','test@example.invalid','https://review.example',forged);assert.equal(rotated.status,200);assert.notEqual(rotated.data.me.id,guest.data.me.id);assert.match(rotated.headers.get('set-cookie')??'',/^__Host-lr_guest=v1\./);const profile=await call({action:'profile',name:'hello'},'','','test@example.invalid','https://review.example',cookie);assert.equal(profile.status,200);const profileCookie=profile.headers.get('set-cookie')??'';assert.match(profileCookie,/__Host-lr_display_name=hello/);const savedNameCookie=(profileCookie.match(/__Host-lr_display_name=[^,]+/)||[''])[0];const restored=await call(null,'','','test@example.invalid','https://review.example',savedNameCookie);assert.equal(restored.data.me.name,'hello');assert.equal((await call({action:'profile',name:'hello'},'a','','x','https://evil.example')).status,403);assert.equal((await call({action:'profile',name:'hello'},'')).status,200);
+ const {call}=setup();const guest=await call(null,'');assert.equal(guest.status,200);assert.equal(guest.data.me,null);const cookie=guest.headers.get('set-cookie');assert.match(cookie??'',/^__Host-lr_guest=v1\./);const same=await call(null,'','','test@example.invalid','https://review.example',cookie);assert.equal(same.data.me,null);const forged=cookie.replace(/(v1\.[^;]+\.)[^;]+/,'$1x');const rotated=await call(null,'','','test@example.invalid','https://review.example',forged);assert.equal(rotated.status,200);assert.equal(rotated.data.me,null);assert.match(rotated.headers.get('set-cookie')??'',/^__Host-lr_guest=v1\./);const profile=await call({action:'profile',name:'hello'},'','','test@example.invalid','https://review.example',cookie);assert.equal(profile.status,200);const profileCookie=profile.headers.get('set-cookie')??'';assert.match(profileCookie,/__Host-lr_display_name=hello/);const savedNameCookie=(profileCookie.match(/__Host-lr_display_name=[^,]+/)||[''])[0];const restored=await call(null,'','','test@example.invalid','https://review.example',savedNameCookie);assert.equal(restored.data.me.name,'hello');assert.equal((await call({action:'profile',name:'hello'},'a','','x','https://evil.example')).status,403);assert.equal((await call({action:'profile',name:'hello'},'')).status,200);
 });
 test('owner activation exchanges a private access key for a signed cookie without login',async()=>{
  const {call,anonymous,sql}=setup();const activated=await anonymous.activateOwner('test-owner-access-token');assert.ok(activated);assert.match(activated.setCookie,/^__Host-lr_owner=o1\.[0-9]+\./);assert.ok(activated.setCookies?.some(cookie=>cookie.includes('__Host-lr_display_name=')));
@@ -240,7 +240,7 @@ test('JSON posts reject legacy video URLs and cap video comment replies at one n
  assert.deepEqual((await call(null,'test-a','?replies='+parent)).data.posts.map(p=>p.id),[reply.data.id]);assert.deepEqual((await call(null,'test-a','?replies='+reply.data.id)).data.posts.map(p=>p.id),[nested.data.id]);
 });
 test('server moderation, owner-only role changes and audit records',async()=>{
- const {call,sql,clearLimits}=setup();await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');await call({action:'profile',name:'Member'},'member','','member@example.invalid');const member=(await call(null,'member','','member@example.invalid')).data.me;const board=(await call()).data.board;const post=(await call({action:'post',board,body:'Review',request:crypto.randomUUID()})).data.id;
+ const {call,sql,clearLimits}=setup();await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');await call({action:'profile',name:'Member'},'member','','member@example.invalid');await call({action:'profile',name:'Reviewer'});const member=(await call(null,'member','','member@example.invalid')).data.me;const board=(await call()).data.board;const post=(await call({action:'post',board,body:'Review',request:crypto.randomUUID()})).data.id;
  assert.equal((await call({action:'moderate',operation:'pin',target:post})).status,403);
  assert.equal((await call({action:'moderate',operation:'moderator',target:member.id},'owner-subject')).status,200);const memberAfterReload=(await call(null,'member','','member@example.invalid')).data;assert.equal(memberAfterReload.me.role,'moderator');const ownerView=(await call(null,'owner-subject','?admin=1','owner@example.invalid')).data;assert.equal(ownerView.users.find(user=>user.id===member.id).role,'moderator');assert.equal((await call({action:'moderate',operation:'pin',target:post},'member','','member@example.invalid')).status,200);
  assert.equal((await call({action:'moderate',operation:'moderator',target:member.id})).status,403);
@@ -271,7 +271,7 @@ test('Owner permission list includes named loginless users but excludes anonymou
  const {call}=setup();
  const owner=await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');assert.equal(owner.status,200);
  const named=await call({action:'profile',name:'名前ありユーザー'},'');assert.equal(named.status,200);
- const anonymous=await call(null,'');assert.equal(anonymous.status,200);assert.match(anonymous.data.me.name,/^ゲスト-/);
+ const anonymous=await call(null,'');assert.equal(anonymous.status,200);assert.equal(anonymous.data.me,null);
  const admin=(await call(null,'owner-subject','?admin=1','owner@example.invalid')).data;
  assert.ok(admin.users.some(u=>u.name==='名前ありユーザー'));
  assert.ok(!admin.users.some(u=>/^ゲスト-/.test(u.name)));
@@ -452,6 +452,6 @@ test('media groups stay isolated by board and author even if a UUID is reused',a
 test('grouped-media optimistic accounting and scope indexes stay aligned with server semantics',()=>{
  const communitySource=readFileSync(new URL('app/community.tsx',root),'utf8');const boardSource=readFileSync(new URL('app/api/board/route.ts',root),'utf8');const direct=readFileSync(new URL('app/api/upload/route.ts',root),'utf8');const session=readFileSync(new URL('app/api/upload/session/route.ts',root),'utf8');const schemaSource=readFileSync(new URL('db/schema.ts',root),'utf8');const migration=readFileSync(new URL('drizzle/0011_grouped_media_scope_indexes.sql',root),'utf8');
  assert.match(communitySource,/function applyLocalMediaPost/);assert.match(communitySource,/item=>item.mediaGroup===post.mediaGroup/);assert.doesNotMatch(communitySource,/comments:current.stats.comments+1,todayComments:current.stats.todayComments+1/);
- assert.match(boardSource,/SELECT id,board,author,parent,video/);assert.match(boardSource,/byScope/);assert.match(direct,/SELECT author,board FROM posts WHERE media_group=?/);assert.match(session,/SELECT user,board FROM upload_sessions WHERE media_group=?/);
+ assert.match(boardSource,/SELECT id,board,author,parent,video/);assert.match(boardSource,/byScope/);assert.match(direct,/SELECT author,board,body FROM posts WHERE media_group=?/);assert.match(session,/SELECT user,board,body FROM upload_sessions WHERE media_group=?/);
  assert.match(schemaSource,/posts_media_group_scope/);assert.match(schemaSource,/upload_sessions_media_group_scope/);assert.match(migration,/posts_media_group_scope/);assert.match(migration,/upload_sessions_media_group_scope/);
 });

@@ -4,7 +4,7 @@ import {database} from '@/db/raw';
 import {loadCommunityFeatureFlags,requireCommunityFeature} from '@/lib/community-flags';
 import {communityTimeouts} from '@/lib/community-timeouts';
 import {languages,type Language} from '@/lib/rules';
-import {currentUser} from '@/lib/upload-session';
+import {currentUser,sessionLimitKey} from '@/lib/upload-session';
 
 export const dynamic='force-dynamic';
 
@@ -27,7 +27,7 @@ async function readBody(request:Request){
 
 export async function POST(request:Request){try{
  const h=await headers();const origin=h.get('origin');if(!origin||origin!==new URL(request.url).origin||h.get('sec-fetch-site')==='cross-site')throw new Error('forbidden');
- const {sub,setCookie}=await currentUser(h);const reply=(data:unknown,status=200)=>response(data,status,setCookie);await limit('translate:'+sub,12,60);
+ const session=await currentUser(h);const {sub,setCookie}=session;const reply=(data:unknown,status=200)=>response(data,status,setCookie);await limit(sessionLimitKey(session,'translate',sub),12,60);
  const body=await readBody(request);const postId=String(body.post||'');const target=String(body.target||'');
  if(!/^[a-f0-9-]{36}$/.test(postId)||!languages.includes(target as Language))throw new Error('invalid_request');
  const db=database();requireCommunityFeature(await loadCommunityFeatureFlags(db),'translationEnabled');const post=await db.prepare("SELECT p.body FROM posts p WHERE p.id=? AND p.status='visible' AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))").bind(postId).first<{body:string}>();if(!post)throw new Error('not_found');

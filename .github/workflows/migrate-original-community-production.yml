@@ -1,8 +1,8 @@
 name: migrate-original-community-production
 
-# One-time promotion path: deploy the validated copy to an isolated production
-# Worker and isolated original-site D1/R2 resources. Future copy commits do not
-# deploy here unless this workflow is deliberately changed or dispatched.
+# One-time promotion path: deploy the validated copy to the already provisioned
+# production Worker and D1/R2 resources. Future copy commits do not deploy here
+# unless this workflow is deliberately changed or dispatched.
 on:
   # This workflow can never run from a normal copy commit. Promotion is an
   # explicitly authorized, manual operation with a typed confirmation.
@@ -63,7 +63,7 @@ jobs:
           echo "::add-mask::$account_id"
           echo "CLOUDFLARE_ACCOUNT_ID=$account_id" >> "$GITHUB_ENV"
 
-      - name: Create or verify isolated original D1 and R2
+      - name: Verify existing original D1 and R2 only
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
@@ -77,8 +77,8 @@ jobs:
             ][0] // empty
           ')"
           if [ -z "$db_id" ]; then
-            created="$(npx wrangler d1 create "$D1_NAME" 2>&1)"
-            db_id="$(printf '%s' "$created" | grep -Eo '[A-Fa-f0-9]{8}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{4}-[A-Fa-f0-9]{12}' | head -n1 || true)"
+            echo "Production D1 $D1_NAME does not exist. Refusing to create a new resource automatically."
+            exit 78
           fi
           if ! [[ "$db_id" =~ ^[A-Fa-f0-9-]{36}$ ]]; then
             echo "Unable to resolve the original production D1 database ID."
@@ -87,7 +87,8 @@ jobs:
           echo "::add-mask::$db_id"
 
           if ! npx wrangler r2 bucket info "$R2_BUCKET" --json >/dev/null 2>&1; then
-            npx wrangler r2 bucket create "$R2_BUCKET"
+            echo "Production R2 bucket $R2_BUCKET does not exist. Refusing to create a new resource automatically."
+            exit 78
           fi
 
           tmp="$(mktemp)"
@@ -100,6 +101,27 @@ jobs:
           mv "$tmp" wrangler.jsonc
           grep -q "$db_id" wrangler.jsonc
           grep -q "$R2_BUCKET" wrangler.jsonc
+
+      - name: Verify required production secret names before migration
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          BOARD_OWNER_ACCESS_TOKEN: ${{ secrets.BOARD_OWNER_ACCESS_TOKEN }}
+          BOARD_OWNER_SUBJECT: ${{ secrets.BOARD_OWNER_SUBJECT }}
+        run: |
+          set -euo pipefail
+          secrets_json="$(npx wrangler secret list --name "$WORKER_NAME" --format json)"
+          printf '%s' "$secrets_json" | jq -e '.[] | select(.name == "BOARD_ANON_COOKIE_SECRET")' >/dev/null || {
+            echo "Production anonymous signing secret is missing. Refusing to create it automatically."
+            exit 78
+          }
+          if [ -z "${BOARD_OWNER_ACCESS_TOKEN:-}" ] || [ -z "${BOARD_OWNER_SUBJECT:-}" ]; then
+            for required in BOARD_OWNER_ACCESS_TOKEN BOARD_OWNER_SUBJECT; do
+              printf '%s' "$secrets_json" | jq -e --arg required "$required" '.[] | select(.name == $required)' >/dev/null || {
+                echo "Required production secret name missing: $required"
+                exit 78
+              }
+            done
+          fi
 
       - name: Audit dependencies and run regression tests
         run: |
@@ -127,15 +149,13 @@ jobs:
           echo "Deploying generated Worker config."
           npx wrangler deploy --config "$output_config"
 
-      - name: Preserve or initialize original anonymous signing secret
+      - name: Verify required production secret names after deployment
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
         run: |
           set -euo pipefail
           secrets_json="$(npx wrangler secret list --name "$WORKER_NAME" --format json)"
-          if ! printf '%s' "$secrets_json" | jq -e '.[] | select(.name == "BOARD_ANON_COOKIE_SECRET")' >/dev/null; then
-            openssl rand -hex 48 | npx wrangler secret put BOARD_ANON_COOKIE_SECRET --name "$WORKER_NAME"
-          fi
+          printf '%s' "$secrets_json" | jq -e '.[] | select(.name == "BOARD_ANON_COOKIE_SECRET")' >/dev/null || { echo "Required production secret name missing: BOARD_ANON_COOKIE_SECRET"; exit 78; }
 
       - name: Apply optional Owner secrets to both Workers
         env:
@@ -152,6 +172,16 @@ jobs:
           for worker in "$WORKER_NAME" "line-rangers-pvp-community-review"; do
             printf '%s' "$BOARD_OWNER_ACCESS_TOKEN" | npx wrangler secret put BOARD_OWNER_ACCESS_TOKEN --name "$worker"
             printf '%s' "$BOARD_OWNER_SUBJECT" | npx wrangler secret put BOARD_OWNER_SUBJECT --name "$worker"
+          done
+
+      - name: Verify required production secret names after synchronization
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          secrets_json="$(npx wrangler secret list --name "$WORKER_NAME" --format json)"
+          for required in BOARD_ANON_COOKIE_SECRET BOARD_OWNER_ACCESS_TOKEN BOARD_OWNER_SUBJECT; do
+            printf '%s' "$secrets_json" | jq -e --arg required "$required" '.[] | select(.name == $required)' >/dev/null || { echo "Required production secret name missing: $required"; exit 78; }
           done
 
       - name: Verify original production Worker

@@ -3,15 +3,15 @@ import {bucket,database} from '@/db/raw';
 import {loadCommunityFeatureFlags,requireCommunityFeature} from '@/lib/community-flags';
 import {uploadPartLimit,uploadPartWindowSeconds} from '@/lib/rules';
 import {headerMatches} from '@/lib/upload-session';
-import {assertSameOrigin,captureAndCount,currentUser,enforceLimit,expectedPartSize,fail,json,uploadSessionExpired,type UploadSession} from '@/lib/upload-session';
+import {assertSameOrigin,captureAndCount,currentUser,enforceLimit,expectedPartSize,fail,json,profileReady,sessionLimitKey,uploadSessionExpired,type UploadSession} from '@/lib/upload-session';
 
 export const dynamic='force-dynamic';
 
 export async function PUT(request:Request){try{
- const h=await headers();assertSameOrigin(request,h);const {user,setCookie}=await currentUser(h);if(!user)throw new Error('profile_required');const reply=(data:unknown,status=200)=>json(data,status,setCookie);requireCommunityFeature(await loadCommunityFeatureFlags(database()),'videoUploadEnabled');
+ const h=await headers();assertSameOrigin(request,h);const sessionUser=await currentUser(h);const {user,setCookie}=sessionUser;if(!profileReady(user))throw new Error('profile_required');const reply=(data:unknown,status=200)=>json(data,status,setCookie);requireCommunityFeature(await loadCommunityFeatureFlags(database()),'videoUploadEnabled');
  // A 200 MiB video has 25 chunks.  Do not consume the general write budget for
  // every chunk; this dedicated, bounded allowance also covers normal retries.
- await enforceLimit('upload-part:'+user.id,uploadPartLimit,uploadPartWindowSeconds);
+ await enforceLimit(sessionLimitKey(sessionUser,'upload-part',user.id),uploadPartLimit,uploadPartWindowSeconds);
  const query=new URL(request.url).searchParams;const id=query.get('id')||'';const part=Number(query.get('part'));
  if(!/^[a-f0-9-]{36}$/.test(id)||!Number.isSafeInteger(part)||part<1)throw new Error('invalid_request');
  if(request.headers.get('content-type')!=='application/octet-stream')throw new Error('invalid_request');

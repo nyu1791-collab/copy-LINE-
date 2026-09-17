@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import { env } from 'cloudflare:workers';
 import { bucket,database } from '@/db/raw';
 import { enrichPosts,logicalPostAnchorSql as logicalPostAnchor } from '@/lib/community-activity';
-import {displayNameCookie,guestName,sessionFromHeaders,type AnonymousSession} from '@/lib/anonymous-session';
+import {abuseNetworkBucket,displayNameCookie,guestName,sessionFromHeaders,type AnonymousSession} from '@/lib/anonymous-session';
 import {loadCommunityFeatureFlags,requireCommunityFeature} from '@/lib/community-flags';
 import {isCommunityFeatureName} from '@/lib/community-features';
 import { confirmedCharactersForMonth,isConfirmedCharacterForMonth,isVideoMedia,monthJST,validMonth,textInput,validateReply,mayModerate,contributionBadges,ownerDisplayName,type Role } from '@/lib/rules';
@@ -11,9 +11,14 @@ type User={id:string;name:string;display_name_set:number;role:Role;badges?:strin
 type BoardStats={videos:number;comments:number;todayComments:number;latestCreated:number;latestId:string|null};
 type Session=AnonymousSession;
 function response(data:unknown,status=200,setCookie?:string,setCookies:string[]=[]){const responseHeaders=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});if(setCookie)responseHeaders.append('Set-Cookie',setCookie);for(const cookie of setCookies)responseHeaders.append('Set-Cookie',cookie);return Response.json(data,{status,headers:responseHeaders});}
-async function identity():Promise<Session>{return sessionFromHeaders(await headers());}
+async function identity(h?:Headers):Promise<Session>{return sessionFromHeaders(h||await headers());}
 async function user(sub:string){return database().prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<User>();}
-async function ensureUser(sub:string,name:string,displayName?:string,displayNameSet=false,owner=false){const current=await user(sub);if(current){if(owner){await database().prepare('UPDATE users SET name=?,display_name_set=1 WHERE subject=?').bind(ownerDisplayName,sub).run();return user(sub);}if((displayName&&current.name===guestName(sub))||displayNameSet&&!current.display_name_set){await database().prepare("UPDATE users SET name=CASE WHEN ? IS NOT NULL AND name=? THEN ? ELSE name END,display_name_set=CASE WHEN ? THEN 1 ELSE display_name_set END WHERE subject=?").bind(displayName||null,guestName(sub),displayName||current.name,displayNameSet?1:0,sub).run();return user(sub);}return current;}const db=database();const initialName=owner?ownerDisplayName:displayName||name;await db.prepare("INSERT OR IGNORE INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,?,'user',?)").bind(crypto.randomUUID(),sub,initialName,owner||displayNameSet||!!displayName?1:0,Date.now()).run();return user(sub);}
+async function ensureUser(sub:string,name:string,displayName?:string,displayNameSet=false,owner=false):Promise<User|null>{const current=await user(sub);if(current){if(owner){await database().prepare('UPDATE users SET name=?,display_name_set=1 WHERE subject=?').bind(ownerDisplayName,sub).run();return user(sub);}if((displayName&&current.name===guestName(sub))||displayNameSet&&!current.display_name_set){await database().prepare("UPDATE users SET name=CASE WHEN ? IS NOT NULL AND name=? THEN ? ELSE name END,display_name_set=CASE WHEN ? THEN 1 ELSE display_name_set END WHERE subject=?").bind(displayName||null,guestName(sub),displayName||current.name,displayNameSet?1:0,sub).run();return user(sub);}return current;}
+ // Browsing and an unread marker must not mint a persistent anonymous user.
+ // A profile, an owner cookie, or a trusted non-anonymous subject is required
+ // before a new D1 user row is created.
+ if(!owner&&!displayNameSet&&!displayName)return null;
+ const db=database();const initialName=owner?ownerDisplayName:displayName||name;await db.prepare("INSERT OR IGNORE INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,?,'user',?)").bind(crypto.randomUUID(),sub,initialName,owner||displayNameSet||!!displayName?1:0,Date.now()).run();return user(sub);}
 async function promoteVerifiedOwner(sub:string,current:User|null){
  if(!current)return current;
  if(current.role==='owner'){if(current.name!==ownerDisplayName||!current.display_name_set){await database().prepare('UPDATE users SET name=?,display_name_set=1 WHERE subject=?').bind(ownerDisplayName,sub).run();return user(sub);}return current;}
@@ -64,7 +69,7 @@ async function setLogicalReaction(table:'likes'|'helpful',post:VisiblePost,userI
 }
 function error(e:unknown){const message=e instanceof Error?e.message:'';const codes=['signin_required','profile_required','invalid_text','invalid_media','text_only','rate_limited','not_found','forbidden','invalid_request','duplicate_post','translation_unavailable','feature_disabled','read_only','archive_readonly','anonymous_unavailable'];if(!codes.includes(message)){console.error('board_request_failed');return response({error:'unavailable'},503);}return response({error:message},message==='signin_required'?401:message==='forbidden'?403:message==='rate_limited'?429:message==='not_found'?404:['feature_disabled','read_only','anonymous_unavailable'].includes(message)?503:message==='archive_readonly'?409:400);}
 export async function GET(request:Request){try{
- const viewUntil=Date.now();const session=await identity();const sub=session.sub;const db=database();const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName,!!session.owner));const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);const flags=await loadCommunityFeatureFlags(db);const meBadges=me?(await db.prepare('SELECT badge FROM user_badges WHERE user=? ORDER BY badge').bind(me.id).all()).results.map(row=>String(row.badge)):[];const publicMe=me?{...me,badges:meBadges}:null;const u=new URL(request.url);
+ const viewUntil=Date.now();const h=await headers();const session=await identity(h);const sub=session.sub;const network=await abuseNetworkBucket(h);if(network)await limit('board-read:'+network,240,60);const db=database();const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName,!!session.owner));const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);const flags=await loadCommunityFeatureFlags(db);const meBadges=me?(await db.prepare('SELECT badge FROM user_badges WHERE user=? ORDER BY badge').bind(me.id).all()).results.map(row=>String(row.badge)):[];const publicMe=me?{...me,badges:meBadges}:null;const u=new URL(request.url);
  // Reaction totals stay visible, but the people behind them are intentionally
  // private.  Keep the saved reactions for uniqueness and moderation without
  // exposing a name-list API that could be called outside the screen.
@@ -154,9 +159,9 @@ export async function POST(request:Request){try{
  if(!request.headers.get('content-type')?.startsWith('application/json'))throw new Error('invalid_request');
  const reader=request.body?.getReader();if(!reader)throw new Error('invalid_request');let raw='';const decoder=new TextDecoder();let size=0;while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>16000){await reader.cancel();throw new Error('invalid_request');}raw+=decoder.decode(value,{stream:true});}raw+=decoder.decode();
  let b:Record<string,unknown>;try{b=JSON.parse(raw);}catch{throw new Error('invalid_request');}if(!b||Array.isArray(b))throw new Error('invalid_request');
- const session=await identity();const sub=session.sub;const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);await limit('write:'+sub,30);const db=database();const now=Date.now();
+ const session=await identity(h);const sub=session.sub;const network=await abuseNetworkBucket(h);const freshAnonymous=session.anonymous===true&&!!session.setCookie;const sessionLimit=(prefix:string,id=sub)=>network&&freshAnonymous?`${prefix}-new:${network}`:`${prefix}:${id}`;const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);await limit(sessionLimit('write'),30);const db=database();const now=Date.now();
  if(b.action==='profile'){
-  const submittedName=textInput(b.name,30);await limit('profile:'+sub,3);
+  const submittedName=textInput(b.name,30);await limit(sessionLimit('profile'),3);
   // Only the opaque subject injected by the platform and matched against the
   // server-side secret may bind the Owner role. Public request headers such as
   // an email value are never used for privilege escalation.
@@ -169,8 +174,8 @@ export async function POST(request:Request){try{
   // present; a display name or client payload never changes a role.
   await db.prepare("INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,1,CASE WHEN ? AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner') THEN 'owner' ELSE 'user' END,?) ON CONFLICT(subject) DO UPDATE SET name=excluded.name,display_name_set=1,role=CASE WHEN ? AND users.role='user' AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner' AND subject<>excluded.subject) THEN 'owner' ELSE users.role END").bind(crypto.randomUUID(),sub,name,ownerCandidate?1:0,now,ownerCandidate?1:0).run();return response({ok:true,me:await user(sub)},200,session.setCookie,[displayNameCookie(name)]);
  }
- if(b.action==='seen'){if(!Number.isSafeInteger(b.until)||Number(b.until)<0||Number(b.until)>now)throw new Error('invalid_request');await db.prepare('INSERT INTO visits(subject,seen) VALUES(?,?) ON CONFLICT(subject) DO UPDATE SET seen=MAX(seen,excluded.seen)').bind(sub,b.until).run();return reply({ok:true});}
- const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName,!!session.owner));if(!me)throw new Error('profile_required');const flags=await loadCommunityFeatureFlags(db);
+ if(b.action==='seen'){if(!Number.isSafeInteger(b.until)||Number(b.until)<0||Number(b.until)>now)throw new Error('invalid_request');if(session.anonymous&&session.setCookie)return reply({ok:true});await db.prepare('INSERT INTO visits(subject,seen) VALUES(?,?) ON CONFLICT(subject) DO UPDATE SET seen=MAX(seen,excluded.seen)').bind(sub,b.until).run();return reply({ok:true});}
+ const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName,!!session.owner));if(!me||me.role!=='owner'&&!me.display_name_set)throw new Error('profile_required');const flags=await loadCommunityFeatureFlags(db);
  if(b.action==='feature_flag'){
   if(me.role!=='owner')throw new Error('forbidden');if(!isCommunityFeatureName(b.name)||typeof b.enabled!=='boolean')throw new Error('invalid_request');
   await db.batch([
@@ -187,8 +192,8 @@ export async function POST(request:Request){try{
   await db.batch([mutation,db.prepare('INSERT INTO audit(id,actor,action,target,created) VALUES(?,?,?,?,?)').bind(crypto.randomUUID(),me.id,b.enabled?'badge_grant':'badge_revoke',`${target}:${badge}`,now)]);
   return reply({ok:true,target,badge,enabled:b.enabled});
  }
- if(b.action==='helpful'){requireCommunityFeature(flags,'commentsEnabled');const post=await logicalVisiblePost(String(b.post));if(!post)throw new Error('not_found');await ensureCurrentBoard(post.board);if(typeof b.selected!=='boolean')throw new Error('invalid_request');await limit('helpful:'+me.id,15);await setLogicalReaction('helpful',post,me.id,b.selected,now);return reply({ok:true});}
- if(b.action==='report'){const post=await logicalVisiblePost(String(b.post));if(!post||post.author===me.id)throw new Error('not_found');await limit('report:'+me.id,6,600);await db.batch([db.prepare('INSERT OR IGNORE INTO post_reports(post,reporter,created) VALUES(?,?,?)').bind(post.id,me.id,now),db.prepare('INSERT INTO audit(id,actor,action,target,created)').bind(crypto.randomUUID(),me.id,'report',post.id,now)]);return reply({ok:true});}
+ if(b.action==='helpful'){requireCommunityFeature(flags,'commentsEnabled');const post=await logicalVisiblePost(String(b.post));if(!post)throw new Error('not_found');await ensureCurrentBoard(post.board);if(typeof b.selected!=='boolean')throw new Error('invalid_request');await limit(sessionLimit('helpful',me.id),15);await setLogicalReaction('helpful',post,me.id,b.selected,now);return reply({ok:true});}
+ if(b.action==='report'){const post=await logicalVisiblePost(String(b.post));if(!post||post.author===me.id)throw new Error('not_found');await limit(sessionLimit('report',me.id),6,600);await db.batch([db.prepare('INSERT OR IGNORE INTO post_reports(post,reporter,created) VALUES(?,?,?)').bind(post.id,me.id,now),db.prepare('INSERT INTO audit(id,actor,action,target,created)').bind(crypto.randomUUID(),me.id,'report',post.id,now)]);return reply({ok:true});}
  if(b.action==='post'){
   requireCommunityFeature(flags,'commentsEnabled');
   const board=String(b.board||'');const boardRow=await db.prepare('SELECT id,month,character FROM boards WHERE id=?').bind(board).first<{id:string;month:string;character:string}>();if(!boardRow)throw new Error('not_found');if(boardRow.month!==monthJST())throw new Error('archive_readonly');if(!isConfirmedCharacterForMonth(boardRow.character,boardRow.month))throw new Error('not_found');
@@ -201,18 +206,18 @@ export async function POST(request:Request){try{
    // tree or accept media/URLs at any reply level.
    if(p.parent){const root=await visiblePost(p.parent);if(!root||!isVideoPost(root)||root.parent)throw new Error('text_only');}
   }
-  await limit('post:'+me.id,1,10);if(await db.prepare('SELECT id FROM posts WHERE author=? AND body=? AND created>?').bind(me.id,body,now-60000).first())throw new Error('duplicate_post');
+  await limit(sessionLimit('post',me.id),1,10);if(await db.prepare('SELECT id FROM posts WHERE author=? AND body=? AND created>?').bind(me.id,body,now-60000).first())throw new Error('duplicate_post');
   const id=crypto.randomUUID();await db.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,?,?,NULL,'visible',0,?,?)").bind(id,board,me.id,parent,body,now,requestId).run();return reply({ok:true,id});
  }
  if(b.action==='vote'){
   requireCommunityFeature(flags,'votingEnabled');
   if(!['strength','pull'].includes(String(b.poll))||!Number.isInteger(b.choice)||Number(b.choice)<0||Number(b.choice)>2)throw new Error('invalid_request');
-  const voteBoard=await db.prepare('SELECT id,month,character FROM boards WHERE id=?').bind(String(b.board)).first<{id:string;month:string;character:string}>();if(!voteBoard)throw new Error('not_found');if(voteBoard.month!==monthJST())throw new Error('archive_readonly');if(!isConfirmedCharacterForMonth(voteBoard.character,voteBoard.month))throw new Error('not_found');await limit('vote:'+me.id,6);
+  const voteBoard=await db.prepare('SELECT id,month,character FROM boards WHERE id=?').bind(String(b.board)).first<{id:string;month:string;character:string}>();if(!voteBoard)throw new Error('not_found');if(voteBoard.month!==monthJST())throw new Error('archive_readonly');if(!isConfirmedCharacterForMonth(voteBoard.character,voteBoard.month))throw new Error('not_found');await limit(sessionLimit('vote',me.id),6);
   await db.prepare('INSERT INTO votes(board,user,poll,choice) VALUES(?,?,?,?) ON CONFLICT(board,user,poll) DO UPDATE SET choice=excluded.choice').bind(String(b.board),me.id,String(b.poll),Number(b.choice)).run();return reply({ok:true});
  }
  if(b.action==='like'){
   requireCommunityFeature(flags,'commentsEnabled');
-  const post=await logicalVisiblePost(String(b.post));if(!post)throw new Error('not_found');await ensureCurrentBoard(post.board);await limit('like:'+me.id,15);
+  const post=await logicalVisiblePost(String(b.post));if(!post)throw new Error('not_found');await ensureCurrentBoard(post.board);await limit(sessionLimit('like',me.id),15);
   if(typeof b.liked!=='boolean')throw new Error('invalid_request');await setLogicalReaction('likes',post,me.id,b.liked,now);return reply({ok:true});
  }
  if(b.action==='moderate'){

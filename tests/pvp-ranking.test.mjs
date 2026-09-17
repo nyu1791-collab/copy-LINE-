@@ -52,4 +52,5 @@ test('PvP upstream JSON is bounded before parsing',()=>{
  assert.match(routeSource,/UPSTREAM_MAX_BYTES=4\*1024\*1024/);
  assert.match(routeSource,/response\.body\.getReader\(\)/);
  assert.match(routeSource,/size>UPSTREAM_MAX_BYTES/);
+ assert.doesNotMatch(routeSource,/COPIED_SALLY_SNAPSHOT|copiedFallback/);
 });
