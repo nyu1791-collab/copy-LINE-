@@ -103,7 +103,7 @@ export async function GET(request:Request){try{
   const existingCharacters=new Set(boards.map(b=>String(b.character)));
   const missingTopics=confirmedTopics.filter(c=>!existingCharacters.has(c.id));
   if(missingTopics.length){
-   await db.batch(missingTopics.map(c=>db.prepare('INSERT OR IGNORE INTO boards(id,month,character,name,image) VALUES(?,?,?,?,?)').bind(`${requested}:${c.id}`,requested,c.id,c.name,c.image)));
+   await db.batch(missingTopics.map(c=>db.prepare('INSERT OR IGNORE INTO boards(id,month,character,name,name_en,image) VALUES(?,?,?,?,?,?)').bind(`${requested}:${c.id}`,requested,c.id,c.name,c.nameEn||null,c.image)));
    boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;
   }
  }
@@ -113,7 +113,7 @@ export async function GET(request:Request){try{
  // month, preserve the confirmed topic order (PvP rank/adoption-rate order).
  if(requested===current){
   const boardByCharacter=new Map(boards.map(b=>[String(b.character),b]));
-  boards=confirmedTopics.flatMap(c=>{const row=boardByCharacter.get(c.id);return row?[{...row,name:c.name,image:c.image}]:[];});
+  boards=confirmedTopics.flatMap(c=>{const row=boardByCharacter.get(c.id);return row?[{...row,name:c.name,nameEn:c.nameEn||null,image:c.image}]:[];});
  }
  const board=u.searchParams.get('board')||String(boards[0]?.id||'');let parent=u.searchParams.get('video');const requestedGroup=u.searchParams.get('group');if(parent&&requestedGroup)throw new Error('invalid_request');
  if(board&&!boards.some(b=>b.id===board))throw new Error('not_found');
