@@ -92,12 +92,9 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
     return null
   }
 
-  return (
-    <style
-      dangerouslySetInnerHTML={{
-        __html: Object.entries(THEMES)
-          .map(([theme, media]) => {
-            const rule = `
+  const styleText = Object.entries(THEMES)
+    .map(([theme, media]) => {
+      const rule = `
 [data-chart=${id}] {
 ${colorConfig
   .map(([key, itemConfig]) => {
@@ -109,12 +106,14 @@ ${colorConfig
   .join("\n")}
 }
 `
-            return media ? `@media ${media} {\n${rule}}\n` : rule
-          })
-          .join("\n"),
-      }}
-    />
-  )
+      return media ? `@media ${media} {\n${rule}}\n` : rule
+    })
+    .join("\n")
+
+  // Render CSS as a text child so configuration values cannot terminate the
+  // style element and inject markup when this reusable component is fed by a
+  // future data source.
+  return <style>{styleText}</style>
 }
 
 const ChartTooltip = RechartsPrimitive.Tooltip
