@@ -329,6 +329,7 @@ test('read marker is persistent, monotonic and rejects future timestamps',async(
 test('community board is Japanese-English only with ten-image five-video media caps', () => {
   const source = readFileSync(new URL('app/community.tsx', root), 'utf8');
   const labelsSource = readFileSync(new URL('lib/labels.ts', root), 'utf8');
+  const characterConfig = JSON.parse(readFileSync(new URL('config/community-characters.json', root), 'utf8'));
   const activitySource = readFileSync(new URL('lib/activity-labels.ts', root), 'utf8');
   const translationSource = readFileSync(new URL('app/api/translate/route.ts', root), 'utf8');
   const directUpload = readFileSync(new URL('app/api/upload/route.ts', root), 'utf8');
@@ -347,6 +348,7 @@ test('community board is Japanese-English only with ten-image five-video media c
   assert.match(labelsSource, /owner:'Owner'/);
   assert.match(source, /function boardName\(board:Board,lang:Language\)/);
   assert.match(source, /boardName\(b,lang\)/);
+  assert.equal(characterConfig.characters.find(character=>character.id==='u1631e-sally').nameEn, 'Cancer Sally');
   assert.match(source, /videoCount>maxVideosPerPost/);
   assert.match(source, /imageCount>maxImagesPerPost/);
   assert.match(source, /else void uploadImage\(fileToSend,description,request,uploadBoard,group\)/);
