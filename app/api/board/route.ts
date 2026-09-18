@@ -136,7 +136,10 @@ export async function GET(request:Request){try{
    const latest=afterValue
     ?await db.prepare(`SELECT COUNT(*) count,COALESCE(MAX(p.created),0) latestCreated FROM posts p WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND (p.created>? OR (p.created=? AND p.id>?))`).bind(board,parentId,after.created,after.created,after.id).first<{count:number;latestCreated:number}>()
     :await db.prepare(`SELECT COUNT(*) count,COALESCE(MAX(p.created),0) latestCreated FROM posts p WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND p.created>?`).bind(board,parentId,since).first<{count:number;latestCreated:number}>();
-   return reply({count:Number(latest?.count||0),latestCreated:Number(latest?.latestCreated||after.created),latestId:null});
+   const count=Number(latest?.count||0);
+   const latestParams=afterValue?[board,parentId,after.created,after.created,after.id]:[board,parentId,since];
+   const latestId=count>0?((await db.prepare(`SELECT p.id FROM posts p WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND ${afterValue?'(p.created>? OR (p.created=? AND p.id>?)':'p.created>?'} ORDER BY p.created DESC,p.id DESC LIMIT 1`).bind(...latestParams).first<{id:string}>())?.id||null):null;
+   return reply({count,latestCreated:Number(latest?.latestCreated||0),latestId});
   }
   const rows=afterValue
    ?(await db.prepare(`SELECT p.id,p.author,p.board,p.parent,p.body,p.video,p.media_type mediaType,p.media_name mediaName,p.media_size mediaSize,p.media_group mediaGroup,p.created,p.pinned,u.name,u.role,(SELECT COUNT(*) FROM likes l WHERE l.post=p.id) likes,(SELECT COUNT(*) FROM posts r WHERE r.parent=p.id AND r.status='visible') replies,EXISTS(SELECT 1 FROM likes l WHERE l.post=p.id AND l.user=?) liked FROM posts p JOIN users u ON u.id=p.author WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND (p.created>? OR (p.created=? AND p.id>?)) ORDER BY p.created ASC,p.id ASC LIMIT 21`).bind(me?.id||'',board,parentId,after.created,after.created,after.id).all()).results

@@ -332,7 +332,7 @@ test('new-post cursor keeps same-timestamp records addressable by id',async()=>{
  const {call,sql}=setup();await call({action:'profile',name:'Author'});const initial=(await call()).data;const created=Date.now();
  const firstId='00000000-0000-4000-8000-000000000001';sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(firstId,initial.board,initial.me.id,'Same-time first',created,crypto.randomUUID());
  const state=(await call()).data;const cursor=`${state.stats.latestCreated}.${state.stats.latestId}`;const secondId='00000000-0000-4000-8000-000000000002';sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(secondId,initial.board,initial.me.id,'Same-time second',created,crypto.randomUUID());
- const newer=(await call(null,'test-a','?after='+encodeURIComponent(cursor))).data;assert.equal(newer.posts.length,1);assert.equal(newer.posts[0].body,'Same-time second');
+ const newer=(await call(null,'test-a','?after='+encodeURIComponent(cursor))).data;assert.equal(newer.posts.length,1);assert.equal(newer.posts[0].body,'Same-time second');\n const countOnly=(await call(null,'test-a','?after='+encodeURIComponent(cursor)+'&countOnly=1')).data;assert.equal(countOnly.count,1);assert.equal(countOnly.latestId,secondId);
 });
 test('read marker is persistent, monotonic and rejects future timestamps',async()=>{
  const {call}=setup();const before=(await call()).data;assert.equal(before.previousSeen,0);
@@ -521,6 +521,12 @@ test('viewer token cannot override an existing Owner session',async()=>{
 });
 
 
+
+test('optimistic comment polling keeps an exact server cursor',()=>{
+ assert.match(communitySource,/function updateLatestCursor\(id:string,created:number\)/);
+ assert.match(communitySource,/if\(!nested\)updateLatestCursor\(savedId,local\.created\)/);
+ assert.match(communitySource,/latestId:newest\?\.id\?\?latestId/);
+});
 
 test('Owner activation explicitly preserves the cookie and refreshes the role badge',()=>{
  assert.ok(communitySource.includes("credentials:'same-origin'"));
