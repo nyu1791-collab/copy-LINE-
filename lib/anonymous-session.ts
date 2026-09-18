@@ -95,6 +95,18 @@ function trustedUpstreamSubject(h:Headers){
 }
 async function guestCookie(sub:string){const issuedAt=Math.floor(Date.now()/1000);const token=await issue(sub,issuedAt);return `${guestCookieName}=${token}; Path=/; Max-Age=${guestCookieMaxAge}; SameSite=Lax; Secure; HttpOnly`;}
 async function ownerCookie(subject:string){const issuedAt=Math.floor(Date.now()/1000);const token=await issueOwner(subject,issuedAt);return `${ownerCookieName}=${token}; Path=/; Max-Age=${ownerCookieMaxAge}; SameSite=Strict; Secure; HttpOnly`;}
+export async function issuePublicViewerToken(subject=crypto.randomUUID()){
+ if(!/^[a-f0-9-]{36}$/.test(subject))throw new Error('invalid_subject');
+ return issue(subject,Math.floor(Date.now()/1000));
+}
+export async function verifyPublicViewerToken(token:string){
+ if(typeof token!=='string'||token.length>256)return null;
+ return verify(token);
+}
+export async function guestCookieForSubject(subject:string){
+ if(!/^[a-f0-9-]{36}$/.test(subject))throw new Error('invalid_subject');
+ return guestCookie(subject);
+}
 export function displayNameCookie(value:string){return `${displayNameCookieName}=${encodeURIComponent(value)}; Path=/; Max-Age=${displayNameCookieMaxAge}; SameSite=Lax; Secure; HttpOnly`;}
 export function guestName(sub:string){return `ゲスト-${sub.replaceAll('-','').slice(0,4).toUpperCase()}`;}
 

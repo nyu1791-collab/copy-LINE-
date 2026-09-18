@@ -2,7 +2,7 @@ import { headers } from 'next/headers';
 import { env } from 'cloudflare:workers';
 import { bucket,database } from '@/db/raw';
 import { enrichPosts,logicalPostAnchorSql as logicalPostAnchor } from '@/lib/community-activity';
-import {abuseNetworkBucket,displayNameCookie,guestName,sessionFromHeaders,type AnonymousSession} from '@/lib/anonymous-session';
+import {abuseNetworkBucket,displayNameCookie,guestCookieForSubject,guestName,sessionFromHeaders,type AnonymousSession,verifyPublicViewerToken} from '@/lib/anonymous-session';
 import {loadCommunityFeatureFlags,requireCommunityFeature} from '@/lib/community-flags';
 import {isCommunityFeatureName} from '@/lib/community-features';
 import { confirmedCharactersForMonth,isConfirmedCharacterForMonth,isVideoMedia,monthJST,validMonth,textInput,validateReply,mayModerate,contributionBadges,ownerDisplayName,type Role } from '@/lib/rules';
@@ -11,7 +11,10 @@ type User={id:string;name:string;display_name_set:number;role:Role;badges?:strin
 type BoardStats={videos:number;comments:number;todayComments:number;unread:number;latestCreated:number;latestId:string|null};
 type Session=AnonymousSession;
 function response(data:unknown,status=200,setCookie?:string,setCookies:string[]=[]){const responseHeaders=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});if(setCookie)responseHeaders.append('Set-Cookie',setCookie);for(const cookie of setCookies)responseHeaders.append('Set-Cookie',cookie);return Response.json(data,{status,headers:responseHeaders});}
-async function identity(h?:Headers):Promise<Session>{return sessionFromHeaders(h||await headers());}
+async function identity(h?:Headers,viewerToken?:string):Promise<Session>{
+ if(viewerToken&&viewerToken.length<=256){const sub=await verifyPublicViewerToken(viewerToken);if(sub)return {sub,anonymous:true,setCookie:await guestCookieForSubject(sub)};}
+ return sessionFromHeaders(h||await headers());
+}
 async function user(sub:string){return database().prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<User>();}
 async function ensureUser(sub:string,name:string,displayName?:string,displayNameSet=false,owner=false):Promise<User|null>{const current=await user(sub);if(current){if(owner){await database().prepare('UPDATE users SET name=?,display_name_set=1 WHERE subject=?').bind(ownerDisplayName,sub).run();return user(sub);}if((displayName&&current.name===guestName(sub))||displayNameSet&&!current.display_name_set){await database().prepare("UPDATE users SET name=CASE WHEN ? IS NOT NULL AND name=? THEN ? ELSE name END,display_name_set=CASE WHEN ? THEN 1 ELSE display_name_set END WHERE subject=?").bind(displayName||null,guestName(sub),displayName||current.name,displayNameSet?1:0,sub).run();return user(sub);}return current;}
  // Browsing and an unread marker must not mint a persistent anonymous user.
@@ -69,7 +72,7 @@ async function setLogicalReaction(table:'likes'|'helpful',post:VisiblePost,userI
 }
 function error(e:unknown){const message=e instanceof Error?e.message:'';const codes=['signin_required','profile_required','invalid_text','invalid_media','text_only','rate_limited','not_found','forbidden','invalid_request','duplicate_post','translation_unavailable','feature_disabled','read_only','archive_readonly','anonymous_unavailable'];if(!codes.includes(message)){console.error('board_request_failed');return response({error:'unavailable'},503);}return response({error:message},message==='signin_required'?401:message==='forbidden'?403:message==='rate_limited'?429:message==='not_found'?404:['feature_disabled','read_only','anonymous_unavailable'].includes(message)?503:message==='archive_readonly'?409:400);}
 export async function GET(request:Request){try{
- const viewUntil=Date.now();const h=await headers();const session=await identity(h);const sub=session.sub;const network=await abuseNetworkBucket(h);if(network)await limit('board-read:'+network,240,60);const db=database();const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName,!!session.owner));const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);const flags=await loadCommunityFeatureFlags(db);const meBadges=me?(await db.prepare('SELECT badge FROM user_badges WHERE user=? ORDER BY badge').bind(me.id).all()).results.map(row=>String(row.badge)):[];const publicMe=me?{...me,badges:meBadges}:null;const u=new URL(request.url);
+ const viewUntil=Date.now();const h=await headers();const u=new URL(request.url);const session=await identity(h,u.searchParams.get('viewer')||undefined);const sub=session.sub;const network=await abuseNetworkBucket(h);if(network)await limit('board-read:'+network,240,60);const db=database();const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName,!!session.owner));const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);const flags=await loadCommunityFeatureFlags(db);const meBadges=me?(await db.prepare('SELECT badge FROM user_badges WHERE user=? ORDER BY badge').bind(me.id).all()).results.map(row=>String(row.badge)):[];const publicMe=me?{...me,badges:meBadges}:null;
  // Reaction totals stay visible, but the people behind them are intentionally
  // private.  Keep the saved reactions for uniqueness and moderation without
  // exposing a name-list API that could be called outside the screen.

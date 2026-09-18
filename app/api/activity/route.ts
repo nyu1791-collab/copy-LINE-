@@ -1,7 +1,7 @@
 import {database} from '@/db/raw';
 import {logicalPostAnchorSql} from '@/lib/community-activity';
 import {confirmedCharactersForMonth,monthJST} from '@/lib/rules';
-import {abuseNetworkBucket,sessionFromHeaders} from '@/lib/anonymous-session';
+import {abuseNetworkBucket,issuePublicViewerToken,sessionFromHeaders,verifyPublicViewerToken} from '@/lib/anonymous-session';
 export const dynamic='force-dynamic';
 
 const publicActivityOrigin='https://line-rangers-fan.github.io';
@@ -14,18 +14,32 @@ function json(data:unknown,status=200,setCookie?:string,extraHeaders?:HeadersIni
 
 function publicResponseHeaders(origin:string|null){
  const headers:Record<string,string>={
-  'Cache-Control':'public, max-age=15, stale-while-revalidate=30',
-  'Vary':'Origin',
+  'Cache-Control':'no-store',
+  'Vary':'Origin, X-LR-Viewer',
  };
- if(origin===publicActivityOrigin)headers['Access-Control-Allow-Origin']=publicActivityOrigin;
+ if(origin===publicActivityOrigin){
+  headers['Access-Control-Allow-Origin']=publicActivityOrigin;
+  headers['Access-Control-Allow-Headers']='Accept, X-LR-Viewer';
+  headers['Access-Control-Allow-Methods']='GET, OPTIONS';
+ }
  return headers;
+}
+function withViewerToken(data:unknown,token:string|undefined){
+ if(!token||!data||typeof data!=='object'||Array.isArray(data))return data;
+ return {...data as Record<string,unknown>,viewerToken:token};
+}
+export async function OPTIONS(request:Request){
+ const origin=request.headers.get('origin');
+ if(origin!==publicActivityOrigin)return new Response(null,{status:403,headers:{'Cache-Control':'no-store','Vary':'Origin'}});
+ return new Response(null,{status:204,headers:publicResponseHeaders(origin)});
 }
 
 export async function GET(request:Request){
  const url=new URL(request.url);
  const publicMode=url.searchParams.get('public')==='1';
  const origin=request.headers.get('origin');
- const respond=(data:unknown,status=200,setCookie?:string)=>json(data,status,setCookie,publicMode?publicResponseHeaders(origin):undefined);
+ let viewerToken:string|undefined;
+ const respond=(data:unknown,status=200,setCookie?:string)=>json(withViewerToken(data,viewerToken),status,setCookie,publicMode?publicResponseHeaders(origin):undefined);
  try{
   const h=request.headers;
   const network=await abuseNetworkBucket(h);
@@ -36,7 +50,13 @@ export async function GET(request:Request){
   if(!admitted)return respond({error:'rate_limited'},429);
 
   let seen=0;let setCookie:string|undefined;
-  if(!publicMode){
+  if(publicMode&&origin===publicActivityOrigin){
+   const supplied=request.headers.get('x-lr-viewer')?.trim()||'';
+   const verified=supplied.length<=256?await verifyPublicViewerToken(supplied):null;
+   const subject=verified||crypto.randomUUID();
+   viewerToken=verified?supplied:await issuePublicViewerToken(subject);
+   seen=(await db.prepare('SELECT seen FROM visits WHERE subject=?').bind(subject).first<{seen:number}>())?.seen||0;
+  }else if(!publicMode){
    const session=await sessionFromHeaders(h);
    setCookie=session.setCookie;
    seen=(await db.prepare('SELECT seen FROM visits WHERE subject=?').bind(session.sub).first<{seen:number}>())?.seen||0;

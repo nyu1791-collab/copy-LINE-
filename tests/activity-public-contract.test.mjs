@@ -7,9 +7,9 @@ const route=readFileSync(new URL('../app/api/activity/route.ts',import.meta.url)
 test('public activity feed is explicitly scoped to the canonical ranking origin',()=>{
  assert.match(route,/publicActivityOrigin='https:\/\/line-rangers-fan\.github\.io'/);
  assert.match(route,/url\.searchParams\.get\('public'\)==='1'/);
- assert.match(route,/Access-Control-Allow-Origin/);
+ assert.match(route,/Access-Control-Allow-Origin/);assert.match(route,/Access-Control-Allow-Headers/);
  assert.match(route,/Vary':'Origin/);
- assert.match(route,/public, max-age=15/);
+ assert.match(route,/Cache-Control.*no-store/);assert.match(route,/X-LR-Viewer/);assert.match(route,/viewerToken/);assert.match(route,/OPTIONS/);
 });
 
 test('public activity feed returns only teaser data while preserving likes-first ranking',()=>{

@@ -133,7 +133,11 @@ function setup(){
   const request=new Request('https://review.example/api/activity',{headers:{host:'review.example',...(who?{'oai-authenticated-user-id':who,'oai-authenticated-user-email':'test@example.invalid'}:{}),...(cookie?{cookie}:{}),origin:'https://review.example'}});
   return requestContext.run(request,async()=>{const r=await activityApi.GET(request);return {status:r.status,data:await r.json(),headers:r.headers};});
  };
- return {sql,call,activityCall,anonymous,deletedObjects,clearLimits(){sql.exec('DELETE FROM limits');}};
+ const publicActivityCall=async(viewerToken='')=>{
+  const request=new Request('https://review.example/api/activity?public=1',{headers:{host:'review.example',origin:'https://line-rangers-fan.github.io',...(viewerToken?{'x-lr-viewer':viewerToken}:{})}});
+  return requestContext.run(request,async()=>{const r=await activityApi.GET(request);return {status:r.status,data:await r.json(),headers:r.headers};});
+ };
+ return {sql,call,activityCall,publicActivityCall,anonymous,deletedObjects,clearLimits(){sql.exec('DELETE FROM limits');}};
 }
 test('JST month boundaries and leap/year transitions',()=>{
  assert.equal(rules.monthJST(new Date('2026-09-30T14:59:59Z')),'2026-09');assert.equal(rules.monthJST(new Date('2026-09-30T15:00:00Z')),'2026-10');assert.equal(rules.monthJST(new Date('2026-12-31T15:00:00Z')),'2027-01');assert.equal(rules.monthJST(new Date('2028-02-29T15:00:00Z')),'2028-03');assert.equal(rules.validMonth('2026-13'),false);
@@ -476,4 +480,28 @@ test('grouped-media optimistic accounting and scope indexes stay aligned with se
  assert.match(communitySource,/function applyLocalMediaPost/);assert.match(communitySource,/item=>item.mediaGroup===post.mediaGroup/);assert.doesNotMatch(communitySource,/comments:current.stats.comments+1,todayComments:current.stats.todayComments+1/);assert.match(communitySource,/stats\.unread/);assert.match(communitySource,/t\.newCount/);assert.doesNotMatch(communitySource,/today-comments/);assert.match(boardSource,/const unread=/);
  assert.match(boardSource,/SELECT id,board,author,parent,video/);assert.match(boardSource,/byScope/);assert.match(direct,/SELECT author,board,body FROM posts WHERE media_group=?/);assert.match(session,/SELECT user,board,body FROM upload_sessions WHERE media_group=?/);
  assert.match(schemaSource,/posts_media_group_scope/);assert.match(schemaSource,/upload_sessions_media_group_scope/);assert.match(migration,/posts_media_group_scope/);assert.match(migration,/upload_sessions_media_group_scope/);
+});
+
+
+test('public viewer tokens keep NEW isolated and bridge into the board cursor',async()=>{
+ const {call,publicActivityCall,anonymous,sql}=setup();
+ const seeded=await call();const board=seeded.data.board;assert.ok(board);
+ const first=await publicActivityCall();const second=await publicActivityCall();
+ assert.equal(first.status,200);assert.equal(second.status,200);
+ assert.match(first.data.viewerToken,/^v1[.][a-f0-9-]{36}[.][0-9]+[.][A-Za-z0-9_-]{43}$/);
+ assert.match(second.data.viewerToken,/^v1[.][a-f0-9-]{36}[.][0-9]+[.][A-Za-z0-9_-]{43}$/);
+ assert.notEqual(first.data.viewerToken,second.data.viewerToken);
+ const subjectA=await anonymous.verifyPublicViewerToken(first.data.viewerToken);
+ const subjectB=await anonymous.verifyPublicViewerToken(second.data.viewerToken);
+ assert.ok(subjectA);assert.ok(subjectB);assert.notEqual(subjectA,subjectB);
+ const baseline=Date.now()-2000;sql.prepare('INSERT INTO visits(subject,seen) VALUES(?,?)').run(subjectA,baseline);
+ const author=crypto.randomUUID();sql.prepare('INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,?,?,?)').run(author,'viewer-test-author','Viewer test author',1,'user',baseline);
+ const post=crypto.randomUUID();sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,NULL,NULL,NULL,NULL,NULL,'visible',0,?,?)").run(post,board,author,'Viewer-token test post',baseline+1,crypto.randomUUID());
+ const unreadA=await publicActivityCall(first.data.viewerToken);const unreadB=await publicActivityCall(second.data.viewerToken);
+ assert.equal(unreadA.data.unread,1);assert.equal(unreadB.data.unread,0);
+ const bridged=await call(null,'','?board='+encodeURIComponent(board)+'&viewer='+encodeURIComponent(first.data.viewerToken));
+ assert.equal(bridged.status,200);assert.match(bridged.headers.get('set-cookie')||'',/^__Host-lr_guest=v1[.]/);
+ const seen=await call({action:'seen',until:bridged.data.viewUntil},'','', 'test@example.invalid','https://review.example',bridged.headers.get('set-cookie')||'');
+ assert.equal(seen.status,200);
+ assert.equal((await publicActivityCall(first.data.viewerToken)).data.unread,0);
 });
