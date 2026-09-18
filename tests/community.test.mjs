@@ -528,3 +528,9 @@ test('Owner activation explicitly preserves the cookie and refreshes the role ba
  assert.ok(communitySource.includes("data?.me?.role==='owner'"));
  assert.ok(communitySource.includes("t.owner"));
 });
+
+
+test('Owner display uses plain operator text without an icon',()=>{
+ assert.match(labelsSource,/owner:'運営'/);
+ assert.doesNotMatch(labelsSource,/owner:'🛡 運営'/);
+});
