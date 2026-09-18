@@ -250,7 +250,7 @@ test('JSON posts reject legacy video URLs and cap video comment replies at one n
  const reply=await call({action:'post',board:state.board,parent,body:'Thanks for sharing',request:crypto.randomUUID()});assert.equal(reply.status,200);clearLimits();
  const nested=await call({action:'post',board:state.board,parent:reply.data.id,body:'I agree',request:crypto.randomUUID()});assert.equal(nested.status,200);clearLimits();
  assert.equal((await call({action:'post',board:state.board,parent:nested.data.id,body:'Fourth layer',request:crypto.randomUUID()})).data.error,'text_only');
- assert.deepEqual((await call(null,'test-a','?replies='+parent)).data.posts.map(p=>p.id),[reply.data.id]);assert.deepEqual((await call(null,'test-a','?replies='+reply.data.id)).data.posts.map(p=>p.id),[nested.data.id]);
+ const rootReplies=(await call(null,'test-a','?replies='+parent)).data.posts;assert.deepEqual(rootReplies.map(p=>p.id),[reply.data.id]);assert.equal(rootReplies[0].replies,1);const nestedReplies=(await call(null,'test-a','?replies='+reply.data.id)).data.posts;assert.deepEqual(nestedReplies.map(p=>p.id),[nested.data.id]);assert.equal(nestedReplies[0].replies,0);
 });
 test('server moderation, owner-only role changes and audit records',async()=>{
  const {call,sql,clearLimits}=setup();await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');await call({action:'profile',name:'Member'},'member','','member@example.invalid');await call({action:'profile',name:'Reviewer'});const member=(await call(null,'member','','member@example.invalid')).data.me;const board=(await call()).data.board;const post=(await call({action:'post',board,body:'Review',request:crypto.randomUUID()})).data.id;
