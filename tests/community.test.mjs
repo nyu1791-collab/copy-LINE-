@@ -339,6 +339,19 @@ test('read marker is persistent, monotonic and rejects future timestamps',async(
 });
 
 
+test('anonymous read cursors stay isolated per signed guest subject',async()=>{
+ const {call,activityCall,sql}=setup();await call({action:'profile',name:'Publisher'});const board=(await call()).data.board;
+ const first=await call(null,'');const second=await call(null,'');const cookieA=first.headers.get('set-cookie')||'';const cookieB=second.headers.get('set-cookie')||'';
+ assert.match(cookieA,/^__Host-lr_guest=/);assert.match(cookieB,/^__Host-lr_guest=/);assert.notEqual(cookieA,cookieB);
+ const bSeenAt=Date.now()-1000;assert.equal((await call({action:'seen',until:bSeenAt},'','','test@example.invalid','https://review.example',cookieB)).status,200);
+ const post=await call({action:'post',board,body:'Unread for one guest only',request:crypto.randomUUID()});assert.equal(post.status,200);
+ const aSeenAt=Date.now();assert.equal((await call({action:'seen',until:aSeenAt},'','','test@example.invalid','https://review.example',cookieA)).status,200);
+ const aActivity=await activityCall('',cookieA);const bActivity=await activityCall('',cookieB);
+ assert.equal(aActivity.status,200);assert.equal(bActivity.status,200);assert.equal(aActivity.data.unread,0);assert.equal(bActivity.data.unread,1);
+ const visits=sql.prepare('SELECT subject,seen FROM visits ORDER BY subject').all();assert.equal(visits.length,2);assert.notEqual(visits[0].subject,visits[1].subject);
+});
+
+
 
 test('badge administration persists and refreshes both owner state and admin rows',()=>{
   const source=readFileSync(new URL('app/community.tsx',root),'utf8');
