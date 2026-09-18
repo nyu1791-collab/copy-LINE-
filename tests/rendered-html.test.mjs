@@ -35,6 +35,8 @@ test("Workers runtime keeps the PvP shell free of the obsolete community entry a
     assert.equal(publicActivity.status,200);
     const activityPayload=await publicActivity.json();
     assert.equal(activityPayload.unread,0);
+    assert.equal(activityPayload.videos,0);
+    assert.equal(activityPayload.comments,0);
     assert.equal(activityPayload.featured,null);
     assert.ok(Array.isArray(activityPayload.topics));
     assert.deepEqual(activityPayload.topics.map(topic=>({id:topic.id,character:topic.character,month:topic.month})),[

@@ -49,6 +49,12 @@ test('PvP shell mirrors the current Owner Preview while preserving the original 
   assert.doesNotMatch(communityJs,/community-board-entry-character-name/);
   assert.doesNotMatch(communityJs,/name:\s*["']かに座 サリー/);
   assert.match(communityJs,/updateCommunityEntryLanguage/);
+  assert.match(communityJs,/community-board-entry-stats/);
+  assert.match(communityJs,/activity\.videos/);
+  assert.match(communityJs,/activity\.comments/);
+  assert.match(communityJs,/metricText\("videos"/);
+  assert.match(communityJs,/metricText\("comments"/);
+  assert.doesNotMatch(communityJs,/今日/);
 });
 
 test('review UX keeps the update time and ranking rows compact',async()=>{
@@ -56,8 +62,9 @@ test('review UX keeps the update time and ranking rows compact',async()=>{
     read('public/pvp/index.html'),
     read('public/pvp/assets/community-entry.css'),
   ]);
-  assert.match(html,/community-entry\.css\?v=20260916-ui-2/);
+  assert.match(html,/community-entry\.css\?v=20260918-stats-1/);
   assert.match(html,/app\.js\?v=20260916-ui-1/);
+  assert.match(html,/community-entry\.js\?v=20260918-stats-1/);
   assert.match(html,/community-entry\.js\?v=20260917-i18n-1/);
   assert.match(communityCss,/\.summary-updated-value\s*\{[\s\S]*?font-size:\s*clamp\(1\.45rem,\s*4vw,\s*2\.1rem\)/);
   assert.match(communityCss,/\.ranking-section \.character-image\s*\{[\s\S]*?width:\s*3rem/);

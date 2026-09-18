@@ -46,18 +46,19 @@ export async function GET(request:Request){
   const confirmedTopics=confirmedCharactersForMonth(currentMonth);
   const topics=confirmedTopics.map(character=>({id:`${currentMonth}:${character.id}`,character:character.id,name:character.name,image:character.image,month:currentMonth}));
   const boardIds=topics.map(topic=>topic.id);
-  if(!boardIds.length)return respond({unread:0,featured:null,topics:[]},200,setCookie);
+  if(!boardIds.length)return respond({unread:0,videos:0,comments:0,featured:null,topics:[]},200,setCookie);
   const slots=boardIds.map(()=>'?').join(',');
 
   // Count one logical root for a mixed upload. Replies remain individual text
   // posts, but two or more media rows sharing a group are never two NEW items.
   const unread=!publicMode&&seen?(await db.prepare(`SELECT COUNT(*) count FROM posts p WHERE p.status='visible' AND p.created>? AND p.board IN (${slots}) AND ${logicalPostAnchorSql} AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))`).bind(seen,...boardIds).first<{count:number}>())?.count||0:0;
+  const stats=(await db.prepare(`SELECT COALESCE(SUM(CASE WHEN p.video IS NOT NULL OR p.media_type LIKE 'video/%' THEN 1 ELSE 0 END),0) videos,COALESCE(SUM(CASE WHEN ${logicalPostAnchorSql} THEN 1 ELSE 0 END),0) comments FROM posts p WHERE p.status='visible' AND p.board IN (${slots}) AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))`).bind(...boardIds).first<{videos:number;comments:number}>())||{videos:0,comments:0};
 
   // The PvP landing-page teaser is driven by likes first. Helpful is a
   // tie-breaker, followed by recency for a deterministic result. Only public
   // post fields are returned; Owner/session state is never exposed here.
   const featured=await db.prepare(`SELECT p.id,p.board,p.body,CASE WHEN u.name='ゲスト' OR u.name LIKE 'ゲスト-%' THEN '匿名ユーザー' ELSE u.name END name,(SELECT COUNT(DISTINCT l.user) FROM likes l WHERE l.post=p.id OR (p.media_group IS NOT NULL AND l.post IN (SELECT g.id FROM posts g WHERE g.board=p.board AND g.author=p.author AND g.parent IS p.parent AND g.media_group=p.media_group AND g.status='visible'))) likes,(SELECT COUNT(DISTINCT h.user) FROM helpful h WHERE h.post=p.id OR (p.media_group IS NOT NULL AND h.post IN (SELECT g.id FROM posts g WHERE g.board=p.board AND g.author=p.author AND g.parent IS p.parent AND g.media_group=p.media_group AND g.status='visible'))) helpful FROM posts p JOIN users u ON u.id=p.author WHERE p.status='visible' AND p.parent IS NULL AND p.body<>'' AND p.board IN (${slots}) AND ${logicalPostAnchorSql} ORDER BY likes DESC,helpful DESC,p.created DESC,p.id DESC LIMIT 1`).bind(...boardIds).first();
-  return respond({unread,featured,topics},200,setCookie);
+  return respond({unread,videos:Number(stats.videos||0),comments:Number(stats.comments||0),featured,topics},200,setCookie);
  }catch{
   console.error('community_activity_unavailable');
   return respond({error:'unavailable'},503);
