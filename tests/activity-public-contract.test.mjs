@@ -13,7 +13,7 @@ test('public activity feed is explicitly scoped to the canonical ranking origin'
 });
 
 test('public activity feed returns only teaser data while preserving likes-first ranking',()=>{
- assert.match(route,/return respond\(\{unread,featured,topics\}/);
+ assert.match(route,/return respond\(\{unread,videos:Number\(stats\.videos\|\|0\),comments:Number\(stats\.comments\|\|0\),featured,topics\}/);
  assert.match(route,/ORDER BY likes DESC,helpful DESC,p\.created DESC,p\.id DESC LIMIT 1/);
  assert.match(route,/if\(!publicMode\)\{/);
  assert.match(route,/sessionFromHeaders\(h\)/);

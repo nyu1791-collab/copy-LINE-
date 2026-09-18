@@ -52,8 +52,11 @@ test('PvP shell mirrors the current Owner Preview while preserving the original 
   assert.match(communityJs,/community-board-entry-stats/);
   assert.match(communityJs,/activity\.videos/);
   assert.match(communityJs,/activity\.comments/);
-  assert.match(communityJs,/metricText\("videos"/);
-  assert.match(communityJs,/metricText\("comments"/);
+  assert.match(communityCss,/community-board-entry-stat/);
+  assert.match(communityJs,/metricItems/);
+  assert.match(communityJs,/\["newCount", state\.unread/);
+  assert.match(communityJs,/\["videos", state\.videos/);
+  assert.match(communityJs,/\["comments", state\.comments/);
   assert.doesNotMatch(communityJs,/今日/);
 });
 
@@ -65,7 +68,6 @@ test('review UX keeps the update time and ranking rows compact',async()=>{
   assert.match(html,/community-entry\.css\?v=20260918-stats-1/);
   assert.match(html,/app\.js\?v=20260916-ui-1/);
   assert.match(html,/community-entry\.js\?v=20260918-stats-1/);
-  assert.match(html,/community-entry\.js\?v=20260917-i18n-1/);
   assert.match(communityCss,/\.summary-updated-value\s*\{[\s\S]*?font-size:\s*clamp\(1\.45rem,\s*4vw,\s*2\.1rem\)/);
   assert.match(communityCss,/\.ranking-section \.character-image\s*\{[\s\S]*?width:\s*3rem/);
   assert.match(communityCss,/\.ranking-section \.rate-track\s*\{[\s\S]*?display:\s*none !important/);
