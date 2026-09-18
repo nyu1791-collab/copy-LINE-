@@ -12,8 +12,10 @@ type BoardStats={videos:number;comments:number;todayComments:number;unread:numbe
 type Session=AnonymousSession;
 function response(data:unknown,status=200,setCookie?:string,setCookies:string[]=[]){const responseHeaders=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'});if(setCookie)responseHeaders.append('Set-Cookie',setCookie);for(const cookie of setCookies)responseHeaders.append('Set-Cookie',cookie);return Response.json(data,{status,headers:responseHeaders});}
 async function identity(h?:Headers,viewerToken?:string):Promise<Session>{
+ const current=await sessionFromHeaders(h||await headers());
+ if(!current.anonymous)return current;
  if(viewerToken&&viewerToken.length<=256){const sub=await verifyPublicViewerToken(viewerToken);if(sub)return {sub,anonymous:true,setCookie:await guestCookieForSubject(sub)};}
- return sessionFromHeaders(h||await headers());
+ return current;
 }
 async function user(sub:string){return database().prepare('SELECT id,name,display_name_set,role FROM users WHERE subject=?').bind(sub).first<User>();}
 async function ensureUser(sub:string,name:string,displayName?:string,displayNameSet=false,owner=false):Promise<User|null>{const current=await user(sub);if(current){if(owner){await database().prepare('UPDATE users SET name=?,display_name_set=1 WHERE subject=?').bind(ownerDisplayName,sub).run();return user(sub);}if((displayName&&current.name===guestName(sub))||displayNameSet&&!current.display_name_set){await database().prepare("UPDATE users SET name=CASE WHEN ? IS NOT NULL AND name=? THEN ? ELSE name END,display_name_set=CASE WHEN ? THEN 1 ELSE display_name_set END WHERE subject=?").bind(displayName||null,guestName(sub),displayName||current.name,displayNameSet?1:0,sub).run();return user(sub);}return current;}

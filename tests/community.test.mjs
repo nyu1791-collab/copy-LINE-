@@ -505,3 +505,17 @@ test('public viewer tokens keep NEW isolated and bridge into the board cursor',a
  assert.equal(seen.status,200);
  assert.equal((await publicActivityCall(first.data.viewerToken)).data.unread,0);
 });
+
+
+test('viewer token cannot override an existing Owner session',async()=>{
+ const {call,publicActivityCall,anonymous}=setup();
+ const seeded=await call();const board=seeded.data.board;assert.ok(board);
+ const viewer=(await publicActivityCall()).data.viewerToken;assert.match(viewer,/^v1[.]/);
+ const owner=await anonymous.activateOwner('test-owner-access-token');assert.ok(owner);
+ const result=await call(null,'','','owner@example.invalid','https://review.example',owner.setCookie||'');
+ const bridged=await call(null,'','?board='+encodeURIComponent(board)+'&viewer='+encodeURIComponent(viewer),'owner@example.invalid','https://review.example',owner.setCookie||'');
+ assert.equal(result.status,200);
+ assert.equal(bridged.status,200);
+ assert.equal(bridged.data.me?.role,'owner');
+ assert.equal(bridged.data.me?.name,'LINEレンジャーは神ゲー');
+});
