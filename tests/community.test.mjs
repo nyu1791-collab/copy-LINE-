@@ -519,3 +519,10 @@ test('viewer token cannot override an existing Owner session',async()=>{
  assert.equal(bridged.data.me?.role,'owner');
  assert.equal(bridged.data.me?.name,'LINEレンジャーは神ゲー');
 });
+
+
+test('Owner activation explicitly preserves the cookie and refreshes the role badge',()=>{
+ assert.match(communitySource,/fetch\('\/api\/owner',\{method:'POST',[\s\S]*credentials:'same-origin'/);
+ assert.match(communitySource,/setOwnerAccess\(false\);window\.location\.reload\(\)/);
+ assert.match(communitySource,/data\.me\?\.role==='owner',[\s\S]*t\.owner/);
+});
