@@ -137,8 +137,13 @@ export async function GET(request:Request){try{
     ?await db.prepare(`SELECT COUNT(*) count,COALESCE(MAX(p.created),0) latestCreated FROM posts p WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND (p.created>? OR (p.created=? AND p.id>?))`).bind(board,parentId,after.created,after.created,after.id).first<{count:number;latestCreated:number}>()
     :await db.prepare(`SELECT COUNT(*) count,COALESCE(MAX(p.created),0) latestCreated FROM posts p WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND p.created>?`).bind(board,parentId,since).first<{count:number;latestCreated:number}>();
    const count=Number(latest?.count||0);
-   const latestParams=afterValue?[board,parentId,after.created,after.created,after.id]:[board,parentId,since];
-   const latestId=count>0?((await db.prepare(`SELECT p.id FROM posts p WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND ${afterValue?'(p.created>? OR (p.created=? AND p.id>?)':'p.created>?'} ORDER BY p.created DESC,p.id DESC LIMIT 1`).bind(...latestParams).first<{id:string}>())?.id||null):null;
+   let latestId:string|null=null;
+   if(count>0){
+    const latestRow=afterValue
+     ?await db.prepare(`SELECT p.id FROM posts p WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND (p.created>? OR (p.created=? AND p.id>?)) ORDER BY p.created DESC,p.id DESC LIMIT 1`).bind(board,parentId,after.created,after.created,after.id).first<{id:string}>()
+     :await db.prepare(`SELECT p.id FROM posts p WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND p.created>? ORDER BY p.created DESC,p.id DESC LIMIT 1`).bind(board,parentId,since).first<{id:string}>();
+    latestId=latestRow?.id||null;
+   }
    return reply({count,latestCreated:Number(latest?.latestCreated||0),latestId});
   }
   const rows=afterValue
