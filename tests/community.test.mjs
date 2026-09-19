@@ -155,6 +155,26 @@ test('permission matrix does not grant management based on a name',()=>{
 test('public browsing and anonymous mutations work while cross-origin writes fail closed',async()=>{
  const {call}=setup();const guest=await call(null,'');assert.equal(guest.status,200);assert.equal(guest.data.me,null);const cookie=guest.headers.get('set-cookie');assert.match(cookie??'',/^__Host-lr_guest=v1\./);const same=await call(null,'','','test@example.invalid','https://review.example',cookie);assert.equal(same.data.me,null);const forged=cookie.replace(/(v1\.[^;]+\.)[^;]+/,'$1x');const rotated=await call(null,'','','test@example.invalid','https://review.example',forged);assert.equal(rotated.status,200);assert.equal(rotated.data.me,null);assert.match(rotated.headers.get('set-cookie')??'',/^__Host-lr_guest=v1\./);const profile=await call({action:'profile',name:'hello'},'','','test@example.invalid','https://review.example',cookie);assert.equal(profile.status,200);const profileCookie=profile.headers.get('set-cookie')??'';assert.match(profileCookie,/__Host-lr_display_name=hello/);const savedNameCookie=(profileCookie.match(/__Host-lr_display_name=[^,]+/)||[''])[0];const restored=await call(null,'','','test@example.invalid','https://review.example',savedNameCookie);assert.equal(restored.data.me.name,'hello');assert.equal((await call({action:'profile',name:'hello'},'a','','x','https://evil.example')).status,403);assert.equal((await call({action:'profile',name:'hello'},'')).status,200);
 });
+test('post reports persist once and always write an audit record',async()=>{
+ const {call,sql,clearLimits}=setup();
+ const author='report-author';const reporter='report-viewer';
+ await call({action:'profile',name:'Report Author'},author);const state=(await call(null,author)).data;
+ const created=await call({action:'post',board:state.board,body:'Report target',request:crypto.randomUUID()},author);assert.equal(created.status,200);
+ await call({action:'profile',name:'Reporter'},reporter);clearLimits();
+ const first=await call({action:'report',post:created.data.id},reporter);assert.equal(first.status,200);
+ clearLimits();const second=await call({action:'report',post:created.data.id},reporter);assert.equal(second.status,200);
+ assert.equal(Number(sql.prepare('SELECT COUNT(*) count FROM post_reports WHERE post=?').get(created.data.id).count),1);
+ const audits=sql.prepare("SELECT action,target FROM audit WHERE action='report' AND target=?").all(created.data.id);assert.equal(audits.length,2);
+});
+
+test('viewer bridge token is retained only in memory after the board binds it',()=>{
+ assert.match(communitySource,/let viewerTokenCache=''/);
+ assert.match(communitySource,/scrubViewerTokenFromLocation/);
+ assert.match(communitySource,/url\.searchParams\.delete\('viewer'\)/);
+ assert.match(communitySource,/history\.replaceState\(history\.state/);
+ assert.match(communitySource,/fetch\(withViewerQuery\('\/api\/board'\)/);
+});
+
 test('owner activation exchanges a private access key for a signed cookie without login',async()=>{
  const {call,anonymous,sql}=setup();const activated=await anonymous.activateOwner('test-owner-access-token');assert.ok(activated);assert.match(activated.setCookie,/^__Host-lr_owner=o1\.[0-9]+\./);assert.ok(activated.setCookies?.some(cookie=>cookie.includes('__Host-lr_display_name=')));
  assert.match(activated.setCookie,/Max-Age=31536000/);const session=await anonymous.sessionFromHeaders(new Headers({cookie:activated.setCookie}));assert.equal(session.owner,true);assert.equal(session.sub,'owner-subject');assert.equal(session.displayName,'LINEレンジャーは神ゲー');assert.match(session.setCookie||'',/^__Host-lr_owner=o1\.[0-9]+\./);
