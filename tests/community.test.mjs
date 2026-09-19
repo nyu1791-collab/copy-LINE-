@@ -541,11 +541,11 @@ test('successful own comments replies and media batches resync the same viewer u
  assert.match(communitySource,/async function syncViewerSeen\(\)/);
  assert.match(communitySource,/fetch\(withViewerQuery\('\/api\/board'\)/);
  const publish=communitySource.slice(communitySource.indexOf('async function publish()'),communitySource.indexOf('async function retryPost'));
- assert.match(publish,/void syncViewerSeen\(\)/);
+ assert.match(publish,/await syncViewerSeen\(\)/);
  const retry=communitySource.slice(communitySource.indexOf('async function retryPost'),communitySource.indexOf('const current='));
- assert.match(retry,/void syncViewerSeen\(\)/);
+ assert.match(retry,/await syncViewerSeen\(\)/);
  const batch=communitySource.slice(communitySource.indexOf('function finishMediaBatch'),communitySource.indexOf('function applyLocalMediaPost'));
- assert.match(batch,/void syncViewerSeen\(\)/);
+ assert.match(batch,/await syncViewerSeen\(\)/);
 });
 
 test('viewer token cannot override Owner auth but Owner seen still clears that viewer NEW only',async()=>{
