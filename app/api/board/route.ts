@@ -170,11 +170,11 @@ export async function GET(request:Request){try{
  return reply({me:publicMe,anonymous:session.anonymous,month:requested,boards,board,posts:await withMediaItems(pageRows,me?.id||''),nextCursor,poll,mine,video:publicVideo,mediaGroup:requestedGroup||null,mediaItems,stats,previousSeen,viewUntil,flags});
  }catch(e){return error(e);}}
 export async function POST(request:Request){try{
- const h=await headers();const origin=h.get('origin');if(!origin||origin!==new URL(request.url).origin||h.get('sec-fetch-site')==='cross-site')throw new Error('forbidden');
+ const h=await headers();const requestUrl=new URL(request.url);const origin=h.get('origin');if(!origin||origin!==requestUrl.origin||h.get('sec-fetch-site')==='cross-site')throw new Error('forbidden');
  if(!request.headers.get('content-type')?.startsWith('application/json'))throw new Error('invalid_request');
  const reader=request.body?.getReader();if(!reader)throw new Error('invalid_request');let raw='';const decoder=new TextDecoder();let size=0;while(true){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>16000){await reader.cancel();throw new Error('invalid_request');}raw+=decoder.decode(value,{stream:true});}raw+=decoder.decode();
  let b:Record<string,unknown>;try{b=JSON.parse(raw);}catch{throw new Error('invalid_request');}if(!b||Array.isArray(b))throw new Error('invalid_request');
- const session=await identity(h);const sub=session.sub;const network=await abuseNetworkBucket(h);const freshAnonymous=session.anonymous===true&&session.newGuest===true;const sessionLimit=(prefix:string,id=sub)=>network&&freshAnonymous?`${prefix}-new:${network}`:`${prefix}:${id}`;const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);await limit(sessionLimit('write'),30);const db=database();const now=Date.now();
+ const session=await identity(h,b.action==='seen'?(requestUrl.searchParams.get('viewer')||undefined):undefined);const sub=session.sub;const network=await abuseNetworkBucket(h);const freshAnonymous=session.anonymous===true&&session.newGuest===true;const sessionLimit=(prefix:string,id=sub)=>network&&freshAnonymous?`${prefix}-new:${network}`:`${prefix}:${id}`;const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);await limit(sessionLimit('write'),30);const db=database();const now=Date.now();
  if(b.action==='profile'){
   const submittedName=textInput(b.name,30);await limit(sessionLimit('profile'),3);
   // Only the opaque subject injected by the platform and matched against the
