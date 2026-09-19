@@ -124,6 +124,7 @@ function secureResponse(response: Response) {
   headers.set("X-Frame-Options", "SAMEORIGIN");
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
   headers.set("X-Permitted-Cross-Domain-Policies", "none");
+  headers.set("Content-Security-Policy", "base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'");
   headers.set("Strict-Transport-Security", "max-age=31536000");
   return new Response(response.body, {
     status: response.status,
