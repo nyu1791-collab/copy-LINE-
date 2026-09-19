@@ -537,6 +537,17 @@ test('public viewer tokens keep NEW isolated and bridge into the board cursor',a
 });
 
 
+test('successful own comments replies and media batches resync the same viewer unread cursor',()=>{
+ assert.match(communitySource,/async function syncViewerSeen\(\)/);
+ assert.match(communitySource,/fetch\(withViewerQuery\('\/api\/board'\)/);
+ const publish=communitySource.slice(communitySource.indexOf('async function publish()'),communitySource.indexOf('async function retryPost'));
+ assert.match(publish,/void syncViewerSeen\(\)/);
+ const retry=communitySource.slice(communitySource.indexOf('async function retryPost'),communitySource.indexOf('const current='));
+ assert.match(retry,/void syncViewerSeen\(\)/);
+ const batch=communitySource.slice(communitySource.indexOf('function finishMediaBatch'),communitySource.indexOf('function applyLocalMediaPost'));
+ assert.match(batch,/void syncViewerSeen\(\)/);
+});
+
 test('viewer token cannot override Owner auth but Owner seen still clears that viewer NEW only',async()=>{
  const {call,publicActivityCall,anonymous,sql}=setup();
  const seeded=await call();const board=seeded.data.board;assert.ok(board);
