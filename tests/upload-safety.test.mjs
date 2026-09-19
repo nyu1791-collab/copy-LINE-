@@ -96,6 +96,21 @@ test('resumable upload routes keep same-origin, expiry, size and completion gate
   assert.match(completeSource,/SELECT id FROM posts WHERE author=\? AND request=\?/);
 });
 
+test('upload completion rechecks current JST board after long-running R2 work',()=>{
+ const existing=completeSource.indexOf("SELECT id FROM posts WHERE author=? AND request=?");
+ const firstBoard=completeSource.indexOf("SELECT character,month FROM boards WHERE id=?");
+ const head=completeSource.indexOf("bucket().head");
+ const secondBoard=completeSource.indexOf("SELECT character,month FROM boards WHERE id=?",firstBoard+1);
+ const insert=completeSource.indexOf("INSERT INTO posts");
+ assert.ok(existing>=0&&firstBoard>existing&&head>firstBoard&&secondBoard>head&&insert>secondBoard);
+ assert.match(completeSource,/latestTopic\.month!==monthJST\(\)/);
+ assert.match(completeSource,/isConfirmedCharacterForMonth\(latestTopic\.character,latestTopic\.month\)/);
+ const legacyChecks=[...legacySource.matchAll(/SELECT character,month FROM boards WHERE id=\?/g)].map(match=>match.index??-1);
+ const legacyPut=legacySource.indexOf('await bucket().put');
+ const legacyInsert=legacySource.indexOf('INSERT INTO posts');
+ assert.ok(legacyChecks.length>=2&&legacyChecks[0]<legacyPut&&legacyChecks[1]>legacyPut&&legacyChecks[1]<legacyInsert);
+});
+
 test('legacy upload rejects a sixth grouped attachment before writing an R2 object',()=>{
   const groupGuard=legacySource.indexOf('if(mediaGroup){const grouped=');
   const bucketWrite=legacySource.indexOf('await bucket().put');
