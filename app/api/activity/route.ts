@@ -55,15 +55,17 @@ export async function GET(request:Request){
   const admitted=network?await db.prepare('INSERT INTO limits(key,count,until) VALUES(?,1,?) ON CONFLICT(key) DO UPDATE SET count=CASE WHEN until<=? THEN 1 ELSE count+1 END, until=CASE WHEN until<=? THEN excluded.until ELSE until END WHERE until<=? OR count<? RETURNING count').bind(limitKey+network,now+60000,now,now,now,limitMax).first():true;
   if(!admitted)return respond({error:'rate_limited'},429);
 
-  let seen=0;let setCookie:string|undefined;
+  let seen=0;let setCookie:string|undefined;let viewerSubject='';
   if(isPublicActivityRequest(publicMode,origin,url)){
    const supplied=request.headers.get('x-lr-viewer')?.trim()||'';
    const verified=supplied.length<=256?await verifyPublicViewerToken(supplied):null;
    const subject=verified||crypto.randomUUID();
+   viewerSubject=subject;
    viewerToken=verified?supplied:await issuePublicViewerToken(subject);
    seen=(await db.prepare('SELECT seen FROM visits WHERE subject=?').bind(subject).first<{seen:number}>())?.seen||0;
   }else if(!publicMode){
    const session=await sessionFromHeaders(h);
+   viewerSubject=session.sub;
    setCookie=session.setCookie;
    seen=(await db.prepare('SELECT seen FROM visits WHERE subject=?').bind(session.sub).first<{seen:number}>())?.seen||0;
   }
@@ -77,7 +79,7 @@ export async function GET(request:Request){
 
   // Count one logical root for a mixed upload. Replies remain individual text
   // posts, but two or more media rows sharing a group are never two NEW items.
-  const unread=seen?(await db.prepare(`SELECT COUNT(*) count FROM posts p WHERE p.status='visible' AND p.created>? AND p.board IN (${slots}) AND ${logicalPostAnchorSql} AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))`).bind(seen,...boardIds).first<{count:number}>())?.count||0:0;
+  const unread=seen?(await db.prepare(`SELECT COUNT(*) count FROM posts p WHERE p.status='visible' AND p.created>? AND p.board IN (${slots}) AND ${logicalPostAnchorSql} AND NOT EXISTS(SELECT 1 FROM users own WHERE own.id=p.author AND own.subject=?) AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))`).bind(seen,...boardIds,viewerSubject).first<{count:number}>())?.count||0:0;
   const stats=(await db.prepare(`SELECT COALESCE(SUM(CASE WHEN p.video IS NOT NULL OR p.media_type LIKE 'video/%' THEN 1 ELSE 0 END),0) videos,COALESCE(SUM(CASE WHEN ${logicalPostAnchorSql} THEN 1 ELSE 0 END),0) comments FROM posts p WHERE p.status='visible' AND p.board IN (${slots}) AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))`).bind(...boardIds).first<{videos:number;comments:number}>())||{videos:0,comments:0};
 
   // The PvP landing-page teaser is driven by likes first. Helpful is a
