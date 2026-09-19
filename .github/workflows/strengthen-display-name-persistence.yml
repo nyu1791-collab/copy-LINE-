@@ -1,11 +1,10 @@
 name: strengthen-display-name-persistence
 
+# Legacy guarded patch workflow. The persistence fix is already part of main.
+# Keep this only as an explicit recovery tool so ordinary maintenance cannot
+# re-run an obsolete source patch against newer security changes.
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/strengthen-display-name-persistence.yml'
-      - '.github/scripts/strengthen_display_name.py'
+  workflow_dispatch:
 
 permissions:
   contents: write
