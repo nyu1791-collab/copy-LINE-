@@ -356,11 +356,14 @@ test('new-post cursor keeps same-timestamp records addressable by id',async()=>{
  const newer=(await call(null,'test-a','?after='+encodeURIComponent(cursor))).data;assert.equal(newer.posts.length,1);assert.equal(newer.posts[0].body,'Same-time second');
  const countOnly=(await call(null,'test-a','?after='+encodeURIComponent(cursor)+'&countOnly=1')).data;assert.equal(countOnly.count,1);assert.equal(countOnly.latestId,secondId);
 });
-test('read marker is persistent, monotonic, server-authoritative and rejects future timestamps',async()=>{
- const {call}=setup();const before=(await call()).data;assert.equal(before.previousSeen,0);
- const first=await call({action:'seen',until:before.viewUntil});assert.equal(first.status,200);assert.ok(first.data.seen>=before.viewUntil);
- const second=await call({action:'seen',until:before.viewUntil-1000});assert.equal(second.status,200);assert.ok(second.data.seen>=first.data.seen);
- const after=(await call()).data;assert.ok(after.previousSeen>=first.data.seen);
+test('read marker is persistent, monotonic, activity-based and rejects future timestamps',async()=>{
+ const {call,sql}=setup();const before=(await call()).data;assert.equal(before.previousSeen,0);
+ const first=await call({action:'seen',until:before.viewUntil});assert.equal(first.status,200);assert.equal(first.data.seen,1);
+ const state=(await call()).data;const author=state.me?.id||crypto.randomUUID();
+ if(!state.me)sql.prepare('INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,?,?,?)').run(author,'cursor-author','Cursor Author',1,'user',Date.now());
+ const created=Date.now();sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,?,?,NULL,'visible',0,?,?)").run(crypto.randomUUID(),state.board,author,null,'Cursor target',created,crypto.randomUUID());
+ const second=await call({action:'seen',until:Date.now()});assert.equal(second.status,200);assert.ok(second.data.seen>=created);
+ const third=await call({action:'seen',until:before.viewUntil-1000});assert.equal(third.status,200);assert.ok(third.data.seen>=second.data.seen);
  assert.equal((await call({action:'seen',until:Date.now()+60000})).status,400);
 });
 
@@ -475,10 +478,10 @@ test('grouped media count as one logical post across listing stats, activity, re
  const rows=[[ids[0],'image/jpeg','a.jpg'],[ids[1],'image/png','b.png'],[ids[2],'image/webp','c.webp'],[ids[3],'video/mp4','one.mp4'],[ids[4],'video/webm','two.webm']];
  for(const [id,type,name] of rows)sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?,?,'visible',0,?,?)").run(id,state.board,state.me.id,'One logical post',`media/${id}`,type,name,100,group,created++,crypto.randomUUID());
  const legacyUser=crypto.randomUUID();sql.prepare('INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,?,?,?)').run(legacyUser,'legacy-reactor','Legacy Reactor',1,'user',Date.now());sql.prepare('INSERT INTO likes(post,user,created) VALUES(?,?,?)').run(ids[0],legacyUser,Date.now());sql.prepare('INSERT INTO helpful(post,user,created) VALUES(?,?,?)').run(ids[0],legacyUser,Date.now());sql.prepare('INSERT INTO visits(subject,seen) VALUES(?,?)').run('test-a',start-1);
- const activity=await activityCall();assert.equal(activity.status,200);assert.equal(activity.data.unread,1);assert.equal(activity.data.videos,2);assert.equal(activity.data.comments,1);assert.equal(activity.data.featured.id,ids[3]);assert.equal(Number(activity.data.featured.likes),1);assert.equal(Number(activity.data.featured.helpful),1);
+ const activity=await activityCall();assert.equal(activity.status,200);assert.equal(activity.data.unread,0);assert.equal(activity.data.videos,2);assert.equal(activity.data.comments,1);assert.equal(activity.data.featured.id,ids[3]);assert.equal(Number(activity.data.featured.likes),1);assert.equal(Number(activity.data.featured.helpful),1);
  const listed=await call();const grouped=listed.data.posts.filter(post=>post.mediaGroup===group);
  assert.equal(grouped.length,1);assert.equal(grouped[0].mediaItems.length,5);
- assert.equal(listed.data.stats.comments,1);assert.equal(listed.data.stats.todayComments,1);assert.equal(listed.data.stats.videos,2);assert.equal(listed.data.stats.unread,1);
+ assert.equal(listed.data.stats.comments,1);assert.equal(listed.data.stats.todayComments,1);assert.equal(listed.data.stats.videos,2);assert.equal(listed.data.stats.unread,0);
  const counted=await call(null,'test-a','?board='+encodeURIComponent(state.board)+'&newerThan='+(start-1)+'&countOnly=1');
  assert.equal(counted.status,200);assert.equal(counted.data.count,1);
  const directLike=await call({action:'like',post:ids[0],liked:true});assert.equal(directLike.status,200);const directHelpful=await call({action:'helpful',post:ids[0],selected:true});assert.equal(directHelpful.status,200);
