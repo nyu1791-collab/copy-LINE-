@@ -37,6 +37,7 @@ export async function PUT(request:Request){try{
  // the INSERT below so concurrent requests cannot all pass the first count.
  await bucket().put(key,file.stream(),{httpMetadata:{contentType:file.type,contentDisposition:`inline; filename="attachment.${extension}"`}});
  try{
+  const latestTopic=await db.prepare('SELECT character,month FROM boards WHERE id=?').bind(board).first<{character:string;month:string}>();if(!latestTopic)throw new Error('not_found');if(latestTopic.month!==monthJST())throw new Error('archive_readonly');if(!isConfirmedCharacterForMonth(latestTopic.character,latestTopic.month))throw new Error('not_found');
   const id=crypto.randomUUID();let inserted;
   if(mediaGroup){inserted=await db.prepare(`INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) SELECT ?,?,?,NULL,?,NULL,?,?,?,?,?,'visible',0,?,? WHERE (SELECT COUNT(*) FROM posts WHERE author=? AND media_group=? AND status='visible' AND ${groupFilter}) < ?`).bind(id,board,me.id,body,key,file.type,file.name.slice(0,120),file.size,mediaGroup,now,requestId,me.id,mediaGroup,groupLimit).run();}
   else inserted=await db.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,?,?,NULL,?,?,?,?,?,'visible',0,?,?)").bind(id,board,me.id,null,body,key,file.type,file.name.slice(0,120),file.size,null,now,requestId).run();
