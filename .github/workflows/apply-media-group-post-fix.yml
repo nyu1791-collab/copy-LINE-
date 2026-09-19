@@ -1,9 +1,8 @@
 name: apply-media-group-post-fix
+# Legacy one-shot patch workflow. Current main already contains the validated fix.
+# Manual recovery only: routine file changes must never re-apply an obsolete patch.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'ops/apply-media-group-post-fix.txt'
+  workflow_dispatch:
 permissions:
   contents: write
 concurrency:
