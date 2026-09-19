@@ -5,6 +5,12 @@ import {abuseNetworkBucket,issuePublicViewerToken,sessionFromHeaders,verifyPubli
 export const dynamic='force-dynamic';
 
 const publicActivityOrigin='https://line-rangers-fan.github.io';
+const publicActivityWorkerOrigin='https://line-rangers-pvp-community-production.n-yu1791.workers.dev';
+const publicActivityOrigins=new Set([publicActivityOrigin,publicActivityWorkerOrigin]);
+function isPublicActivityOrigin(origin:string|null){return origin!==null&&publicActivityOrigins.has(origin);}
+function isPublicActivityRequest(publicMode:boolean,origin:string|null,url:URL){
+ return publicMode&&(isPublicActivityOrigin(origin)||(origin===null&&url.origin===publicActivityWorkerOrigin));
+}
 
 function json(data:unknown,status=200,setCookie?:string,extraHeaders?:HeadersInit){
  const responseHeaders=new Headers({'Cache-Control':'no-store','X-Content-Type-Options':'nosniff',...(extraHeaders||{})});
@@ -17,7 +23,7 @@ function publicResponseHeaders(origin:string|null){
   'Cache-Control':'no-store',
   'Vary':'Origin, X-LR-Viewer',
  };
- if(origin===publicActivityOrigin){
+ if(isPublicActivityOrigin(origin)){
   headers['Access-Control-Allow-Origin']=publicActivityOrigin;
   headers['Access-Control-Allow-Headers']='Accept, X-LR-Viewer';
   headers['Access-Control-Allow-Methods']='GET, OPTIONS';
@@ -50,7 +56,7 @@ export async function GET(request:Request){
   if(!admitted)return respond({error:'rate_limited'},429);
 
   let seen=0;let setCookie:string|undefined;
-  if(publicMode&&origin===publicActivityOrigin){
+  if(isPublicActivityRequest(publicMode,origin,url)){
    const supplied=request.headers.get('x-lr-viewer')?.trim()||'';
    const verified=supplied.length<=256?await verifyPublicViewerToken(supplied):null;
    const subject=verified||crypto.randomUUID();
