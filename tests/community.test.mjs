@@ -356,11 +356,11 @@ test('new-post cursor keeps same-timestamp records addressable by id',async()=>{
  const newer=(await call(null,'test-a','?after='+encodeURIComponent(cursor))).data;assert.equal(newer.posts.length,1);assert.equal(newer.posts[0].body,'Same-time second');
  const countOnly=(await call(null,'test-a','?after='+encodeURIComponent(cursor)+'&countOnly=1')).data;assert.equal(countOnly.count,1);assert.equal(countOnly.latestId,secondId);
 });
-test('read marker is persistent, monotonic and rejects future timestamps',async()=>{
+test('read marker is persistent, monotonic, server-authoritative and rejects future timestamps',async()=>{
  const {call}=setup();const before=(await call()).data;assert.equal(before.previousSeen,0);
- assert.equal((await call({action:'seen',until:before.viewUntil})).status,200);
- assert.equal((await call({action:'seen',until:before.viewUntil-1000})).status,200);
- assert.equal((await call()).data.previousSeen,before.viewUntil);
+ const first=await call({action:'seen',until:before.viewUntil});assert.equal(first.status,200);assert.ok(first.data.seen>=before.viewUntil);
+ const second=await call({action:'seen',until:before.viewUntil-1000});assert.equal(second.status,200);assert.ok(second.data.seen>=first.data.seen);
+ const after=(await call()).data;assert.ok(after.previousSeen>=first.data.seen);
  assert.equal((await call({action:'seen',until:Date.now()+60000})).status,400);
 });
 
@@ -519,6 +519,8 @@ test('public viewer tokens keep NEW isolated and bridge into the board cursor',a
  const baseline=Date.now()-2000;sql.prepare('INSERT INTO visits(subject,seen) VALUES(?,?)').run(subjectA,baseline);
  const author=crypto.randomUUID();sql.prepare('INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,?,?,?)').run(author,'viewer-test-author','Viewer test author',1,'user',baseline);
  const post=crypto.randomUUID();sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,NULL,NULL,NULL,NULL,NULL,'visible',0,?,?)").run(post,board,author,'Viewer-token test post',baseline+1,crypto.randomUUID());
+ const ownAuthor=crypto.randomUUID();sql.prepare('INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,?,?,?)').run(ownAuthor,subjectA,'Viewer A',1,'user',baseline);
+ const ownPost=crypto.randomUUID();sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,media_group,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,NULL,NULL,NULL,NULL,NULL,'visible',0,?,?)").run(ownPost,board,ownAuthor,'Own post must not be unread',baseline+2,crypto.randomUUID());
  const unreadA=await publicActivityCall(first.data.viewerToken);const unreadB=await publicActivityCall(second.data.viewerToken);
  assert.equal(unreadA.data.unread,1);assert.equal(unreadB.data.unread,0);
  const bridged=await call(null,'','?board='+encodeURIComponent(board)+'&viewer='+encodeURIComponent(first.data.viewerToken));
