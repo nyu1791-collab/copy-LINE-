@@ -19,3 +19,12 @@ test('public activity feed returns only teaser data while preserving likes-first
  assert.match(route,/sessionFromHeaders\(h\)/);
  assert.doesNotMatch(route,/BOARD_OWNER_ACCESS_TOKEN|BOARD_OWNER_SUBJECT/);
 });
+
+const boardRoute=readFileSync(new URL('../app/api/board/route.ts',import.meta.url),'utf8');
+const community=readFileSync(new URL('../app/community.tsx',import.meta.url),'utf8');
+
+test('viewer token survives board read and seen write paths',()=>{
+ assert.match(boardRoute,/identity\(h,u\.searchParams\.get\('viewer'\)\|\|undefined\)/);
+ assert.ok((community.match(/fetch\(withViewerQuery\('\/api\/board'\)/g)||[]).length>=2);
+ assert.match(community,/action:'seen',until:viewUntil/);
+});
