@@ -537,17 +537,22 @@ test('public viewer tokens keep NEW isolated and bridge into the board cursor',a
 });
 
 
-test('viewer token cannot override an existing Owner session',async()=>{
- const {call,publicActivityCall,anonymous}=setup();
+test('viewer token cannot override Owner auth but Owner seen still clears that viewer NEW only',async()=>{
+ const {call,publicActivityCall,anonymous,sql}=setup();
  const seeded=await call();const board=seeded.data.board;assert.ok(board);
- const viewer=(await publicActivityCall()).data.viewerToken;assert.match(viewer,/^v1[.]/);
+ const viewer=(await publicActivityCall()).data.viewerToken;assert.match(viewer,/^v1[.]/);const viewerSubject=await anonymous.verifyPublicViewerToken(viewer);assert.ok(viewerSubject);
  const owner=await anonymous.activateOwner('test-owner-access-token');assert.ok(owner);
  const result=await call(null,'','','owner@example.invalid','https://review.example',owner.setCookie||'');
  const bridged=await call(null,'','?board='+encodeURIComponent(board)+'&viewer='+encodeURIComponent(viewer),'owner@example.invalid','https://review.example',owner.setCookie||'');
- assert.equal(result.status,200);
- assert.equal(bridged.status,200);
- assert.equal(bridged.data.me?.role,'owner');
- assert.equal(bridged.data.me?.name,'LINEレンジャーは神ゲー');
+ assert.equal(result.status,200);assert.equal(bridged.status,200);assert.equal(bridged.data.me?.role,'owner');assert.equal(bridged.data.me?.name,'LINEレンジャーは神ゲー');
+ const author=crypto.randomUUID();const created=Date.now();sql.prepare('INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,?,?,?)').run(author,'owner-viewer-test-author','Other User',1,'user',created);
+ sql.prepare('INSERT INTO visits(subject,seen) VALUES(?,?)').run(viewerSubject,1);
+ sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,?,?,NULL,'visible',0,?,?)").run(crypto.randomUUID(),board,author,null,'Unread for Owner viewer',created,crypto.randomUUID());
+ assert.equal((await publicActivityCall(viewer)).data.unread,1);
+ const marked=await call({action:'seen',until:Date.now()},'','?viewer='+encodeURIComponent(viewer),'owner@example.invalid','https://review.example',owner.setCookie||'');assert.equal(marked.status,200);
+ assert.equal((await publicActivityCall(viewer)).data.unread,0);
+ assert.ok(Number(sql.prepare('SELECT seen FROM visits WHERE subject=?').get(viewerSubject)?.seen||0)>=created);
+ assert.equal(sql.prepare('SELECT seen FROM visits WHERE subject=?').get('owner-subject'),undefined);
 });
 
 
