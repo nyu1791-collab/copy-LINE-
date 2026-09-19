@@ -5,7 +5,7 @@ import {readFileSync} from 'node:fs';
 const route=readFileSync(new URL('../app/api/activity/route.ts',import.meta.url),'utf8');
 
 test('public activity feed is explicitly scoped to the canonical ranking origin',()=>{
- assert.match(route,/publicActivityOrigin='https:\/\/line-rangers-fan\.github\.io'/);
+ assert.match(route,/publicActivityOrigin='https:\/\/line-rangers-fan\.github\.io'/);\n assert.match(route,/publicActivityWorkerOrigin='https:\/\/line-rangers-pvp-community-production\.n-yu1791\.workers\.dev'/);\n assert.match(route,/isPublicActivityRequest/);
  assert.match(route,/url\.searchParams\.get\('public'\)==='1'/);
  assert.match(route,/Access-Control-Allow-Origin/);assert.match(route,/Access-Control-Allow-Headers/);
  assert.match(route,/Vary':'Origin/);
