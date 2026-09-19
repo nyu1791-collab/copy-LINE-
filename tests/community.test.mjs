@@ -479,7 +479,7 @@ test('media groups stay isolated by board and author even if a UUID is reused',a
 
 test('grouped-media optimistic accounting and scope indexes stay aligned with server semantics',()=>{
  const communitySource=readFileSync(new URL('app/community.tsx',root),'utf8');const boardSource=readFileSync(new URL('app/api/board/route.ts',root),'utf8');const direct=readFileSync(new URL('app/api/upload/route.ts',root),'utf8');const session=readFileSync(new URL('app/api/upload/session/route.ts',root),'utf8');const schemaSource=readFileSync(new URL('db/schema.ts',root),'utf8');const migration=readFileSync(new URL('drizzle/0011_grouped_media_scope_indexes.sql',root),'utf8');
- assert.match(communitySource,/function applyLocalMediaPost/);assert.match(communitySource,/item=>item.mediaGroup===post.mediaGroup/);assert.doesNotMatch(communitySource,/comments:current.stats.comments+1,todayComments:current.stats.todayComments+1/);assert.match(communitySource,/stats\.unread/);assert.match(communitySource,/t\.newCount/);assert.doesNotMatch(communitySource,/today-comments/);assert.match(boardSource,/const unread=/);
+ assert.match(communitySource,/function applyLocalMediaPost/);assert.match(communitySource,/item=>item.mediaGroup===post.mediaGroup/);assert.doesNotMatch(communitySource,/comments:current.stats.comments+1,todayComments:current.stats.todayComments+1/);assert.match(communitySource,/stats\.unread/);assert.match(communitySource,/t\.newCount/);assert.doesNotMatch(communitySource,/today-comments/);assert.match(boardSource,/const unread=/);assert.match(communitySource,/fetch\(withViewerQuery\('\/api\/board'\)/);assert.match(boardSource,/b\.action==='seen'\?\(requestUrl\.searchParams\.get\('viewer'\)/);
  assert.match(boardSource,/SELECT id,board,author,parent,video/);assert.match(boardSource,/byScope/);assert.match(direct,/SELECT author,board,body FROM posts WHERE media_group=?/);assert.match(session,/SELECT user,board,body FROM upload_sessions WHERE media_group=?/);
  assert.match(schemaSource,/posts_media_group_scope/);assert.match(schemaSource,/upload_sessions_media_group_scope/);assert.match(migration,/posts_media_group_scope/);assert.match(migration,/upload_sessions_media_group_scope/);
 });
@@ -503,7 +503,10 @@ test('public viewer tokens keep NEW isolated and bridge into the board cursor',a
  assert.equal(unreadA.data.unread,1);assert.equal(unreadB.data.unread,0);
  const bridged=await call(null,'','?board='+encodeURIComponent(board)+'&viewer='+encodeURIComponent(first.data.viewerToken));
  assert.equal(bridged.status,200);assert.match(bridged.headers.get('set-cookie')||'',/^__Host-lr_guest=v1[.]/);
- const seen=await call({action:'seen',until:bridged.data.viewUntil},'','', 'test@example.invalid','https://review.example',bridged.headers.get('set-cookie')||'');
+ const tampered=await call({action:'seen',until:bridged.data.viewUntil},'','?viewer='+encodeURIComponent(first.data.viewerToken+'x'),'test@example.invalid','https://review.example','');
+ assert.equal(tampered.status,200);
+ assert.equal((await publicActivityCall(first.data.viewerToken)).data.unread,1);
+ const seen=await call({action:'seen',until:bridged.data.viewUntil},'','?viewer='+encodeURIComponent(first.data.viewerToken),'test@example.invalid','https://review.example','');
  assert.equal(seen.status,200);
  assert.equal((await publicActivityCall(first.data.viewerToken)).data.unread,0);
 });
