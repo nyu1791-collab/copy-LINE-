@@ -38,6 +38,15 @@ test('Owner cookie is cryptographically bound to the configured Owner subject',a
 });
 
 
+test('Worker applies a non-breaking baseline CSP at the response boundary',()=>{
+ const workerSource=readFileSync(new URL('worker/index.ts',root),'utf8');
+ assert.match(workerSource,/Content-Security-Policy/);
+ assert.match(workerSource,/base-uri 'self'/);
+ assert.match(workerSource,/object-src 'none'/);
+ assert.match(workerSource,/frame-ancestors 'self'/);
+ assert.match(workerSource,/form-action 'self'/);
+});
+
 test('original-production promotion is manual and explicitly gated',()=>{
  const workflow=readFileSync(new URL('../.github/workflows/migrate-original-community-production.yml',import.meta.url),'utf8');
  assert.doesNotMatch(workflow,/^  push:/m);
