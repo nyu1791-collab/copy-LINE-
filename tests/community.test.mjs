@@ -527,7 +527,7 @@ test('public viewer tokens keep NEW isolated and bridge into the board cursor',a
  const unreadA=await publicActivityCall(first.data.viewerToken);const unreadB=await publicActivityCall(second.data.viewerToken);
  assert.equal(unreadA.data.unread,1);assert.equal(unreadB.data.unread,0);
  const bridged=await call(null,'','?board='+encodeURIComponent(board)+'&viewer='+encodeURIComponent(first.data.viewerToken));
- assert.equal(bridged.status,200);assert.match(bridged.headers.get('set-cookie')||'',/^__Host-lr_guest=v1[.]/);
+ assert.equal(bridged.status,200);assert.equal(bridged.data.stats.unread,1);assert.match(bridged.headers.get('set-cookie')||'',/^__Host-lr_guest=v1[.]/);
  const tampered=await call({action:'seen',until:bridged.data.viewUntil},'','?viewer='+encodeURIComponent(first.data.viewerToken+'x'),'test@example.invalid','https://review.example','');
  assert.equal(tampered.status,200);
  assert.equal((await publicActivityCall(first.data.viewerToken)).data.unread,1);
@@ -560,8 +560,10 @@ test('viewer token cannot override Owner auth but Owner seen still clears that v
  sql.prepare('INSERT INTO visits(subject,seen) VALUES(?,?)').run(viewerSubject,1);
  sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,?,?,NULL,'visible',0,?,?)").run(crypto.randomUUID(),board,author,null,'Unread for Owner viewer',created,crypto.randomUUID());
  assert.equal((await publicActivityCall(viewer)).data.unread,1);
+ const beforeSeenBoard=await call(null,'','?board='+encodeURIComponent(board)+'&viewer='+encodeURIComponent(viewer),'owner@example.invalid','https://review.example',owner.setCookie||'');assert.equal(beforeSeenBoard.data.stats.unread,1);
  const marked=await call({action:'seen',until:Date.now()},'','?viewer='+encodeURIComponent(viewer),'owner@example.invalid','https://review.example',owner.setCookie||'');assert.equal(marked.status,200);
  assert.equal((await publicActivityCall(viewer)).data.unread,0);
+ const afterSeenBoard=await call(null,'','?board='+encodeURIComponent(board)+'&viewer='+encodeURIComponent(viewer),'owner@example.invalid','https://review.example',owner.setCookie||'');assert.equal(afterSeenBoard.data.stats.unread,0);
  assert.ok(Number(sql.prepare('SELECT seen FROM visits WHERE subject=?').get(viewerSubject)?.seen||0)>=created);
  assert.equal(sql.prepare('SELECT seen FROM visits WHERE subject=?').get('owner-subject'),undefined);
 });
