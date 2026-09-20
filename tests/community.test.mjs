@@ -617,7 +617,7 @@ test('Ranger detail API data parser exposes active skills and canonical handbook
    usk1555_af_nm:'表示対象外',usk1555_af_desc:'icon code only',
   },
  };
- const parsed=rangerInfo.parseRangerInfoData(basics,skills,translations,'u1556e-af');
+ const parsed=rangerInfo.buildRangerInfo('u1556e-af',basics,skills,translations);
  assert.equal(parsed.name,'9★ 超能力者 アーニャ');
  assert.deepEqual(parsed.skills,[{name:'わくわくっ！',description:'味方に良い効果を与える。\n*味方のスキル範囲30%アップ'},{name:'星を摑む光の矢!',description:'敵に悪い効果を与える。'}]);
  assert.equal(parsed.sourceUrl,'https://rangers.lerico.net/ja/ranger/u1556e-af');
