@@ -1,4 +1,4 @@
-import {buildRangerInfo,rangerDetailUrl,validRangerUnitCode,type RangerInfo} from '@/lib/ranger-info';
+import {parseRangerInfoData,rangerDetailUrl,validRangerUnitCode,type RangerInfo} from '@/lib/ranger-info';
 
 export const dynamic='force-dynamic';
 
@@ -68,7 +68,7 @@ export async function GET(request:Request){
  if(existing&&existing.expires>Date.now())return json(existing.value,200,origin);
  try{
   const catalog=await catalogs();
-  const info=buildRangerInfo(unit,catalog.basics,catalog.skills,catalog.translations);
+  const info=parseRangerInfoData(catalog.basics,catalog.skills,catalog.translations,unit);
   if(info.sourceUrl!==rangerDetailUrl(unit))throw new Error('invalid_source_url');
   if(responseCache.size>=128)responseCache.delete(responseCache.keys().next().value||'');
   responseCache.set(unit,{expires:Date.now()+cacheTtlMs,value:info});
