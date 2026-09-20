@@ -602,24 +602,39 @@ test('reply pagination exposes every reply beyond 20 and the client follows next
 });
 
 
-test('Ranger detail API data parser exposes active skills and canonical handbook link',()=>{
+test('Ranger detail API separates descriptions from effects and exposes safe skill icons',()=>{
  const basics=[{unitCode:'u1556e-af',unitNameCode:'u1556e-af_nm',grade:9,isTranscendentUnit:0,isHyperUnit:0,skillCode:'sk1555_af',skillCode2:'',skillCode3:'hsk1555_af',iconSkillCode2:'usk1555_af'}];
  const skills=[
-  {skillCode:'sk1555_af',nameCode:'sk1555_af_nm',descriptionCode:'sk1555_af_desc'},
-  {skillCode:'hsk1555_af',nameCode:'hsk1555_af_nm',descriptionCode:'hsk1555_af_desc'},
-  {skillCode:'usk1555_af',nameCode:'usk1555_af_nm',descriptionCode:'usk1555_af_desc'},
+  {skillCode:'sk1555_af',nameCode:'sk1555_af_nm',descriptionCode:'sk1555_af_desc',iconResourcePath:'skill_icon_sk1555_af.png'},
+  {skillCode:'hsk1555_af',nameCode:'hsk1555_af_nm',descriptionCode:'hsk1555_af_desc',iconResourcePath:'skill_icon_hsk1555_af.png'},
+  {skillCode:'usk1555_af',nameCode:'usk1555_af_nm',descriptionCode:'usk1555_af_desc',iconResourcePath:'../unsafe.png'},
  ];
  const translations={
   'ja:UNIT':{'u1556e-af_nm':'超能力者 アーニャ'},
   'ja:SKILL':{
-   sk1555_af_nm:'わくわくっ！',sk1555_af_desc:'味方に良い効果を与える。\\n*味方のスキル範囲30%アップ',
-   hsk1555_af_nm:'星を摑む光の矢!',hsk1555_af_desc:'敵に悪い効果を与える。',
+   sk1555_af_nm:'わくわくっ！',sk1555_af_desc:'ペンギンのぬいぐるみと一緒に\\n楽しそうにアニメを見る。\\n\\n*味方のスキル範囲30%アップ (9秒)\\n*一部自軍のスキルクールタイムの初期化',
+   hsk1555_af_nm:'星を摑む光の矢!',hsk1555_af_desc:'ボールを全力で投げる。\\n敵に悪い効果を与える。\\n\\n*敵の無敵スキル解除\\n*範囲内の敵2体に誘惑効果 (10秒)',
    usk1555_af_nm:'表示対象外',usk1555_af_desc:'icon code only',
   },
  };
  const parsed=rangerInfo.buildRangerInfo('u1556e-af',basics,skills,translations);
  assert.equal(parsed.name,'9★ 超能力者 アーニャ');
- assert.deepEqual(parsed.skills,[{name:'わくわくっ！',description:'味方に良い効果を与える。\n*味方のスキル範囲30%アップ'},{name:'星を摑む光の矢!',description:'敵に悪い効果を与える。'}]);
+ assert.deepEqual(parsed.skills,[
+  {
+   name:'わくわくっ！',
+   description:'ペンギンのぬいぐるみと一緒に\n楽しそうにアニメを見る。',
+   effects:['味方のスキル範囲30%アップ (9秒)','一部自軍のスキルクールタイムの初期化'],
+   iconUrl:'https://rangers.lerico.net/res/skill_icon/skill_icon_sk1555_af.png',
+  },
+  {
+   name:'星を摑む光の矢!',
+   description:'ボールを全力で投げる。\n敵に悪い効果を与える。',
+   effects:['敵の無敵スキル解除','範囲内の敵2体に誘惑効果 (10秒)'],
+   iconUrl:'https://rangers.lerico.net/res/skill_icon/skill_icon_hsk1555_af.png',
+  },
+ ]);
  assert.equal(parsed.sourceUrl,'https://rangers.lerico.net/ja/ranger/u1556e-af');
+ assert.equal(rangerInfo.rangerSkillIconUrl('../unsafe.png'),null);
+ assert.deepEqual(rangerInfo.splitSkillDescription('説明だけです。'),{description:'説明だけです。',effects:[]});
  assert.throws(()=>rangerInfo.rangerDetailUrl('../bad'));
 });
