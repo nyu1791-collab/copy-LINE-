@@ -602,11 +602,24 @@ test('reply pagination exposes every reply beyond 20 and the client follows next
 });
 
 
-test('Ranger detail parser exposes bounded skill metadata and canonical handbook link',()=>{
- const html='<main><h1>9★ 超能力者 アーニャ</h1><h3>詳細</h3><h3>スキル</h3><h5>こころよみ</h5><p>味方に良い効果を与えます。</p><h5>星を摑む光の矢!</h5><p>敵に範囲ダメージを与えます。</p><h3>アビリティ</h3><h5>グループ</h5></main>';
- const parsed=rangerInfo.parseRangerInfoHtml(html,'u1556e-af');
+test('Ranger detail API data parser exposes active skills and canonical handbook link',()=>{
+ const basics=[{unitCode:'u1556e-af',unitNameCode:'u1556e-af_nm',grade:9,isTranscendentUnit:0,isHyperUnit:0,skillCode:'sk1555_af',skillCode2:'',skillCode3:'hsk1555_af',iconSkillCode2:'usk1555_af'}];
+ const skills=[
+  {skillCode:'sk1555_af',nameCode:'sk1555_af_nm',descriptionCode:'sk1555_af_desc'},
+  {skillCode:'hsk1555_af',nameCode:'hsk1555_af_nm',descriptionCode:'hsk1555_af_desc'},
+  {skillCode:'usk1555_af',nameCode:'usk1555_af_nm',descriptionCode:'usk1555_af_desc'},
+ ];
+ const translations={
+  'ja:UNIT':{'u1556e-af_nm':'超能力者 アーニャ'},
+  'ja:SKILL':{
+   sk1555_af_nm:'わくわくっ！',sk1555_af_desc:'味方に良い効果を与える。\\n*味方のスキル範囲30%アップ',
+   hsk1555_af_nm:'星を摑む光の矢!',hsk1555_af_desc:'敵に悪い効果を与える。',
+   usk1555_af_nm:'表示対象外',usk1555_af_desc:'icon code only',
+  },
+ };
+ const parsed=rangerInfo.parseRangerInfoData(basics,skills,translations,'u1556e-af');
  assert.equal(parsed.name,'9★ 超能力者 アーニャ');
- assert.deepEqual(parsed.skills,[{name:'こころよみ',description:'味方に良い効果を与えます。'},{name:'星を摑む光の矢!',description:'敵に範囲ダメージを与えます。'}]);
+ assert.deepEqual(parsed.skills,[{name:'わくわくっ！',description:'味方に良い効果を与える。\n*味方のスキル範囲30%アップ'},{name:'星を摑む光の矢!',description:'敵に悪い効果を与える。'}]);
  assert.equal(parsed.sourceUrl,'https://rangers.lerico.net/ja/ranger/u1556e-af');
  assert.throws(()=>rangerInfo.rangerDetailUrl('../bad'));
 });
