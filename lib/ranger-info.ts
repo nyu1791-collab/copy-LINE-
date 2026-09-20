@@ -1,10 +1,11 @@
 const UNIT_CODE_PATTERN=/^[A-Za-z0-9_-]{1,80}$/;
+const CATALOG_CODE_PATTERN=/^[A-Za-z0-9_-]{1,120}$/;
 const HANDBOOK_ORIGIN='https://rangers.lerico.net';
 
 export type RangerSkillInfo={name:string;description:string};
 export type RangerInfo={unitCode:string;name:string;skills:RangerSkillInfo[];sourceUrl:string};
 
-type RangerBasic={
+type BasicRanger={
  unitCode?:unknown;
  unitNameCode?:unknown;
  grade?:unknown;
@@ -14,11 +15,7 @@ type RangerBasic={
  skillCode2?:unknown;
  skillCode3?:unknown;
 };
-type SkillRow={
- skillCode?:unknown;
- nameCode?:unknown;
- descriptionCode?:unknown;
-};
+type SkillRow={skillCode?:unknown;nameCode?:unknown;descriptionCode?:unknown};
 
 export function validRangerUnitCode(value:string){return UNIT_CODE_PATTERN.test(value);}
 
@@ -31,62 +28,77 @@ function cleanText(value:unknown,max:number){
  if(typeof value!=='string')return '';
  return value
   .replace(/\\n/g,'\n')
-  .replace(/\r/g,'')
-  .replace(/[ \t]+/g,' ')
+  .replace(/\r\n?/g,'\n')
+  .replace(/[\t ]+/g,' ')
   .replace(/ *\n */g,'\n')
   .replace(/\n{3,}/g,'\n\n')
   .trim()
   .slice(0,max);
 }
-function safeCode(value:unknown){
- return typeof value==='string'&&/^[A-Za-z0-9_-]{1,120}$/.test(value)?value:'';
-}
 function record(value:unknown):Record<string,unknown>|null{
- return value&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:null;
+ return value!==null&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:null;
+}
+function safeCatalogCode(value:unknown){
+ return typeof value==='string'&&CATALOG_CODE_PATTERN.test(value)?value:'';
+}
+function rangerGradeLabel(row:BasicRanger){
+ const grade=Number(row.grade);
+ if(!Number.isSafeInteger(grade)||grade<1||grade>20)return '';
+ const plus=Number(row.isTranscendentUnit)===1?'+':'';
+ const hyper=Number(row.isHyperUnit)===1?'#':'';
+ return `${grade}${plus}${hyper}★`;
 }
 
-export function buildRangerInfo(unitCode:string,basicsPayload:unknown,skillsPayload:unknown,translationsPayload:unknown):RangerInfo{
+export function parseRangerInfoData(
+ basics:unknown,
+ skills:unknown,
+ translations:unknown,
+ unitCode:string,
+):RangerInfo{
  if(!validRangerUnitCode(unitCode))throw new Error('invalid_unit_code');
- if(!Array.isArray(basicsPayload)||!Array.isArray(skillsPayload))throw new Error('invalid_catalog');
+ if(!Array.isArray(basics)||!Array.isArray(skills))throw new Error('invalid_upstream');
 
- const basic=basicsPayload.find((row:unknown)=>record(row)?.unitCode===unitCode) as RangerBasic|undefined;
- if(!basic)throw new Error('unit_not_found');
+ const translationRoot=record(translations);
+ const unitTranslations=record(translationRoot?.['ja:UNIT']);
+ const skillTranslations=record(translationRoot?.['ja:SKILL']);
+ if(!unitTranslations||!skillTranslations)throw new Error('invalid_upstream');
 
- const translations=record(translationsPayload);
- const unitTranslations=record(translations?.['ja:UNIT']);
- const skillTranslations=record(translations?.['ja:SKILL']);
- if(!unitTranslations||!skillTranslations)throw new Error('translation_missing');
+ const ranger=basics.find((item)=>{
+  const row=record(item);
+  return row?.unitCode===unitCode;
+ }) as BasicRanger|undefined;
+ if(!ranger)throw new Error('ranger_missing');
 
- const unitNameCode=safeCode(basic.unitNameCode)||`${unitCode}_nm`;
- const officialName=cleanText(unitTranslations[unitNameCode]??unitTranslations[`${unitCode}_nm`],160);
- if(!officialName)throw new Error('unit_name_missing');
- const grade=Number(basic.grade);
- const gradeLabel=Number.isSafeInteger(grade)&&grade>=1&&grade<=20
-  ?`${grade}${Number(basic.isTranscendentUnit)===1?'+':''}${Number(basic.isHyperUnit)===1?'#':''}★`
-  :'';
- const name=cleanText(gradeLabel?`${gradeLabel} ${officialName}`:officialName,180);
+ const unitNameCode=safeCatalogCode(ranger.unitNameCode)||`${unitCode}_nm`;
+ const officialName=cleanText(unitTranslations[unitNameCode],160);
+ if(!officialName)throw new Error('name_missing');
+ const grade=rangerGradeLabel(ranger);
+ const name=cleanText(grade?`${grade} ${officialName}`:officialName,180);
 
- const rows=new Map<string,SkillRow>();
- for(const row of skillsPayload){
-  const value=record(row);const code=safeCode(value?.skillCode);
-  if(code)rows.set(code,value as SkillRow);
+ const codes=[ranger.skillCode,ranger.skillCode2,ranger.skillCode3]
+  .map(safeCatalogCode)
+  .filter((code,index,list)=>code&&list.indexOf(code)===index)
+  .slice(0,3);
+
+ const byCode=new Map<string,SkillRow>();
+ for(const item of skills){
+  const row=record(item);
+  const code=safeCatalogCode(row?.skillCode);
+  if(code)byCode.set(code,row as SkillRow);
  }
- const codes=[basic.skillCode,basic.skillCode2,basic.skillCode3]
-  .map(safeCode)
-  .filter((code,index,list)=>code&&list.indexOf(code)===index);
 
- const skills:RangerSkillInfo[]=[];
+ const result:RangerSkillInfo[]=[];
  for(const code of codes){
-  const row=rows.get(code);
-  const nameCode=safeCode(row?.nameCode)||`${code}_nm`;
-  const descriptionCode=safeCode(row?.descriptionCode)||`${code}_desc`;
+  const skill=byCode.get(code);
+  if(!skill)continue;
+  const nameCode=safeCatalogCode(skill.nameCode)||`${code}_nm`;
+  const descriptionCode=safeCatalogCode(skill.descriptionCode)||`${code}_desc`;
   const skillName=cleanText(skillTranslations[nameCode],120);
   const description=cleanText(skillTranslations[descriptionCode],500);
   if(!skillName)continue;
-  skills.push({name:skillName,description});
-  if(skills.length>=3)break;
+  result.push({name:skillName,description});
  }
- if(!skills.length)throw new Error('skills_missing');
+ if(!result.length)throw new Error('skills_missing');
 
- return {unitCode,name,skills,sourceUrl:rangerDetailUrl(unitCode)};
+ return {unitCode,name,skills:result,sourceUrl:rangerDetailUrl(unitCode)};
 }
