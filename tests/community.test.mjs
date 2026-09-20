@@ -638,3 +638,34 @@ test('Ranger detail API separates descriptions from effects and exposes safe ski
  assert.deepEqual(rangerInfo.splitSkillDescription('説明だけです。'),{description:'説明だけです。',effects:[]});
  assert.throws(()=>rangerInfo.rangerDetailUrl('../bad'));
 });
+
+
+test('Ranger detail parser keeps partial cards when Handbook translations are missing',()=>{
+ const basics=[{unitCode:'u1616e-brown',unitNameCode:'u1616e-brown_nm',grade:9,isTranscendentUnit:0,isHyperUnit:0,skillCode:'sk1615_brown',skillCode2:'',skillCode3:'hsk1615_brown'}];
+ const skills=[
+  {skillCode:'sk1615_brown',nameCode:'sk1615_brown_nm',descriptionCode:'sk1615_brown_desc',iconResourcePath:'skill_icon_sk1615_brown.png'},
+  {skillCode:'hsk1615_brown',nameCode:'hsk1615_brown_nm',descriptionCode:'hsk1615_brown_desc',iconResourcePath:'skill_icon_hsk1615_brown.png'},
+ ];
+ const translations={
+  'ja:UNIT':{'u1616e-brown_nm':'ゴールドクワガタブラウン'},
+  'ja:SKILL':{
+   hsk1615_brown_desc:'口に含んだゼリーを噴射して敵を攻撃し、悪い効果を与える。\\n\\n*敵の無敵スキル解除\\n*体力持続回復の解除',
+  },
+ };
+ const parsed=rangerInfo.buildRangerInfo('u1616e-brown',basics,skills,translations);
+ assert.equal(parsed.name,'9★ ゴールドクワガタブラウン');
+ assert.deepEqual(parsed.skills,[
+  {
+   name:'スキル1',
+   description:'取得元に説明情報が登録されていません。',
+   effects:[],
+   iconUrl:'https://rangers.lerico.net/res/skill_icon/skill_icon_sk1615_brown.png',
+  },
+  {
+   name:'スキル2',
+   description:'口に含んだゼリーを噴射して敵を攻撃し、悪い効果を与える。',
+   effects:['敵の無敵スキル解除','体力持続回復の解除'],
+   iconUrl:'https://rangers.lerico.net/res/skill_icon/skill_icon_hsk1615_brown.png',
+  },
+ ]);
+});
