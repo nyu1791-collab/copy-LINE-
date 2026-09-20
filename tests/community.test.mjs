@@ -7,6 +7,7 @@ import ts from 'typescript';
 const root=new URL('../',import.meta.url);
 function compile(path,require){const source=readFileSync(new URL(path,root),'utf8');const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const exports={};new Function('exports','require',code)(exports,require);return exports;}
 const rules=compile('lib/rules.ts',()=>{});
+const rangerInfo=compile('lib/ranger-info.ts',()=>{});
 const {mediaRange}=compile('lib/media-range.ts',()=>{});
 const communitySource=readFileSync(new URL('app/community.tsx',root),'utf8');
 const communityCss=readFileSync(new URL('app/community.css',root),'utf8');
@@ -598,4 +599,14 @@ test('reply pagination exposes every reply beyond 20 and the client follows next
  const second=await call(null,'test-a','?replies='+rootPost+'&replyAfter='+encodeURIComponent(first.data.nextAfter));assert.equal(second.status,200);assert.equal(second.data.posts.length,5);assert.equal(second.data.nextAfter,null);
  assert.deepEqual([...first.data.posts,...second.data.posts].map(post=>post.id),ids);
  assert.match(communitySource,/params\.set\('replyAfter',after\)/);assert.match(communitySource,/nextAfter:string\|null/);
+});
+
+
+test('Ranger detail parser exposes bounded skill metadata and canonical handbook link',()=>{
+ const html='<main><h1>9★ 超能力者 アーニャ</h1><h3>詳細</h3><h3>スキル</h3><h5>こころよみ</h5><p>味方に良い効果を与えます。</p><h5>星を摑む光の矢!</h5><p>敵に範囲ダメージを与えます。</p><h3>アビリティ</h3><h5>グループ</h5></main>';
+ const parsed=rangerInfo.parseRangerInfoHtml(html,'u1556e-af');
+ assert.equal(parsed.name,'9★ 超能力者 アーニャ');
+ assert.deepEqual(parsed.skills,[{name:'こころよみ',description:'味方に良い効果を与えます。'},{name:'星を摑む光の矢!',description:'敵に範囲ダメージを与えます。'}]);
+ assert.equal(parsed.sourceUrl,'https://rangers.lerico.net/ja/ranger/u1556e-af');
+ assert.throws(()=>rangerInfo.rangerDetailUrl('../bad'));
 });
