@@ -1,9 +1,13 @@
-import {parseRangerInfoHtml,rangerDetailUrl,validRangerUnitCode,type RangerInfo} from '@/lib/ranger-info';
+import {parseRangerInfoData,rangerDetailUrl,validRangerUnitCode,type RangerInfo} from '@/lib/ranger-info';
 
 export const dynamic='force-dynamic';
 
 const pagesOrigin='https://line-rangers-fan.github.io';
-const maxHtmlBytes=900_000;
+const handbookOrigin='https://rangers.lerico.net';
+const basicsUrl=handbookOrigin+'/api/getRangersBasics';
+const skillsUrl=handbookOrigin+'/api/getSkills';
+const translationsUrl=handbookOrigin+'/api/v2/translate?keys=ja%3ASKILL%2Cja%3AUNIT';
+const maxJsonBytes=8*1024*1024;
 const cache=new Map<string,{expires:number,value:RangerInfo}>();
 const cacheTtlMs=6*60*60*1000;
 
@@ -24,6 +28,27 @@ export async function OPTIONS(request:Request){
  if(origin!==pagesOrigin)return new Response(null,{status:403,headers:{'Cache-Control':'no-store','Vary':'Origin'}});
  return new Response(null,{status:204,headers:{...responseHeaders(origin,'no-store'),'Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Allow-Headers':'Accept'}});
 }
+
+async function fetchJsonBounded(url:string){
+ const parsed=new URL(url);
+ if(parsed.protocol!=='https:'||parsed.origin!==handbookOrigin)throw new Error('invalid_source');
+ const response=await fetch(url,{
+  headers:{Accept:'application/json','User-Agent':'line-rangers-pvp-character-detail/2.0'},
+  redirect:'follow',
+  signal:AbortSignal.timeout(8000),
+ });
+ if(!response.ok)throw new Error('upstream_status');
+ const finalUrl=new URL(response.url);
+ if(finalUrl.protocol!=='https:'||finalUrl.origin!==handbookOrigin)throw new Error('upstream_redirect');
+ const type=(response.headers.get('content-type')||'').toLowerCase();
+ if(!type.includes('json'))throw new Error('upstream_type');
+ const length=Number(response.headers.get('content-length')||0);
+ if(Number.isFinite(length)&&length>maxJsonBytes)throw new Error('upstream_size');
+ const text=await response.text();
+ if(new TextEncoder().encode(text).byteLength>maxJsonBytes)throw new Error('upstream_size');
+ return JSON.parse(text) as unknown;
+}
+
 export async function GET(request:Request){
  const origin=request.headers.get('origin');
  const url=new URL(request.url);
@@ -32,21 +57,13 @@ export async function GET(request:Request){
  const existing=cache.get(unit);
  if(existing&&existing.expires>Date.now())return json(existing.value,200,origin);
  try{
-  const sourceUrl=rangerDetailUrl(unit);
-  const source=new URL(sourceUrl);
-  if(source.protocol!=='https:'||source.hostname!=='rangers.lerico.net')throw new Error('invalid_source');
-  const upstream=await fetch(sourceUrl,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'line-rangers-pvp-character-detail/1.0'},redirect:'follow',signal:AbortSignal.timeout(8000)});
-  if(!upstream.ok)throw new Error('upstream_status');
-  const finalUrl=new URL(upstream.url);
-  if(finalUrl.protocol!=='https:'||finalUrl.hostname!=='rangers.lerico.net')throw new Error('upstream_redirect');
-  const contentType=upstream.headers.get('content-type')||'';
-  if(!contentType.toLowerCase().includes('text/html'))throw new Error('upstream_type');
-  const contentLength=Number(upstream.headers.get('content-length')||0);
-  if(Number.isFinite(contentLength)&&contentLength>maxHtmlBytes)throw new Error('upstream_size');
-  const html=await upstream.text();
-  if(new TextEncoder().encode(html).byteLength>maxHtmlBytes)throw new Error('upstream_size');
-  const parsed=parseRangerInfoHtml(html,unit);
-  if(!parsed.skills.length)throw new Error('skills_missing');
+  rangerDetailUrl(unit);
+  const [basics,skills,translations]=await Promise.all([
+   fetchJsonBounded(basicsUrl),
+   fetchJsonBounded(skillsUrl),
+   fetchJsonBounded(translationsUrl),
+  ]);
+  const parsed=parseRangerInfoData(basics,skills,translations,unit);
   if(cache.size>=128)cache.delete(cache.keys().next().value||'');
   cache.set(unit,{expires:Date.now()+cacheTtlMs,value:parsed});
   return json(parsed,200,origin);
