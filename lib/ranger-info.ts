@@ -4,6 +4,18 @@ const HANDBOOK_ORIGIN='https://rangers.lerico.net';
 export type RangerSkillInfo={name:string;description:string};
 export type RangerInfo={unitCode:string;name:string;skills:RangerSkillInfo[];sourceUrl:string};
 
+type BasicRanger={
+ unitCode?:unknown;
+ unitNameCode?:unknown;
+ grade?:unknown;
+ isTranscendentUnit?:unknown;
+ isHyperUnit?:unknown;
+ skillCode?:unknown;
+ skillCode2?:unknown;
+ skillCode3?:unknown;
+};
+type SkillRow={skillCode?:unknown;nameCode?:unknown;descriptionCode?:unknown};
+
 export function validRangerUnitCode(value:string){return UNIT_CODE_PATTERN.test(value);}
 
 export function rangerDetailUrl(unitCode:string){
@@ -11,65 +23,69 @@ export function rangerDetailUrl(unitCode:string){
  return `${HANDBOOK_ORIGIN}/ja/ranger/${encodeURIComponent(unitCode)}`;
 }
 
-function decodeEntities(value:string){
- const named:Record<string,string>={amp:'&',lt:'<',gt:'>',quot:'"',apos:"'",nbsp:' '};
+function cleanText(value:unknown,max:number){
+ if(typeof value!=='string')return '';
  return value
-  .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi,(full,entity:string)=>{
-   const lower=entity.toLowerCase();
-   if(lower.startsWith('#x')){const code=Number.parseInt(lower.slice(2),16);return Number.isFinite(code)&&code>=0&&code<=0x10ffff?String.fromCodePoint(code):full;}
-   if(lower.startsWith('#')){const code=Number.parseInt(lower.slice(1),10);return Number.isFinite(code)?String.fromCodePoint(code):full;}
-   return named[lower]??full;
-  });
-}
-function cleanHtmlText(value:string){
- return decodeEntities(value
-  .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,' ')
-  .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,' ')
-  .replace(/<br\s*\/?\s*>/gi,'\n')
-  .replace(/<[^>]+>/g,' '))
-  .replace(/[\t\r ]+/g,' ')
+  .replace(/\\n/g,'\n')
+  .replace(/\r\n?/g,'\n')
+  .replace(/[\t ]+/g,' ')
   .replace(/ *\n */g,'\n')
   .replace(/\n{3,}/g,'\n\n')
-  .trim();
-}
-function firstParagraph(fragment:string){
- const paragraphs=[...fragment.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
-  .map(match=>cleanHtmlText(match[1]))
-  .filter(text=>text&&text!=='詳細を表示'&&text!=='Show Details');
- return paragraphs[0]||'';
+  .trim()
+  .slice(0,max);
 }
 
-export function parseRangerInfoHtml(html:string,unitCode:string):RangerInfo{
+function record(value:unknown):Record<string,unknown>|null{
+ return value!==null&&typeof value==='object'&&!Array.isArray(value)?value as Record<string,unknown>:null;
+}
+
+function rangerGradeLabel(row:BasicRanger){
+ const grade=Number(row.grade);
+ if(!Number.isSafeInteger(grade)||grade<1||grade>20)return '';
+ const plus=Number(row.isTranscendentUnit)===1?'+':'';
+ const hyper=Number(row.isHyperUnit)===1?'#':'';
+ return `${grade}${plus}${hyper}★`;
+}
+
+export function parseRangerInfoData(
+ basics:unknown,
+ skills:unknown,
+ translations:unknown,
+ unitCode:string,
+):RangerInfo{
  if(!validRangerUnitCode(unitCode))throw new Error('invalid_unit_code');
- const sourceUrl=rangerDetailUrl(unitCode);
- const withoutNoise=html
-  .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi,'')
-  .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi,'');
- const headingPattern=/<h([1-6])\b[^>]*>([\s\S]*?)<\/h\1>/gi;
- const headings:{level:number;text:string;start:number;end:number}[]=[];
- let match:RegExpExecArray|null;
- while((match=headingPattern.exec(withoutNoise))){
-  const text=cleanHtmlText(match[2]);
-  if(text)headings.push({level:Number(match[1]),text,start:match.index,end:headingPattern.lastIndex});
+ if(!Array.isArray(basics)||!Array.isArray(skills))throw new Error('invalid_upstream');
+ const translationRoot=record(translations);
+ const unitTranslations=record(translationRoot?.['ja:UNIT']);
+ const skillTranslations=record(translationRoot?.['ja:SKILL']);
+ if(!unitTranslations||!skillTranslations)throw new Error('invalid_upstream');
+
+ const ranger=basics.find((item):item is BasicRanger=>{
+  const row=record(item);
+  return row?.unitCode===unitCode;
+ });
+ if(!ranger)throw new Error('ranger_missing');
+
+ const unitNameCode=typeof ranger.unitNameCode==='string'&&ranger.unitNameCode?ranger.unitNameCode:`${unitCode}_nm`;
+ const officialName=cleanText(unitTranslations[unitNameCode],160);
+ if(!officialName)throw new Error('name_missing');
+ const grade=rangerGradeLabel(ranger);
+ const name=cleanText(grade?`${grade} ${officialName}`:officialName,180);
+
+ const codes=[ranger.skillCode,ranger.skillCode2,ranger.skillCode3]
+  .filter((value):value is string=>typeof value==='string'&&value.length>0&&value.length<=120);
+ const uniqueCodes=[...new Set(codes)].slice(0,3);
+ const result:RangerSkillInfo[]=[];
+ for(const code of uniqueCodes){
+  const skill=skills.find((item):item is SkillRow=>record(item)?.skillCode===code);
+  if(!skill)continue;
+  const nameCode=typeof skill.nameCode==='string'?skill.nameCode:'';
+  const descriptionCode=typeof skill.descriptionCode==='string'?skill.descriptionCode:'';
+  const skillName=cleanText(skillTranslations[nameCode],120);
+  const description=cleanText(skillTranslations[descriptionCode],500);
+  if(!skillName)continue;
+  result.push({name:skillName,description});
  }
- const title=headings.find(item=>item.level===1)?.text||'';
- const skillSectionIndex=headings.findIndex(item=>item.text==='スキル'||item.text==='Skill');
- if(skillSectionIndex<0)return {unitCode,name:title,skills:[],sourceUrl};
- const skillSection=headings[skillSectionIndex];
- const nextSection=headings.find((item,index)=>index>skillSectionIndex&&(item.text==='アビリティ'||item.text==='Ability'||item.text==='進化'||item.text==='Evolution'));
- const sectionEnd=nextSection?.start??withoutNoise.length;
- const candidates=headings.filter(item=>item.start>=skillSection.end&&item.start<sectionEnd&&item.level>=4&&item.text!=='詳細を表示'&&item.text!=='Show Details');
- const skills:RangerSkillInfo[]=[];
- const seen=new Set<string>();
- for(let index=0;index<candidates.length&&skills.length<3;index++){
-  const item=candidates[index];
-  const name=item.text.slice(0,120).trim();
-  if(!name||seen.has(name))continue;
-  seen.add(name);
-  const next=candidates[index+1];
-  const fragment=withoutNoise.slice(item.end,Math.min(next?.start??sectionEnd,sectionEnd));
-  const description=firstParagraph(fragment).slice(0,500);
-  skills.push({name,description});
- }
- return {unitCode,name:title.slice(0,180),skills,sourceUrl};
+ if(!result.length)throw new Error('skills_missing');
+ return {unitCode,name,skills:result,sourceUrl:rangerDetailUrl(unitCode)};
 }
