@@ -16,7 +16,7 @@ function decodeEntities(value:string){
  return value
   .replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi,(full,entity:string)=>{
    const lower=entity.toLowerCase();
-   if(lower.startsWith('#x')){const code=Number.parseInt(lower.slice(2),16);return Number.isFinite(code)?String.fromCodePoint(code):full;}
+   if(lower.startsWith('#x')){const code=Number.parseInt(lower.slice(2),16);return Number.isFinite(code)&&code>=0&&code<=0x10ffff?String.fromCodePoint(code):full;}
    if(lower.startsWith('#')){const code=Number.parseInt(lower.slice(1),10);return Number.isFinite(code)?String.fromCodePoint(code):full;}
    return named[lower]??full;
   });
@@ -58,7 +58,7 @@ export function parseRangerInfoHtml(html:string,unitCode:string):RangerInfo{
  const skillSection=headings[skillSectionIndex];
  const nextSection=headings.find((item,index)=>index>skillSectionIndex&&(item.text==='アビリティ'||item.text==='Ability'||item.text==='進化'||item.text==='Evolution'));
  const sectionEnd=nextSection?.start??withoutNoise.length;
- const candidates=headings.filter(item=>item.start>skillSection.end&&item.start<sectionEnd&&item.level>=4&&item.text!=='詳細を表示'&&item.text!=='Show Details');
+ const candidates=headings.filter(item=>item.start>=skillSection.end&&item.start<sectionEnd&&item.level>=4&&item.text!=='詳細を表示'&&item.text!=='Show Details');
  const skills:RangerSkillInfo[]=[];
  const seen=new Set<string>();
  for(let index=0;index<candidates.length&&skills.length<3;index++){
