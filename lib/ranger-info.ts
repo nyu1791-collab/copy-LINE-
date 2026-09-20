@@ -102,3 +102,13 @@ export function parseRangerInfoData(
 
  return {unitCode,name,skills:result,sourceUrl:rangerDetailUrl(unitCode)};
 }
+
+
+export function buildRangerInfo(
+ unitCode:string,
+ basics:unknown,
+ skills:unknown,
+ translations:unknown,
+):RangerInfo{
+ return parseRangerInfoData(basics,skills,translations,unitCode);
+}
