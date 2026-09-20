@@ -588,3 +588,14 @@ test('Owner display uses plain operator text without an icon',()=>{
  assert.match(labelsSource,/owner:'運営'/);
  assert.doesNotMatch(labelsSource,/owner:'🛡 運営'/);
 });
+
+
+test('reply pagination exposes every reply beyond 20 and the client follows nextAfter',async()=>{
+ const {call,sql}=setup();await call({action:'profile',name:'Reply pager'});const state=(await call()).data;const rootPost=crypto.randomUUID();const start=Date.now();
+ sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,?,?,NULL,'visible',0,?,?)").run(rootPost,state.board,state.me.id,null,'Root for reply pagination',start,crypto.randomUUID());
+ const ids=[];for(let i=0;i<25;i++){const id=crypto.randomUUID();ids.push(id);sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,?,?,NULL,'visible',0,?,?)").run(id,state.board,state.me.id,rootPost,`reply-${i}`,start+i+1,crypto.randomUUID());}
+ const first=await call(null,'test-a','?replies='+rootPost);assert.equal(first.status,200);assert.equal(first.data.posts.length,20);assert.ok(first.data.nextAfter);
+ const second=await call(null,'test-a','?replies='+rootPost+'&replyAfter='+encodeURIComponent(first.data.nextAfter));assert.equal(second.status,200);assert.equal(second.data.posts.length,5);assert.equal(second.data.nextAfter,null);
+ assert.deepEqual([...first.data.posts,...second.data.posts].map(post=>post.id),ids);
+ assert.match(communitySource,/params\.set\('replyAfter',after\)/);assert.match(communitySource,/nextAfter:string\|null/);
+});
