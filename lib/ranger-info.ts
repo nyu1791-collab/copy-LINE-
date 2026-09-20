@@ -7,6 +7,9 @@ export type RangerInfo={unitCode:string;name:string;skills:RangerSkillInfo[];sou
 type RangerBasic={
  unitCode?:unknown;
  unitNameCode?:unknown;
+ grade?:unknown;
+ isTranscendentUnit?:unknown;
+ isHyperUnit?:unknown;
  skillCode?:unknown;
  skillCode2?:unknown;
  skillCode3?:unknown;
@@ -55,8 +58,13 @@ export function buildRangerInfo(unitCode:string,basicsPayload:unknown,skillsPayl
  if(!unitTranslations||!skillTranslations)throw new Error('translation_missing');
 
  const unitNameCode=safeCode(basic.unitNameCode)||`${unitCode}_nm`;
- const name=cleanText(unitTranslations[unitNameCode]??unitTranslations[`${unitCode}_nm`],180);
- if(!name)throw new Error('unit_name_missing');
+ const officialName=cleanText(unitTranslations[unitNameCode]??unitTranslations[`${unitCode}_nm`],160);
+ if(!officialName)throw new Error('unit_name_missing');
+ const grade=Number(basic.grade);
+ const gradeLabel=Number.isSafeInteger(grade)&&grade>=1&&grade<=20
+  ?`${grade}${Number(basic.isTranscendentUnit)===1?'+':''}${Number(basic.isHyperUnit)===1?'#':''}★`
+  :'';
+ const name=cleanText(gradeLabel?`${gradeLabel} ${officialName}`:officialName,180);
 
  const rows=new Map<string,SkillRow>();
  for(const row of skillsPayload){
