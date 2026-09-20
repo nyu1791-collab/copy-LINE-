@@ -141,9 +141,12 @@ export function parseRangerInfoData(
   if(!skill)continue;
   const nameCode=safeCatalogCode(skill.nameCode)||`${code}_nm`;
   const descriptionCode=safeCatalogCode(skill.descriptionCode)||`${code}_desc`;
-  const skillName=cleanText(skillTranslations[nameCode],120);
-  if(!skillName)continue;
-  const parts=splitSkillDescription(skillTranslations[descriptionCode]);
+  const ordinal=result.length+1;
+  const skillName=cleanText(skillTranslations[nameCode],120)||`スキル${ordinal}`;
+  const translatedDescription=cleanText(skillTranslations[descriptionCode],1200);
+  const parts=translatedDescription
+   ? splitSkillDescription(translatedDescription)
+   : {description:'取得元に説明情報が登録されていません。',effects:[] as string[]};
   result.push({
    name:skillName,
    description:parts.description,
