@@ -1,8 +1,14 @@
 const UNIT_CODE_PATTERN=/^[A-Za-z0-9_-]{1,80}$/;
 const CATALOG_CODE_PATTERN=/^[A-Za-z0-9_-]{1,120}$/;
+const ICON_RESOURCE_PATTERN=/^[A-Za-z0-9._-]{1,180}$/;
 const HANDBOOK_ORIGIN='https://rangers.lerico.net';
 
-export type RangerSkillInfo={name:string;description:string};
+export type RangerSkillInfo={
+ name:string;
+ description:string;
+ effects:string[];
+ iconUrl:string|null;
+};
 export type RangerInfo={unitCode:string;name:string;skills:RangerSkillInfo[];sourceUrl:string};
 
 type BasicRanger={
@@ -15,7 +21,12 @@ type BasicRanger={
  skillCode2?:unknown;
  skillCode3?:unknown;
 };
-type SkillRow={skillCode?:unknown;nameCode?:unknown;descriptionCode?:unknown};
+type SkillRow={
+ skillCode?:unknown;
+ nameCode?:unknown;
+ descriptionCode?:unknown;
+ iconResourcePath?:unknown;
+};
 
 export function validRangerUnitCode(value:string){return UNIT_CODE_PATTERN.test(value);}
 
@@ -41,12 +52,49 @@ function record(value:unknown):Record<string,unknown>|null{
 function safeCatalogCode(value:unknown){
  return typeof value==='string'&&CATALOG_CODE_PATTERN.test(value)?value:'';
 }
+function safeIconResource(value:unknown){
+ return typeof value==='string'&&ICON_RESOURCE_PATTERN.test(value)?value:'';
+}
 function rangerGradeLabel(row:BasicRanger){
  const grade=Number(row.grade);
  if(!Number.isSafeInteger(grade)||grade<1||grade>20)return '';
  const plus=Number(row.isTranscendentUnit)===1?'+':'';
  const hyper=Number(row.isHyperUnit)===1?'#':'';
  return `${grade}${plus}${hyper}★`;
+}
+
+export function rangerSkillIconUrl(resourcePath:unknown){
+ const safe=safeIconResource(resourcePath);
+ return safe?`${HANDBOOK_ORIGIN}/res/skill_icon/${encodeURIComponent(safe)}`:null;
+}
+
+export function splitSkillDescription(value:unknown){
+ const text=cleanText(value,1200);
+ if(!text)return {description:'',effects:[] as string[]};
+ const lines=text.split('\n');
+ const firstEffect=lines.findIndex((line)=>/^\s*[*＊•・]\s*/u.test(line));
+ if(firstEffect<0)return {description:text.slice(0,500),effects:[] as string[]};
+
+ const description=lines
+  .slice(0,firstEffect)
+  .join('\n')
+  .trim()
+  .slice(0,500);
+ const effects:string[]=[];
+ for(const line of lines.slice(firstEffect)){
+  const trimmed=line.trim();
+  if(!trimmed)continue;
+  const bullet=trimmed.match(/^[*＊•・]\s*(.*)$/u);
+  const effect=cleanText(bullet?bullet[1]:trimmed,220);
+  if(!effect)continue;
+  if(bullet||effects.length===0){
+   if(effects.length<12)effects.push(effect);
+  }else{
+   const last=effects.length-1;
+   effects[last]=cleanText(`${effects[last]} ${effect}`,220);
+  }
+ }
+ return {description,effects};
 }
 
 export function parseRangerInfoData(
@@ -94,15 +142,19 @@ export function parseRangerInfoData(
   const nameCode=safeCatalogCode(skill.nameCode)||`${code}_nm`;
   const descriptionCode=safeCatalogCode(skill.descriptionCode)||`${code}_desc`;
   const skillName=cleanText(skillTranslations[nameCode],120);
-  const description=cleanText(skillTranslations[descriptionCode],500);
   if(!skillName)continue;
-  result.push({name:skillName,description});
+  const parts=splitSkillDescription(skillTranslations[descriptionCode]);
+  result.push({
+   name:skillName,
+   description:parts.description,
+   effects:parts.effects,
+   iconUrl:rangerSkillIconUrl(skill.iconResourcePath),
+  });
  }
  if(!result.length)throw new Error('skills_missing');
 
  return {unitCode,name,skills:result,sourceUrl:rangerDetailUrl(unitCode)};
 }
-
 
 export function buildRangerInfo(
  unitCode:string,
