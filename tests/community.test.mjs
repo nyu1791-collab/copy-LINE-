@@ -668,19 +668,19 @@ test('Ranger detail parser serves English names, descriptions, effects, and link
 });
 
 test('Ranger detail route isolates language catalogs and tolerates transient Handbook failures',()=>{
- assert.match(rangerRouteSource,/validRangerInfoLanguage/);
- assert.match(rangerRouteSource,/url\\.searchParams\\.get\\('lang'\\)/);
- assert.match(rangerRouteSource,/translationPath\\(language:RangerInfoLanguage\\)/);
- assert.match(rangerRouteSource,/encodeURIComponent/);
- assert.match(rangerRouteSource,/const upstreamRetryDelaysMs=\\[0,350\\] as const/);
- assert.match(rangerRouteSource,/const staleCacheTtlMs=7\\*24\\*60\\*60\\*1000/);
- assert.match(rangerRouteSource,/sharedRefreshPromise/);
- assert.match(rangerRouteSource,/translationRefreshPromises/);
- assert.match(rangerRouteSource,/ranger_catalog_stale_fallback/);
- assert.match(rangerRouteSource,/ranger_translation_stale_fallback/);
- assert.match(rangerRouteSource,/existing&&existing\\.staleUntil>Date\\.now\\(\\)/);
- assert.match(rangerRouteSource,/const cacheKey=\\`\\$\\{language\\}:\\$\\{unit\\}\\`/);
- assert.match(rangerRouteSource,/parseRangerInfoData\\(catalog\\.basics,catalog\\.skills,catalog\\.translations,unit,language\\)/);
+ assert.ok(rangerRouteSource.includes('validRangerInfoLanguage'));
+ assert.ok(rangerRouteSource.includes("url.searchParams.get('lang')"));
+ assert.ok(rangerRouteSource.includes('translationPath(language:RangerInfoLanguage)'));
+ assert.ok(rangerRouteSource.includes('encodeURIComponent'));
+ assert.ok(rangerRouteSource.includes('const upstreamRetryDelaysMs=[0,350] as const'));
+ assert.ok(rangerRouteSource.includes('const staleCacheTtlMs=7*24*60*60*1000'));
+ assert.ok(rangerRouteSource.includes('sharedRefreshPromise'));
+ assert.ok(rangerRouteSource.includes('translationRefreshPromises'));
+ assert.ok(rangerRouteSource.includes('ranger_catalog_stale_fallback'));
+ assert.ok(rangerRouteSource.includes('ranger_translation_stale_fallback'));
+ assert.ok(rangerRouteSource.includes('existing&&existing.staleUntil>Date.now()'));
+ assert.ok(rangerRouteSource.includes('const cacheKey=\`\${language}:\${unit}\`'));
+ assert.ok(rangerRouteSource.includes('parseRangerInfoData(catalog.basics,catalog.skills,catalog.translations,unit,language)'));
 });
 
 test('Ranger detail parser keeps partial cards when Handbook translations are missing',()=>{
