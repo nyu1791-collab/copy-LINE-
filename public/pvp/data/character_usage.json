@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "updated_at": "2026-09-21T17:01:38.594Z",
+  "updated_at": "2026-09-21T21:02:32.594Z",
   "source": {
     "name": "LINE Rangers Handbook PvP Tracker",
     "url": "https://rangers.lerico.net/ja/pvp-tracker"
@@ -17,8 +17,8 @@
     "equipment_slots_missing": 9,
     "detail_fetch_failures": 0,
     "invalid_player_records": 0,
-    "collection_started_at": "2026-09-21T17:01:18.199Z",
-    "collection_duration_seconds": 20.41
+    "collection_started_at": "2026-09-21T21:02:17.652Z",
+    "collection_duration_seconds": 14.96
   },
   "characters": [
     {
@@ -1838,7 +1838,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -2731,7 +2731,7 @@
             "rank": 0,
             "occurrence_count": 3,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -3768,7 +3768,7 @@
             "rank": 0,
             "occurrence_count": 4,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -4985,7 +4985,7 @@
             "rank": 0,
             "occurrence_count": 2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -6022,7 +6022,7 @@
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -7383,7 +7383,7 @@
             "rank": 1,
             "occurrence_count": 2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -8348,7 +8348,7 @@
             "rank": -1,
             "occurrence_count": -3,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -9421,7 +9421,7 @@
             "rank": 0,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -10818,7 +10818,7 @@
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -11495,7 +11495,7 @@
             "rank": 1,
             "occurrence_count": 2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -12712,7 +12712,7 @@
             "rank": 0,
             "occurrence_count": -2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -13821,7 +13821,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -14390,7 +14390,7 @@
             "rank": 0,
             "occurrence_count": 2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -15535,7 +15535,7 @@
             "rank": 0,
             "occurrence_count": 2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -16536,7 +16536,7 @@
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -17033,7 +17033,7 @@
             "rank": 0,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -17782,7 +17782,7 @@
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -18567,7 +18567,7 @@
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -19280,7 +19280,7 @@
             "rank": 0,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -19813,7 +19813,7 @@
             "rank": 1,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -20166,7 +20166,7 @@
             "rank": -1,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -20807,7 +20807,7 @@
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -21412,7 +21412,7 @@
             "rank": 7,
             "occurrence_count": 2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -21981,7 +21981,7 @@
             "rank": 1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -22334,7 +22334,7 @@
             "rank": -2,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -22795,7 +22795,7 @@
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -23292,7 +23292,7 @@
             "rank": -5,
             "occurrence_count": -3,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -23753,7 +23753,7 @@
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -24286,7 +24286,7 @@
             "rank": 9,
             "occurrence_count": 3,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -24891,7 +24891,7 @@
             "rank": 3,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -25352,7 +25352,7 @@
             "rank": 0,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -25813,7 +25813,7 @@
             "rank": 0,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -26202,7 +26202,7 @@
             "rank": -3,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -26627,7 +26627,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -27261,7 +27261,7 @@
             "rank": 2,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -27578,7 +27578,7 @@
             "rank": 2,
             "occurrence_count": 1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -27859,7 +27859,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -28104,7 +28104,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -28385,7 +28385,7 @@
             "rank": -5,
             "occurrence_count": -2,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -28666,7 +28666,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -28947,7 +28947,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -29156,7 +29156,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -29401,7 +29401,7 @@
             "rank": -3,
             "occurrence_count": -1,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -29682,7 +29682,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -29891,7 +29891,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -30064,7 +30064,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -30410,7 +30410,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -30583,7 +30583,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -30756,7 +30756,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -30929,7 +30929,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -31102,7 +31102,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -31275,7 +31275,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
@@ -31337,7 +31337,7 @@
             "rank": -1,
             "occurrence_count": 0,
             "from_updated_at": "2026-09-15T14:58:44.538Z",
-            "interval_minutes": 8762.9
+            "interval_minutes": 9003.8
           },
           "month": {
             "comparable": false,
