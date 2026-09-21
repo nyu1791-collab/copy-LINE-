@@ -1,14 +1,35 @@
-import {parseRangerInfoData,rangerDetailUrl,validRangerInfoLanguage,validRangerUnitCode,type RangerInfo} from '@/lib/ranger-info';
+import {parseRangerInfoData,rangerDetailUrl,validRangerInfoLanguage,validRangerUnitCode,type RangerInfo,type RangerInfoLanguage} from '@/lib/ranger-info';
 
 export const dynamic='force-dynamic';
 
 const pagesOrigin='https://line-rangers-fan.github.io';
 const handbookOrigin='https://rangers.lerico.net';
 const cacheTtlMs=6*60*60*1000;
-const responseCache=new Map<string,{expires:number,value:RangerInfo}>();
-let catalogCache:{expires:number;basics:unknown;skills:unknown;translations:unknown}|null=null;
+const staleCacheTtlMs=7*24*60*60*1000;
+const upstreamTimeoutMs=5_000;
+const upstreamRetryDelaysMs=[0,350] as const;
+const successCacheControl='public, max-age=21600, stale-if-error=86400';
+const staleCacheControl='public, max-age=300, stale-if-error=86400';
 
-function responseHeaders(origin:string|null,cacheControl='public, max-age=21600'){
+type SharedCatalog={expires:number;staleUntil:number;basics:unknown;skills:unknown};
+type TranslationCatalog={expires:number;staleUntil:number;value:unknown};
+type ResponseCacheEntry={expires:number;staleUntil:number;value:RangerInfo};
+
+const responseCache=new Map<string,ResponseCacheEntry>();
+let sharedCatalogCache:SharedCatalog|null=null;
+let sharedRefreshPromise:Promise<SharedCatalog>|null=null;
+const translationCache=new Map<RangerInfoLanguage,TranslationCatalog>();
+const translationRefreshPromises=new Map<RangerInfoLanguage,Promise<TranslationCatalog>>();
+
+class UpstreamError extends Error{
+ retryable:boolean;
+ constructor(message:string,retryable:boolean){
+  super(message);
+  this.retryable=retryable;
+ }
+}
+
+function responseHeaders(origin:string|null,cacheControl=successCacheControl){
  const headers:Record<string,string>={
   'Cache-Control':cacheControl,
   'X-Content-Type-Options':'nosniff',
@@ -26,36 +47,135 @@ export async function OPTIONS(request:Request){
  return new Response(null,{status:204,headers:{...responseHeaders(origin,'no-store'),'Access-Control-Allow-Methods':'GET, OPTIONS','Access-Control-Allow-Headers':'Accept'}});
 }
 
-async function fetchJson(path:string,maxBytes:number){
- const url=new URL(path,handbookOrigin);
- if(url.protocol!=='https:'||url.hostname!=='rangers.lerico.net')throw new Error('invalid_source');
- const response=await fetch(url.toString(),{
-  headers:{Accept:'application/json','User-Agent':'line-rangers-pvp-character-detail/1.0'},
-  redirect:'follow',
-  signal:AbortSignal.timeout(10_000),
- });
- if(!response.ok)throw new Error('upstream_status');
- const finalUrl=new URL(response.url);
- if(finalUrl.protocol!=='https:'||finalUrl.hostname!=='rangers.lerico.net')throw new Error('upstream_redirect');
- const contentType=(response.headers.get('content-type')||'').toLowerCase();
- if(!contentType.includes('json'))throw new Error('upstream_type');
- const declared=Number(response.headers.get('content-length')||0);
- if(Number.isFinite(declared)&&declared>maxBytes)throw new Error('upstream_size');
- const text=await response.text();
- if(new TextEncoder().encode(text).byteLength>maxBytes)throw new Error('upstream_size');
- return JSON.parse(text) as unknown;
+function sleep(ms:number){
+ return new Promise((resolve)=>setTimeout(resolve,ms));
 }
 
-async function catalogs(){
+async function fetchJsonOnce(path:string,maxBytes:number){
+ const url=new URL(path,handbookOrigin);
+ if(url.protocol!=='https:'||url.hostname!=='rangers.lerico.net')throw new UpstreamError('invalid_source',false);
+
+ let response:Response;
+ try{
+  response=await fetch(url.toString(),{
+   headers:{Accept:'application/json','User-Agent':'line-rangers-pvp-character-detail/1.1'},
+   redirect:'follow',
+   signal:AbortSignal.timeout(upstreamTimeoutMs),
+  });
+ }catch{
+  throw new UpstreamError('upstream_network',true);
+ }
+
+ if(!response.ok){
+  const retryable=response.status===408||response.status===425||response.status===429||response.status>=500;
+  throw new UpstreamError(`upstream_status_${response.status}`,retryable);
+ }
+ const finalUrl=new URL(response.url);
+ if(finalUrl.protocol!=='https:'||finalUrl.hostname!=='rangers.lerico.net')throw new UpstreamError('upstream_redirect',false);
+ const contentType=(response.headers.get('content-type')||'').toLowerCase();
+ if(!contentType.includes('json'))throw new UpstreamError('upstream_type',false);
+ const declared=Number(response.headers.get('content-length')||0);
+ if(Number.isFinite(declared)&&declared>maxBytes)throw new UpstreamError('upstream_size',false);
+ const text=await response.text();
+ if(new TextEncoder().encode(text).byteLength>maxBytes)throw new UpstreamError('upstream_size',false);
+ try{
+  return JSON.parse(text) as unknown;
+ }catch{
+  throw new UpstreamError('upstream_json',false);
+ }
+}
+
+async function fetchJson(path:string,maxBytes:number){
+ let lastError:unknown=null;
+ for(let attempt=0;attempt<upstreamRetryDelaysMs.length;attempt+=1){
+  const delay=upstreamRetryDelaysMs[attempt];
+  if(delay>0)await sleep(delay);
+  try{
+   return await fetchJsonOnce(path,maxBytes);
+  }catch(error){
+   lastError=error;
+   if(!(error instanceof UpstreamError)||!error.retryable||attempt===upstreamRetryDelaysMs.length-1)throw error;
+  }
+ }
+ throw lastError instanceof Error?lastError:new Error('upstream_unavailable');
+}
+
+function translationPath(language:RangerInfoLanguage){
+ return `/api/v2/translate?keys=${encodeURIComponent(`${language}:UNIT,${language}:SKILL`)}`;
+}
+
+async function sharedCatalogs(){
  const now=Date.now();
- if(catalogCache&&catalogCache.expires>now)return catalogCache;
- const [basics,skills,translations]=await Promise.all([
-  fetchJson('/api/getRangersBasics',6_000_000),
-  fetchJson('/api/getSkills',3_500_000),
-  fetchJson('/api/v2/translate?keys=ja%3AUNIT%2Cja%3ASKILL%2Cen%3AUNIT%2Cen%3ASKILL',4_000_000),
+ if(sharedCatalogCache&&sharedCatalogCache.expires>now)return sharedCatalogCache;
+
+ if(!sharedRefreshPromise){
+  sharedRefreshPromise=(async()=>{
+   const [basics,skills]=await Promise.all([
+    fetchJson('/api/getRangersBasics',6_000_000),
+    fetchJson('/api/getSkills',3_500_000),
+   ]);
+   const refreshedAt=Date.now();
+   const snapshot:SharedCatalog={
+    expires:refreshedAt+cacheTtlMs,
+    staleUntil:refreshedAt+staleCacheTtlMs,
+    basics,
+    skills,
+   };
+   sharedCatalogCache=snapshot;
+   return snapshot;
+  })().finally(()=>{sharedRefreshPromise=null;});
+ }
+
+ try{
+  return await sharedRefreshPromise;
+ }catch(error){
+  if(sharedCatalogCache&&sharedCatalogCache.staleUntil>Date.now()){
+   console.warn('ranger_catalog_stale_fallback');
+   return sharedCatalogCache;
+  }
+  throw error;
+ }
+}
+
+async function translations(language:RangerInfoLanguage){
+ const now=Date.now();
+ const cached=translationCache.get(language);
+ if(cached&&cached.expires>now)return cached.value;
+
+ let refresh=translationRefreshPromises.get(language);
+ if(!refresh){
+  refresh=(async()=>{
+   const value=await fetchJson(translationPath(language),4_000_000);
+   const refreshedAt=Date.now();
+   const snapshot:TranslationCatalog={
+    expires:refreshedAt+cacheTtlMs,
+    staleUntil:refreshedAt+staleCacheTtlMs,
+    value,
+   };
+   translationCache.set(language,snapshot);
+   return snapshot;
+  })().finally(()=>{translationRefreshPromises.delete(language);});
+  translationRefreshPromises.set(language,refresh);
+ }
+
+ try{
+  return (await refresh).value;
+ }catch(error){
+  const stale=translationCache.get(language);
+  if(stale&&stale.staleUntil>Date.now()){
+   console.warn('ranger_translation_stale_fallback',language);
+   return stale.value;
+  }
+  throw error;
+ }
+}
+
+async function catalogs(language:RangerInfoLanguage){
+ const [shared,translated]=await Promise.all([
+  sharedCatalogs(),
+  translations(language),
  ]);
- catalogCache={expires:now+cacheTtlMs,basics,skills,translations};
- return catalogCache;
+ return {basics:shared.basics,skills:shared.skills,translations:translated};
 }
 
 export async function GET(request:Request){
@@ -68,15 +188,25 @@ export async function GET(request:Request){
  const cacheKey=`${language}:${unit}`;
  const existing=responseCache.get(cacheKey);
  if(existing&&existing.expires>Date.now())return json(existing.value,200,origin);
+
  try{
-  const catalog=await catalogs();
+  const catalog=await catalogs(language);
   const info=parseRangerInfoData(catalog.basics,catalog.skills,catalog.translations,unit,language);
   if(info.sourceUrl!==rangerDetailUrl(unit,language))throw new Error('invalid_source_url');
   if(responseCache.size>=256)responseCache.delete(responseCache.keys().next().value||'');
-  responseCache.set(cacheKey,{expires:Date.now()+cacheTtlMs,value:info});
+  const refreshedAt=Date.now();
+  responseCache.set(cacheKey,{
+   expires:refreshedAt+cacheTtlMs,
+   staleUntil:refreshedAt+staleCacheTtlMs,
+   value:info,
+  });
   return json(info,200,origin);
- }catch{
-  console.error('ranger_info_unavailable');
+ }catch(error){
+  if(existing&&existing.staleUntil>Date.now()){
+   console.warn('ranger_info_stale_fallback',cacheKey);
+   return json(existing.value,200,origin,staleCacheControl);
+  }
+  console.error('ranger_info_unavailable',error instanceof Error?error.message:'unknown');
   return json({error:'unavailable'},503,origin,'no-store');
  }
 }

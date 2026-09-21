@@ -667,12 +667,20 @@ test('Ranger detail parser serves English names, descriptions, effects, and link
  assert.ok(parsed.skills.flatMap(skill=>[skill.name,skill.description,...skill.effects]).every(text=>!/[ぁ-んァ-ヶ一-龠]/u.test(text)));
 });
 
-test('Ranger detail route requests Japanese and English Handbook catalogs and keys cache by language',()=>{
+test('Ranger detail route isolates language catalogs and tolerates transient Handbook failures',()=>{
  assert.match(rangerRouteSource,/validRangerInfoLanguage/);
- assert.match(rangerRouteSource,/url\.searchParams\.get\('lang'\)/);
- assert.match(rangerRouteSource,/ja%3AUNIT%2Cja%3ASKILL%2Cen%3AUNIT%2Cen%3ASKILL/);
- assert.match(rangerRouteSource,/const cacheKey=\`\$\{language\}:\$\{unit\}\`/);
- assert.match(rangerRouteSource,/parseRangerInfoData\(catalog\.basics,catalog\.skills,catalog\.translations,unit,language\)/);
+ assert.match(rangerRouteSource,/url\\.searchParams\\.get\\('lang'\\)/);
+ assert.match(rangerRouteSource,/translationPath\\(language:RangerInfoLanguage\\)/);
+ assert.match(rangerRouteSource,/encodeURIComponent/);
+ assert.match(rangerRouteSource,/const upstreamRetryDelaysMs=\\[0,350\\] as const/);
+ assert.match(rangerRouteSource,/const staleCacheTtlMs=7\\*24\\*60\\*60\\*1000/);
+ assert.match(rangerRouteSource,/sharedRefreshPromise/);
+ assert.match(rangerRouteSource,/translationRefreshPromises/);
+ assert.match(rangerRouteSource,/ranger_catalog_stale_fallback/);
+ assert.match(rangerRouteSource,/ranger_translation_stale_fallback/);
+ assert.match(rangerRouteSource,/existing&&existing\\.staleUntil>Date\\.now\\(\\)/);
+ assert.match(rangerRouteSource,/const cacheKey=\\`\\$\\{language\\}:\\$\\{unit\\}\\`/);
+ assert.match(rangerRouteSource,/parseRangerInfoData\\(catalog\\.basics,catalog\\.skills,catalog\\.translations,unit,language\\)/);
 });
 
 test('Ranger detail parser keeps partial cards when Handbook translations are missing',()=>{
