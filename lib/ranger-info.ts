@@ -3,13 +3,14 @@ const CATALOG_CODE_PATTERN=/^[A-Za-z0-9_-]{1,120}$/;
 const ICON_RESOURCE_PATTERN=/^[A-Za-z0-9._-]{1,180}$/;
 const HANDBOOK_ORIGIN='https://rangers.lerico.net';
 
+export type RangerInfoLanguage='ja'|'en';
 export type RangerSkillInfo={
  name:string;
  description:string;
  effects:string[];
  iconUrl:string|null;
 };
-export type RangerInfo={unitCode:string;name:string;skills:RangerSkillInfo[];sourceUrl:string};
+export type RangerInfo={unitCode:string;language:RangerInfoLanguage;name:string;skills:RangerSkillInfo[];sourceUrl:string};
 
 type BasicRanger={
  unitCode?:unknown;
@@ -29,10 +30,11 @@ type SkillRow={
 };
 
 export function validRangerUnitCode(value:string){return UNIT_CODE_PATTERN.test(value);}
+export function validRangerInfoLanguage(value:string):value is RangerInfoLanguage{return value==='ja'||value==='en';}
 
-export function rangerDetailUrl(unitCode:string){
+export function rangerDetailUrl(unitCode:string,language:RangerInfoLanguage='ja'){
  if(!validRangerUnitCode(unitCode))throw new Error('invalid_unit_code');
- return `${HANDBOOK_ORIGIN}/ja/ranger/${encodeURIComponent(unitCode)}`;
+ return `${HANDBOOK_ORIGIN}/${language}/ranger/${encodeURIComponent(unitCode)}`;
 }
 
 function cleanText(value:unknown,max:number){
@@ -102,13 +104,15 @@ export function parseRangerInfoData(
  skills:unknown,
  translations:unknown,
  unitCode:string,
+ language:RangerInfoLanguage='ja',
 ):RangerInfo{
  if(!validRangerUnitCode(unitCode))throw new Error('invalid_unit_code');
+ if(!validRangerInfoLanguage(language))throw new Error('invalid_language');
  if(!Array.isArray(basics)||!Array.isArray(skills))throw new Error('invalid_upstream');
 
  const translationRoot=record(translations);
- const unitTranslations=record(translationRoot?.['ja:UNIT']);
- const skillTranslations=record(translationRoot?.['ja:SKILL']);
+ const unitTranslations=record(translationRoot?.[`${language}:UNIT`]);
+ const skillTranslations=record(translationRoot?.[`${language}:SKILL`]);
  if(!unitTranslations||!skillTranslations)throw new Error('invalid_upstream');
 
  const ranger=basics.find((item)=>{
@@ -142,11 +146,16 @@ export function parseRangerInfoData(
   const nameCode=safeCatalogCode(skill.nameCode)||`${code}_nm`;
   const descriptionCode=safeCatalogCode(skill.descriptionCode)||`${code}_desc`;
   const ordinal=result.length+1;
-  const skillName=cleanText(skillTranslations[nameCode],120)||`スキル${ordinal}`;
+  const skillName=cleanText(skillTranslations[nameCode],120)||(language==='en'?`Skill ${ordinal}`:`スキル${ordinal}`);
   const translatedDescription=cleanText(skillTranslations[descriptionCode],1200);
   const parts=translatedDescription
    ? splitSkillDescription(translatedDescription)
-   : {description:'取得元に説明情報が登録されていません。',effects:[] as string[]};
+   : {
+      description:language==='en'
+       ? 'No skill description is available from the source.'
+       : '取得元に説明情報が登録されていません。',
+      effects:[] as string[],
+     };
   result.push({
    name:skillName,
    description:parts.description,
@@ -156,7 +165,7 @@ export function parseRangerInfoData(
  }
  if(!result.length)throw new Error('skills_missing');
 
- return {unitCode,name,skills:result,sourceUrl:rangerDetailUrl(unitCode)};
+ return {unitCode,language,name,skills:result,sourceUrl:rangerDetailUrl(unitCode,language)};
 }
 
 export function buildRangerInfo(
@@ -164,6 +173,7 @@ export function buildRangerInfo(
  basics:unknown,
  skills:unknown,
  translations:unknown,
+ language:RangerInfoLanguage='ja',
 ):RangerInfo{
- return parseRangerInfoData(basics,skills,translations,unitCode);
+ return parseRangerInfoData(basics,skills,translations,unitCode,language);
 }
