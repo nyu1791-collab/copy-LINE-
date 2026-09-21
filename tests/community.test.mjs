@@ -8,6 +8,7 @@ const root=new URL('../',import.meta.url);
 function compile(path,require){const source=readFileSync(new URL(path,root),'utf8');const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const exports={};new Function('exports','require',code)(exports,require);return exports;}
 const rules=compile('lib/rules.ts',()=>{});
 const rangerInfo=compile('lib/ranger-info.ts',()=>{});
+const rangerRouteSource=readFileSync(new URL('app/api/ranger-info/route.ts',root),'utf8');
 const {mediaRange}=compile('lib/media-range.ts',()=>{});
 const communitySource=readFileSync(new URL('app/community.tsx',root),'utf8');
 const communityCss=readFileSync(new URL('app/community.css',root),'utf8');
@@ -618,6 +619,7 @@ test('Ranger detail API separates descriptions from effects and exposes safe ski
   },
  };
  const parsed=rangerInfo.buildRangerInfo('u1556e-af',basics,skills,translations);
+ assert.equal(parsed.language,'ja');
  assert.equal(parsed.name,'9★ 超能力者 アーニャ');
  assert.deepEqual(parsed.skills,[
   {
@@ -639,6 +641,39 @@ test('Ranger detail API separates descriptions from effects and exposes safe ski
  assert.throws(()=>rangerInfo.rangerDetailUrl('../bad'));
 });
 
+
+test('Ranger detail parser serves English names, descriptions, effects, and links without Japanese fallbacks',()=>{
+ const basics=[{unitCode:'u1556e-af',unitNameCode:'u1556e-af_nm',grade:9,isTranscendentUnit:0,isHyperUnit:0,skillCode:'sk1555_af',skillCode2:'',skillCode3:'hsk1555_af'}];
+ const skills=[
+  {skillCode:'sk1555_af',nameCode:'sk1555_af_nm',descriptionCode:'sk1555_af_desc',iconResourcePath:'skill_icon_sk1555_af.png'},
+  {skillCode:'hsk1555_af',nameCode:'hsk1555_af_nm',descriptionCode:'hsk1555_af_desc',iconResourcePath:'skill_icon_hsk1555_af.png'},
+ ];
+ const translations={
+  'en:UNIT':{'u1556e-af_nm':'Esper Anya'},
+  'en:SKILL':{
+   sk1555_af_nm:'So Exciting!',sk1555_af_desc:'Watches anime with her penguin plush.\\n\\n*Increases allies skill range by 30% (9 sec)\\n*Resets some allied skill cooldowns',
+   hsk1555_af_nm:'Starlight Arrow!',hsk1555_af_desc:'Throws the ball with all her strength.\\n\\n*Removes enemy invincibility skills\\n*Charms 2 enemies in range (10 sec)',
+  },
+ };
+ const parsed=rangerInfo.buildRangerInfo('u1556e-af',basics,skills,translations,'en');
+ assert.equal(parsed.language,'en');
+ assert.equal(parsed.name,'9★ Esper Anya');
+ assert.equal(parsed.sourceUrl,'https://rangers.lerico.net/en/ranger/u1556e-af');
+ assert.equal(parsed.skills[0].name,'So Exciting!');
+ assert.equal(parsed.skills[0].description,'Watches anime with her penguin plush.');
+ assert.deepEqual(parsed.skills[0].effects,['Increases allies skill range by 30% (9 sec)','Resets some allied skill cooldowns']);
+ assert.equal(parsed.skills[1].name,'Starlight Arrow!');
+ assert.match(parsed.skills[1].description,/Throws the ball/);
+ assert.ok(parsed.skills.flatMap(skill=>[skill.name,skill.description,...skill.effects]).every(text=>!/[ぁ-んァ-ヶ一-龠]/u.test(text)));
+});
+
+test('Ranger detail route requests Japanese and English Handbook catalogs and keys cache by language',()=>{
+ assert.match(rangerRouteSource,/validRangerInfoLanguage/);
+ assert.match(rangerRouteSource,/url\.searchParams\.get\('lang'\)/);
+ assert.match(rangerRouteSource,/ja%3AUNIT%2Cja%3ASKILL%2Cen%3AUNIT%2Cen%3ASKILL/);
+ assert.match(rangerRouteSource,/const cacheKey=\`\$\{language\}:\$\{unit\}\`/);
+ assert.match(rangerRouteSource,/parseRangerInfoData\(catalog\.basics,catalog\.skills,catalog\.translations,unit,language\)/);
+});
 
 test('Ranger detail parser keeps partial cards when Handbook translations are missing',()=>{
  const basics=[{unitCode:'u1616e-brown',unitNameCode:'u1616e-brown_nm',grade:9,isTranscendentUnit:0,isHyperUnit:0,skillCode:'sk1615_brown',skillCode2:'',skillCode3:'hsk1615_brown'}];
