@@ -1,4 +1,4 @@
-import {parseRangerInfoData,rangerDetailUrl,validRangerUnitCode,type RangerInfo} from '@/lib/ranger-info';
+import {parseRangerInfoData,rangerDetailUrl,validRangerInfoLanguage,validRangerUnitCode,type RangerInfo} from '@/lib/ranger-info';
 
 export const dynamic='force-dynamic';
 
@@ -52,7 +52,7 @@ async function catalogs(){
  const [basics,skills,translations]=await Promise.all([
   fetchJson('/api/getRangersBasics',6_000_000),
   fetchJson('/api/getSkills',3_500_000),
-  fetchJson('/api/v2/translate?keys=ja%3AUNIT%2Cja%3ASKILL',2_000_000),
+  fetchJson('/api/v2/translate?keys=ja%3AUNIT%2Cja%3ASKILL%2Cen%3AUNIT%2Cen%3ASKILL',4_000_000),
  ]);
  catalogCache={expires:now+cacheTtlMs,basics,skills,translations};
  return catalogCache;
@@ -62,16 +62,18 @@ export async function GET(request:Request){
  const origin=request.headers.get('origin');
  const url=new URL(request.url);
  const unit=(url.searchParams.get('unit')||'').trim();
- if(!validRangerUnitCode(unit))return json({error:'invalid_request'},400,origin,'no-store');
+ const language=(url.searchParams.get('lang')||'ja').trim();
+ if(!validRangerUnitCode(unit)||!validRangerInfoLanguage(language))return json({error:'invalid_request'},400,origin,'no-store');
 
- const existing=responseCache.get(unit);
+ const cacheKey=`${language}:${unit}`;
+ const existing=responseCache.get(cacheKey);
  if(existing&&existing.expires>Date.now())return json(existing.value,200,origin);
  try{
   const catalog=await catalogs();
-  const info=parseRangerInfoData(catalog.basics,catalog.skills,catalog.translations,unit);
-  if(info.sourceUrl!==rangerDetailUrl(unit))throw new Error('invalid_source_url');
-  if(responseCache.size>=128)responseCache.delete(responseCache.keys().next().value||'');
-  responseCache.set(unit,{expires:Date.now()+cacheTtlMs,value:info});
+  const info=parseRangerInfoData(catalog.basics,catalog.skills,catalog.translations,unit,language);
+  if(info.sourceUrl!==rangerDetailUrl(unit,language))throw new Error('invalid_source_url');
+  if(responseCache.size>=256)responseCache.delete(responseCache.keys().next().value||'');
+  responseCache.set(cacheKey,{expires:Date.now()+cacheTtlMs,value:info});
   return json(info,200,origin);
  }catch{
   console.error('ranger_info_unavailable');
