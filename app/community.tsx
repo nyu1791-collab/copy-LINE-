@@ -31,7 +31,7 @@ const displayNameStorageKey='line-rangers-display-name';
 // The confirmed u1631e-sally character image is served by the trusted character CDN; no private-repository fallback is used.
 function isGuestName(value:string|undefined|null){return !!value&&value.startsWith('ゲスト-');}
 function uiName(value:string|undefined|null,anonymousLabel='匿名ユーザー'){if(!value)return '';return isGuestName(value)?anonymousLabel:value;}
-function boardName(board:Board,lang:Language){return lang==='en'?(board.nameEn?.trim()||'New character'):board.name;}
+function boardName(board:Board,lang:Language){return lang==='ja'?board.name:(board.nameEn?.trim()||board.name);}
 // The server writes the display-name cookie as HttpOnly after a successful
 // profile save. Keep localStorage only as a convenience for restoring the
 // draft/name dialog; browser JavaScript must not be able to impersonate an

@@ -390,7 +390,7 @@ test('badge administration persists and refreshes both owner state and admin row
   assert.ok(source.includes('await Promise.all([reload(),loadAdmin()])'));
 });
 
-test('community board is Japanese-English only with ten-image five-video media caps', () => {
+test('community board supports Japanese, English, Chinese, and Thai with ten-image five-video media caps', () => {
   const source = readFileSync(new URL('app/community.tsx', root), 'utf8');
   const labelsSource = readFileSync(new URL('lib/labels.ts', root), 'utf8');
   const characterConfig = JSON.parse(readFileSync(new URL('config/community-characters.json', root), 'utf8'));
@@ -398,13 +398,15 @@ test('community board is Japanese-English only with ten-image five-video media c
   const translationSource = readFileSync(new URL('app/api/translate/route.ts', root), 'utf8');
   const directUpload = readFileSync(new URL('app/api/upload/route.ts', root), 'utf8');
   const videoSession = readFileSync(new URL('app/api/upload/session/route.ts', root), 'utf8');
-  assert.deepEqual(rules.languages, ['ja','en']);
+  assert.deepEqual(rules.languages, ['ja','en','zh','th']);
   assert.equal(rules.maxImagesPerPost, 10);
   assert.equal(rules.maxVideosPerPost, 5);
-  assert.match(labelsSource, /localeNames=\{ja:'🇯🇵 日本語',en:'🇺🇸 English'\}/);
-  assert.doesNotMatch(labelsSource, /🇹🇼|🇰🇷|🇹🇭|🇮🇩|🇻🇳/);
-  assert.doesNotMatch(activitySource, /zh:|ko:|th:|id:|vi:/);
-  assert.match(translationSource, /googleLanguage:Record<Language,string>=\{ja:'ja',en:'en'\}/);
+  assert.match(labelsSource, /localeNames=\{ja:'🇯🇵 日本語',en:'🇺🇸 English',zh:'中文',th:'🇹🇭 ไทย'\}/);
+  assert.match(labelsSource, /const zh:Labels=/);
+  assert.match(labelsSource, /const th:Labels=/);
+  assert.match(activitySource, /zh:\{helpful:/);
+  assert.match(activitySource, /th:\{helpful:/);
+  assert.match(translationSource, /googleLanguage:Record<Language,string>=\{ja:'ja',en:'en',zh:'zh-TW',th:'th'\}/);
   assert.match(source, /media-picker-hint\">\{t\.mediaLimitHint\}/);
   assert.match(labelsSource, /ここをタップ（1投稿につき動画5本・画像10枚まで）/);
   assert.match(labelsSource, /Tap here \(up to 5 videos and 10 images per post\)/);
@@ -636,6 +638,10 @@ test('Ranger detail API separates descriptions from effects and exposes safe ski
   },
  ]);
  assert.equal(parsed.sourceUrl,'https://rangers.lerico.net/ja/ranger/u1556e-af');
+ assert.equal(rangerInfo.rangerDetailUrl('u1556e-af','zh'),'https://rangers.lerico.net/zh/ranger/u1556e-af');
+ assert.equal(rangerInfo.rangerDetailUrl('u1556e-af','th'),'https://rangers.lerico.net/en/ranger/u1556e-af');
+ assert.equal(rangerInfo.validRangerInfoLanguage('zh'),true);
+ assert.equal(rangerInfo.validRangerInfoLanguage('th'),true);
  assert.equal(rangerInfo.rangerSkillIconUrl('../unsafe.png'),null);
  assert.deepEqual(rangerInfo.splitSkillDescription('説明だけです。'),{description:'説明だけです。',effects:[]});
  assert.throws(()=>rangerInfo.rangerDetailUrl('../bad'));
@@ -665,6 +671,25 @@ test('Ranger detail parser serves English names, descriptions, effects, and link
  assert.equal(parsed.skills[1].name,'Starlight Arrow!');
  assert.match(parsed.skills[1].description,/Throws the ball/);
  assert.ok(parsed.skills.flatMap(skill=>[skill.name,skill.description,...skill.effects]).every(text=>!/[ぁ-んァ-ヶ一-龠]/u.test(text)));
+});
+
+test('Ranger detail parser serves Chinese and Thai translation catalogs with isolated language keys',()=>{
+ const basics=[{unitCode:'u1556e-af',unitNameCode:'u1556e-af_nm',grade:9,isTranscendentUnit:0,isHyperUnit:0,skillCode:'sk1555_af',skillCode2:'',skillCode3:''}];
+ const skills=[{skillCode:'sk1555_af',nameCode:'sk1555_af_nm',descriptionCode:'sk1555_af_desc',iconResourcePath:'skill_icon_sk1555_af.png'}];
+ const zhTranslations={'zh:UNIT':{'u1556e-af_nm':'超能力者安妮亞'},'zh:SKILL':{sk1555_af_nm:'太興奮了！',sk1555_af_desc:'和企鵝玩偶一起看動畫。\\n\\n*技能範圍增加30%（9秒）'}};
+ const thTranslations={'th:UNIT':{'u1556e-af_nm':'เอสเปอร์ อาเนีย'},'th:SKILL':{sk1555_af_nm:'ตื่นเต้นมาก!',sk1555_af_desc:'ดูอนิเมะกับตุ๊กตาเพนกวิน\\n\\n*เพิ่มระยะสกิล 30% (9 วินาที)'}};
+ const zh=rangerInfo.buildRangerInfo('u1556e-af',basics,skills,zhTranslations,'zh');
+ const th=rangerInfo.buildRangerInfo('u1556e-af',basics,skills,thTranslations,'th');
+ assert.equal(zh.language,'zh');
+ assert.equal(zh.name,'9★ 超能力者安妮亞');
+ assert.equal(zh.sourceUrl,'https://rangers.lerico.net/zh/ranger/u1556e-af');
+ assert.equal(zh.skills[0].name,'太興奮了！');
+ assert.deepEqual(zh.skills[0].effects,['技能範圍增加30%（9秒）']);
+ assert.equal(th.language,'th');
+ assert.equal(th.name,'9★ เอสเปอร์ อาเนีย');
+ assert.equal(th.sourceUrl,'https://rangers.lerico.net/en/ranger/u1556e-af');
+ assert.equal(th.skills[0].name,'ตื่นเต้นมาก!');
+ assert.deepEqual(th.skills[0].effects,['เพิ่มระยะสกิล 30% (9 วินาที)']);
 });
 
 test('Ranger detail route isolates language catalogs and tolerates transient Handbook failures',()=>{
