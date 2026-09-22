@@ -414,7 +414,14 @@ test('community board supports Japanese, English, Chinese, and Thai with ten-ima
   assert.match(labelsSource, /owner:'Owner'/);
   assert.match(source, /function boardName\(board:Board,lang:Language\)/);
   assert.match(source, /boardName\(b,lang\)/);
-  assert.equal(characterConfig.characters.find(character=>character.id==='u1631e-sally').nameEn, 'Cancer Sally');
+  const sally=characterConfig.characters.find(character=>character.id==='u1631e-sally');
+  assert.equal(sally.nameEn, 'Cancer Sally');
+  assert.equal(sally.nameZh, '巨蟹座 莎莉');
+  assert.equal(sally.nameTh, 'แซลลี่ ราศีกรกฎ');
+  assert.match(source, /nameZh\?:string\|null/);
+  assert.match(source, /nameTh\?:string\|null/);
+  assert.match(source, /lang==='zh'/);
+  assert.match(source, /lang==='th'/);
   assert.match(source, /videoCount>maxVideosPerPost/);
   assert.match(source, /imageCount>maxImagesPerPost/);
   assert.match(source, /else void uploadImage\(fileToSend,description,request,uploadBoard,group\)/);
