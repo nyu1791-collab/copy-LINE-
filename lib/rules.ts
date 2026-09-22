@@ -1,6 +1,6 @@
 import * as communityCharacterRegistryModule from '@/config/community-characters.json';
 
-export const languages = ['ja','en'] as const;
+export const languages = ['ja','en','zh','th'] as const;
 export type Language = typeof languages[number];
 // The Owner's public display name is presentation-only. The Owner role still
 // comes exclusively from the server-verified subject and signed cookie.
