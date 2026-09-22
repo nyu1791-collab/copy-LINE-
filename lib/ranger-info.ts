@@ -3,7 +3,7 @@ const CATALOG_CODE_PATTERN=/^[A-Za-z0-9_-]{1,120}$/;
 const ICON_RESOURCE_PATTERN=/^[A-Za-z0-9._-]{1,180}$/;
 const HANDBOOK_ORIGIN='https://rangers.lerico.net';
 
-export type RangerInfoLanguage='ja'|'en';
+export type RangerInfoLanguage='ja'|'en'|'zh'|'th';
 export type RangerSkillInfo={
  name:string;
  description:string;
@@ -30,11 +30,12 @@ type SkillRow={
 };
 
 export function validRangerUnitCode(value:string){return UNIT_CODE_PATTERN.test(value);}
-export function validRangerInfoLanguage(value:string):value is RangerInfoLanguage{return value==='ja'||value==='en';}
+export function validRangerInfoLanguage(value:string):value is RangerInfoLanguage{return value==='ja'||value==='en'||value==='zh'||value==='th';}
 
+function rangerDetailLanguage(language:RangerInfoLanguage){return language==='th'?'en':language;}
 export function rangerDetailUrl(unitCode:string,language:RangerInfoLanguage='ja'){
  if(!validRangerUnitCode(unitCode))throw new Error('invalid_unit_code');
- return `${HANDBOOK_ORIGIN}/${language}/ranger/${encodeURIComponent(unitCode)}`;
+ return `${HANDBOOK_ORIGIN}/${rangerDetailLanguage(language)}/ranger/${encodeURIComponent(unitCode)}`;
 }
 
 function cleanText(value:unknown,max:number){
@@ -146,16 +147,19 @@ export function parseRangerInfoData(
   const nameCode=safeCatalogCode(skill.nameCode)||`${code}_nm`;
   const descriptionCode=safeCatalogCode(skill.descriptionCode)||`${code}_desc`;
   const ordinal=result.length+1;
-  const skillName=cleanText(skillTranslations[nameCode],120)||(language==='en'?`Skill ${ordinal}`:`スキル${ordinal}`);
+  const fallbackSkillName=language==='en'?`Skill ${ordinal}`:language==='zh'?`技能 ${ordinal}`:language==='th'?`สกิล ${ordinal}`:`スキル${ordinal}`;
+  const skillName=cleanText(skillTranslations[nameCode],120)||fallbackSkillName;
   const translatedDescription=cleanText(skillTranslations[descriptionCode],1200);
+  const missingDescription=language==='en'
+   ? 'No skill description is available from the source.'
+   : language==='zh'
+    ? '資料來源目前沒有提供技能說明。'
+    : language==='th'
+     ? 'แหล่งข้อมูลยังไม่มีคำอธิบายสกิล'
+     : '取得元に説明情報が登録されていません。';
   const parts=translatedDescription
    ? splitSkillDescription(translatedDescription)
-   : {
-      description:language==='en'
-       ? 'No skill description is available from the source.'
-       : '取得元に説明情報が登録されていません。',
-      effects:[] as string[],
-     };
+   : {description:missingDescription,effects:[] as string[]};
   result.push({
    name:skillName,
    description:parts.description,
