@@ -72,6 +72,8 @@ export type CharacterTopic={
  id:string;
  name:string;
  nameEn?:string;
+ nameZh?:string;
+ nameTh?:string;
  image:string;
  releaseMonth:string;
  confirmed:boolean;
@@ -87,6 +89,8 @@ function isSafeTopic(value:unknown):value is CharacterTopic{
  if(typeof topic.id!=='string'||!/^u\d+[a-z]?-[a-z0-9_-]+$/i.test(topic.id))return false;
  if(typeof topic.name!=='string'||!topic.name.trim()||[...topic.name].length>80)return false;
  if(topic.nameEn!==undefined&& (typeof topic.nameEn!=='string'||!topic.nameEn.trim()||[...topic.nameEn].length>80))return false;
+ if(topic.nameZh!==undefined&& (typeof topic.nameZh!=='string'||!topic.nameZh.trim()||[...topic.nameZh].length>80))return false;
+ if(topic.nameTh!==undefined&& (typeof topic.nameTh!=='string'||!topic.nameTh.trim()||[...topic.nameTh].length>80))return false;
  if(!validMonth(topic.releaseMonth)||topic.confirmed!==true)return false;
  if(typeof topic.image!=='string')return false;
  try{const url=new URL(topic.image);if(url.protocol!=='https:'||url.hostname!=='rangers.lerico.net')return false;}catch{return false;}
@@ -102,6 +106,8 @@ const bootstrapConfirmedTopics:readonly CharacterTopic[]=Object.freeze([Object.f
  id:'u1631e-sally',
  name:'かに座 サリー',
  nameEn:'Cancer Sally',
+ nameZh:'巨蟹座 莎莉',
+ nameTh:'แซลลี่ ราศีกรกฎ',
  image:'https://rangers.lerico.net/res/u1631e-sally/u1631e-sally-thum.png',
  releaseMonth:'2026-09',
  confirmed:true,
