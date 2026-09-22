@@ -21,7 +21,7 @@ const CommunityModal=lazy(()=>import('./community-modal'));
 type LocalState='sending'|'failed';
 type MediaItem={id:string;video:string|null;mediaType:string|null;mediaName:string|null;mediaSize:number|null;mediaGroup:string|null;created:number};
 type Post={id:string;name:string;role:Role;body:string;parent?:string|null;video:string|null;mediaType:string|null;mediaName:string|null;mediaSize:number|null;mediaGroup?:string|null;mediaItems?:MediaItem[];created:number;likes:number;liked:number;replies:number;pinned:number;helpful:number;helped:boolean;title:string|null;badges?:string[];mine?:boolean;localState?:LocalState;localRequest?:string;localParent?:string|null;localCounted?:boolean;localParentCounted?:boolean};
-type Board={id:string;character:string;name:string;nameEn?:string|null;image:string};
+type Board={id:string;character:string;name:string;nameEn?:string|null;nameZh?:string|null;nameTh?:string|null;image:string};
 type Stats={videos:number;comments:number;todayComments:number;unread:number;latestCreated:number;latestId:string|null};
 type Data={me:{id:string;name:string;display_name_set:number;role:Role;badges?:string[]}|null;anonymous?:boolean;month:string;boards:Board[];board:string;posts:Post[];nextCursor:string|null;poll:{poll:string;choice:number;count:number}[];mine:{poll:string;choice:number}[];video:Post|null;mediaGroup:string|null;mediaItems:MediaItem[];stats:Stats;previousSeen:number;viewUntil:number;flags:CommunityFeatureFlags};
 type UploadJob={key:string;request:string;group?:string|null;board:string;name:string;type:string;size:number;body:string;created:number;progress:number;status:'preparing'|'uploading'|'finalizing'|'failed';file?:File;error?:string};
@@ -31,7 +31,7 @@ const displayNameStorageKey='line-rangers-display-name';
 // The confirmed u1631e-sally character image is served by the trusted character CDN; no private-repository fallback is used.
 function isGuestName(value:string|undefined|null){return !!value&&value.startsWith('ゲスト-');}
 function uiName(value:string|undefined|null,anonymousLabel='匿名ユーザー'){if(!value)return '';return isGuestName(value)?anonymousLabel:value;}
-function boardName(board:Board,lang:Language){return lang==='ja'?board.name:(board.nameEn?.trim()||board.name);}
+function boardName(board:Board,lang:Language){return lang==='ja'?board.name:lang==='zh'?(board.nameZh?.trim()||board.nameEn?.trim()||board.name):lang==='th'?(board.nameTh?.trim()||board.nameEn?.trim()||board.name):(board.nameEn?.trim()||board.name);}
 // The server writes the display-name cookie as HttpOnly after a successful
 // profile save. Keep localStorage only as a convenience for restoring the
 // draft/name dialog; browser JavaScript must not be able to impersonate an
