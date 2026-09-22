@@ -129,7 +129,7 @@ export async function GET(request:Request){try{
  // month, preserve the confirmed topic order (PvP rank/adoption-rate order).
  if(requested===current){
   const boardByCharacter=new Map(boards.map(b=>[String(b.character),b]));
-  boards=confirmedTopics.flatMap(c=>{const row=boardByCharacter.get(c.id);return row?[{...row,name:c.name,nameEn:c.nameEn||null,image:c.image}]:[];});
+  boards=confirmedTopics.flatMap(c=>{const row=boardByCharacter.get(c.id);return row?[{...row,name:c.name,nameEn:c.nameEn||null,nameZh:c.nameZh||null,nameTh:c.nameTh||null,image:c.image}]:[];});
  }
  const board=u.searchParams.get('board')||String(boards[0]?.id||'');let parent=u.searchParams.get('video');const requestedGroup=u.searchParams.get('group');if(parent&&requestedGroup)throw new Error('invalid_request');
  if(board&&!boards.some(b=>b.id===board))throw new Error('not_found');
