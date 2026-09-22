@@ -8,12 +8,15 @@ const cacheTtlMs=6*60*60*1000;
 const staleCacheTtlMs=7*24*60*60*1000;
 const upstreamTimeoutMs=5_000;
 const upstreamRetryDelaysMs=[0,350] as const;
+const upstreamCacheTtlSeconds=6*60*60;
+const durableCacheVersion='v1';
 const successCacheControl='public, max-age=21600, stale-if-error=86400';
 const staleCacheControl='public, max-age=300, stale-if-error=86400';
 
 type SharedCatalog={expires:number;staleUntil:number;basics:unknown;skills:unknown};
 type TranslationCatalog={expires:number;staleUntil:number;value:unknown};
 type ResponseCacheEntry={expires:number;staleUntil:number;value:RangerInfo};
+type DurableResponseCacheEntry={cachedAt:number;value:RangerInfo};
 
 const responseCache=new Map<string,ResponseCacheEntry>();
 let sharedCatalogCache:SharedCatalog|null=null;
@@ -51,6 +54,52 @@ function sleep(ms:number){
  return new Promise((resolve)=>setTimeout(resolve,ms));
 }
 
+function validDurableResponseCacheEntry(value:unknown,unit:string,language:RangerInfoLanguage):value is DurableResponseCacheEntry{
+ if(!value||typeof value!=='object')return false;
+ const entry=value as {cachedAt?:unknown;value?:unknown};
+ if(typeof entry.cachedAt!=='number'||!Number.isFinite(entry.cachedAt)||entry.cachedAt<=0)return false;
+ if(entry.cachedAt+staleCacheTtlMs<=Date.now())return false;
+ if(!entry.value||typeof entry.value!=='object')return false;
+ const info=entry.value as Partial<RangerInfo>;
+ return info.unitCode===unit
+  &&info.language===language
+  &&info.sourceUrl===rangerDetailUrl(unit,language)
+  &&typeof info.name==='string'
+  &&Array.isArray(info.skills);
+}
+
+function durableCacheRequest(request:Request,unit:string,language:RangerInfoLanguage){
+ const cacheUrl=new URL(request.url);
+ cacheUrl.pathname=`/__cache/ranger-info/${durableCacheVersion}/${language}/${unit}`;
+ cacheUrl.search='';
+ cacheUrl.hash='';
+ return new Request(cacheUrl.toString(),{method:'GET'});
+}
+
+async function readDurableResponseCache(request:Request,unit:string,language:RangerInfoLanguage){
+ try{
+  const cached=await caches.default.match(durableCacheRequest(request,unit,language));
+  if(!cached||!cached.ok)return null;
+  const payload=await cached.json() as unknown;
+  return validDurableResponseCacheEntry(payload,unit,language)?payload:null;
+ }catch(error){
+  console.warn('ranger_info_edge_cache_read_failed',error instanceof Error?error.message:'unknown');
+  return null;
+ }
+}
+
+async function writeDurableResponseCache(request:Request,unit:string,language:RangerInfoLanguage,value:RangerInfo,cachedAt:number){
+ try{
+  const response=Response.json(
+   {cachedAt,value} satisfies DurableResponseCacheEntry,
+   {headers:{'Cache-Control':`public, max-age=${Math.floor(staleCacheTtlMs/1000)}`,'Content-Type':'application/json; charset=utf-8'}},
+  );
+  await caches.default.put(durableCacheRequest(request,unit,language),response);
+ }catch(error){
+  console.warn('ranger_info_edge_cache_write_failed',error instanceof Error?error.message:'unknown');
+ }
+}
+
 async function fetchJsonOnce(path:string,maxBytes:number){
  const url=new URL(path,handbookOrigin);
  if(url.protocol!=='https:'||url.hostname!=='rangers.lerico.net')throw new UpstreamError('invalid_source',false);
@@ -61,6 +110,14 @@ async function fetchJsonOnce(path:string,maxBytes:number){
    headers:{Accept:'application/json','User-Agent':'line-rangers-pvp-character-detail/1.1'},
    redirect:'follow',
    signal:AbortSignal.timeout(upstreamTimeoutMs),
+   cf:{
+    cacheEverything:true,
+    cacheTtlByStatus:{
+     '200-299':upstreamCacheTtlSeconds,
+     '400-499':0,
+     '500-599':0,
+    },
+   },
   });
  }catch{
   throw new UpstreamError('upstream_network',true);
@@ -186,8 +243,20 @@ export async function GET(request:Request){
  if(!validRangerUnitCode(unit)||!validRangerInfoLanguage(language))return json({error:'invalid_request'},400,origin,'no-store');
 
  const cacheKey=`${language}:${unit}`;
- const existing=responseCache.get(cacheKey);
+ let existing=responseCache.get(cacheKey);
  if(existing&&existing.expires>Date.now())return json(existing.value,200,origin);
+
+ const durable=await readDurableResponseCache(request,unit,language);
+ if(durable){
+  const durableEntry:ResponseCacheEntry={
+   expires:durable.cachedAt+cacheTtlMs,
+   staleUntil:durable.cachedAt+staleCacheTtlMs,
+   value:durable.value,
+  };
+  responseCache.set(cacheKey,durableEntry);
+  existing=durableEntry;
+  if(durableEntry.expires>Date.now())return json(durableEntry.value,200,origin);
+ }
 
  try{
   const catalog=await catalogs(language);
@@ -200,6 +269,7 @@ export async function GET(request:Request){
    staleUntil:refreshedAt+staleCacheTtlMs,
    value:info,
   });
+  await writeDurableResponseCache(request,unit,language,info,refreshedAt);
   return json(info,200,origin);
  }catch(error){
   if(existing&&existing.staleUntil>Date.now()){

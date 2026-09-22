@@ -673,7 +673,18 @@ test('Ranger detail route isolates language catalogs and tolerates transient Han
  assert.ok(rangerRouteSource.includes('translationPath(language:RangerInfoLanguage)'));
  assert.ok(rangerRouteSource.includes('encodeURIComponent'));
  assert.ok(rangerRouteSource.includes('const upstreamRetryDelaysMs=[0,350] as const'));
+ assert.ok(rangerRouteSource.includes('const upstreamCacheTtlSeconds=6*60*60'));
+ assert.ok(rangerRouteSource.includes('cacheEverything:true'));
+ assert.ok(rangerRouteSource.includes('cacheTtlByStatus'));
+ assert.ok(rangerRouteSource.includes("'200-299':upstreamCacheTtlSeconds"));
+ assert.ok(rangerRouteSource.includes("'400-499':0"));
+ assert.ok(rangerRouteSource.includes("'500-599':0"));
  assert.ok(rangerRouteSource.includes('const staleCacheTtlMs=7*24*60*60*1000'));
+ assert.ok(rangerRouteSource.includes("const durableCacheVersion='v1'"));
+ assert.ok(rangerRouteSource.includes('caches.default.match'));
+ assert.ok(rangerRouteSource.includes('caches.default.put'));
+ assert.ok(rangerRouteSource.includes('readDurableResponseCache(request,unit,language)'));
+ assert.ok(rangerRouteSource.includes('await writeDurableResponseCache(request,unit,language,info,refreshedAt)'));
  assert.ok(rangerRouteSource.includes('sharedRefreshPromise'));
  assert.ok(rangerRouteSource.includes('translationRefreshPromises'));
  assert.ok(rangerRouteSource.includes('ranger_catalog_stale_fallback'));
