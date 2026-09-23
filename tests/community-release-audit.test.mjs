@@ -47,3 +47,9 @@ test('a sixth verified character is reported and retained',()=>{
  assert.equal(report.communityErrors.length,0);
  assert.ok(report.warnings.some(message=>message.includes('More than five')));
 });
+
+test('archived automatic boards keep their skill and image verification',()=>{
+ const archived={...topic('u2000e-archive',null),releaseMonth:'2026-09',skillsVerified:false};
+ const report=auditCommunityRelease(snapshot(),{characters:[archived]},state);
+ assert.ok(report.communityErrors.some(message=>message.includes('skill')));
+});

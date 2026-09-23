@@ -36,15 +36,17 @@ export function auditCommunityRelease(snapshot,registry,state){
   const id=topic?.id,topicMonth=topic?.releaseMonth,key=topicMonth+':'+id;
   if(typeof id!=='string'||!NEW_ID.test(id)||!/^(20\d\d)-(0[1-9]|1[0-2])$/.test(String(topicMonth))||seen.has(key)){communityErrors.push('duplicate or invalid community topic');continue;}
   seen.add(key);
+  if(topic?.source==='pvp-auto'){
+   if(topic.skillsVerified!==true||!Number.isSafeInteger(topic.skillCount)||topic.skillCount<1||topic.skillCount>3||!Number.isFinite(Date.parse(topic.skillsVerifiedAt))||!Number.isSafeInteger(topic.observationCount)||topic.observationCount<3)communityErrors.push('unverified skill or observation for '+id);
+   else if(topicMonth===month)skillVerified++;
+   if(topic.image!==IMAGE_ROOT+id+'/'+id+'-thum.png')communityErrors.push('unexpected character image for '+id);
+   if(!topic.name||!topic.nameEn||!topic.nameZh)communityErrors.push('missing localized names for '+id);
+  }
   if(topicMonth!==month)continue;
   current++;
   const row=ranked.get(id);
   if(row)rankedTopics++;
   if(topic?.source==='pvp-auto'){
-   if(topic.skillsVerified!==true||!Number.isSafeInteger(topic.skillCount)||topic.skillCount<1||topic.skillCount>3||!Number.isFinite(Date.parse(topic.skillsVerifiedAt))||!Number.isSafeInteger(topic.observationCount)||topic.observationCount<3)communityErrors.push('unverified skill or observation for '+id);
-   else skillVerified++;
-   if(topic.image!==IMAGE_ROOT+id+'/'+id+'-thum.png')communityErrors.push('unexpected character image for '+id);
-   if(!topic.name||!topic.nameEn||!topic.nameZh)communityErrors.push('missing localized names for '+id);
    if(row&&topic.pvpRank!==row.rank)warnings.push('topic PvP rank has not refreshed for '+id);
   }
  }
