@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {readFileSync} from 'node:fs';
-import {updateCommunityCharacters} from '../scripts/update-community-characters.mjs';
+import {readFileSync,mkdtempSync,writeFileSync,rmSync} from 'node:fs';
+import {tmpdir} from 'node:os';
+import {join} from 'node:path';
+import {readJson,updateCommunityCharacters} from '../scripts/update-community-characters.mjs';
 
 function snapshot(updatedAt,rows,{complete=true,sampled=200}={}){
  return {
@@ -156,3 +158,9 @@ test('board API backfills later confirmed topics and preserves PvP topic order',
  assert.match(source,/boards=confirmedTopics\.flatMap\(/);
  assert.doesNotMatch(source,/requested===current&&!boards\.length&&confirmedTopics\.length/);
 });
+
+test('corrupt discovery JSON is not silently treated as an empty state, while a missing first-run file can use defaults',async()=>{const dir=mkdtempSync(join(tmpdir(),'community-discovery-'));const path=join(dir,'state.json');try{assert.deepEqual(await readJson(path,{initialized:false}),{initialized:false});writeFileSync(path,'{broken','utf8');await assert.rejects(()=>readJson(path,{initialized:false}),SyntaxError);}finally{rmSync(dir,{recursive:true,force:true});}});
+
+test('invalid or duplicate registry topics stop discovery instead of being silently removed',async()=>{const common={snapshot:snapshot('2026-10-01T00:00:00+09:00',rows),history:{snapshots:[]},state:initialState(),legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor};await assert.rejects(()=>updateCommunityCharacters({...common,registry:{schemaVersion:1,characters:[{id:'u2000e-alpha',name:'',image:'https://rangers.lerico.net/res/u2000e-alpha/u2000e-alpha-thum.png',releaseMonth:'2026-10',confirmed:true}]}}),/invalid community topic in registry/);await assert.rejects(()=>updateCommunityCharacters({...common,registry:{schemaVersion:1,characters:[{id:'u2000e-alpha',name:'A',image:'https://rangers.lerico.net/res/u2000e-alpha/u2000e-alpha-thum.png',releaseMonth:'2026-10',confirmed:true},{id:'u2000e-alpha',name:'B',image:'https://rangers.lerico.net/res/u2000e-alpha/u2000e-alpha-thum.png',releaseMonth:'2026-10',confirmed:true}]}}),/duplicate community topic in registry/);});
+
+test('duplicate or malformed IDs in a complete snapshot do not create discovery candidates',async()=>{await assert.rejects(()=>updateCommunityCharacters({snapshot:snapshot('2026-10-01T00:00:00+09:00',[rows[0],rows[0]]),history:{snapshots:[]},registry:{schemaVersion:1,characters:[]},state:initialState(),legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor}),/duplicate character ID/);});
