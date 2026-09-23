@@ -43,6 +43,27 @@ export function verifiedMetadataFromCatalogs(id,basics,catalogs,verifiedAt=new D
  const grade=Number(ranger.grade);
  return {id,name,nameEn,nameZh,nameTh,unitNameCode,stage:'e',grade:Number.isSafeInteger(grade)&&grade>0&&grade<=20?grade:null,transcendent:Number(ranger.isTranscendentUnit)===1,hyper:Number(ranger.isHyperUnit)===1,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt};
 }
+async function boundedResponseText(response,maxBytes){
+ const reader=response.body?.getReader();
+ if(!reader){
+  const text=await response.text();
+  if(new TextEncoder().encode(text).byteLength>maxBytes)throw new Error('metadata_too_large');
+  return text;
+ }
+ const chunks=[];let size=0;
+ try{
+  while(true){
+   const {done,value}=await reader.read();
+   if(done)break;
+   size+=value.byteLength;
+   if(size>maxBytes){await reader.cancel();throw new Error('metadata_too_large');}
+   chunks.push(value);
+  }
+ }catch(error){try{await reader.cancel()}catch{}throw error;}
+ const bytes=new Uint8Array(size);let offset=0;
+ for(const chunk of chunks){bytes.set(chunk,offset);offset+=chunk.byteLength;}
+ return new TextDecoder('utf-8',{fatal:true}).decode(bytes);
+}
 async function fetchJson(path,fetchImpl,maxBytes=MAX_CATALOG_BYTES){
  const url=new URL(path,ORIGIN);
  if(url.protocol!=='https:'||url.origin!==ORIGIN)throw new Error('untrusted_metadata_url');
@@ -54,9 +75,7 @@ async function fetchJson(path,fetchImpl,maxBytes=MAX_CATALOG_BYTES){
    if(!(response.headers.get('content-type')||'').toLowerCase().includes('json'))throw new Error('metadata_content_type');
    const declared=Number(response.headers.get('content-length')||0);
    if(Number.isFinite(declared)&&declared>maxBytes)throw new Error('metadata_too_large');
-   const text=await response.text();
-   if(new TextEncoder().encode(text).byteLength>maxBytes)throw new Error('metadata_too_large');
-   return JSON.parse(text);
+   return JSON.parse(await boundedResponseText(response,maxBytes));
   }catch(error){lastError=error;if(attempt===0)await new Promise(resolve=>setTimeout(resolve,250));}
  }
  throw lastError instanceof Error?lastError:new Error('metadata_unavailable');
