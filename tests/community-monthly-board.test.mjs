@@ -12,10 +12,10 @@ test('an explicitly selected archive remains selected across month rollover',()=
  assert.equal(activeMonthAfterJstRollover('2026-08','2026-09','2026-10'),'2026-08');
 });
 
-test('archive choices include current month, reject future or malformed values, and stay bounded',()=>{
+test('archive choices include all retained months, reject future or malformed values, and stay bounded',()=>{
  assert.deepEqual(availableJstMonths('2026-10',['2026-09','2026-08','2027-01','2026-13','bad']),['2026-10','2026-09','2026-08']);
  const months=Array.from({length:40},(_,index)=>'202'+Math.floor(index/12)+'-'+String(index%12+1).padStart(2,'0'));
- assert.equal(availableJstMonths('2026-12',months).length,24);
+ assert.equal(availableJstMonths('2026-12',months).length,41);
 });
 
 test('board UI exposes month archives and resynchronizes after a hidden tab returns',()=>{
@@ -24,6 +24,8 @@ test('board UI exposes month archives and resynchronizes after a hidden tab retu
  assert.match(ui,/pageshow/);
  assert.match(ui,/visibilitychange/);
  assert.match(ui,/activeMonthAfterJstRollover/);
+ assert.match(ui,/availableJstMonths/);
+ assert.match(ui,/aria-label=\{t\.archive\}/);
 });
 
 test('board API lists retained months and keeps archived boards read-only',()=>{
