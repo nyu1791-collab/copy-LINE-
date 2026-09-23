@@ -24,7 +24,7 @@ test('public activity feed returns only teaser data while preserving likes-first
 
 
 test('monthly public topics include every available localized character name',()=>{
- assert.match(route,/nameEn:character\\.nameEn\\?\\?null/);
- assert.match(route,/nameZh:character\\.nameZh\\?\\?null/);
- assert.match(route,/nameTh:character\\.nameTh\\?\\?null/);
+ assert.ok(route.includes("nameEn:character.nameEn??null"));
+ assert.ok(route.includes("nameZh:character.nameZh??null"));
+ assert.ok(route.includes("nameTh:character.nameTh??null"));
 });
