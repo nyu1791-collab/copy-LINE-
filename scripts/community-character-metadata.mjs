@@ -4,6 +4,7 @@ const SAFE_ID=/^u\d+e-[a-z0-9_-]+$/i;
 const SAFE_CODE=/^[A-Za-z0-9_-]{1,120}$/;
 const MAX_CATALOG_BYTES=6*1024*1024;
 const MAX_IMAGE_BYTES=32;
+const NOTICE_ORIGIN='https://notice2.line.me';
 
 function cleanName(value){
  if(typeof value!=='string')return '';
@@ -64,6 +65,83 @@ export function verifiedMetadataFromCatalogs(id,basics,catalogs,verifiedAt=new D
  const grade=Number(ranger.grade);
  const skillDetails=officialSkillDetails(ranger,skills,catalogs);
  return {id,name,nameEn,nameZh,nameTh,unitNameCode,stage:'e',grade:Number.isSafeInteger(grade)&&grade>0&&grade<=20?grade:null,transcendent:Number(ranger.isTranscendentUnit)===1,hyper:Number(ranger.isHyperUnit)===1,skillsVerified:!!skillDetails,skillCount:skillDetails?.skillCount||0,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt};
+}
+function releaseMonthJst(timestamp){
+ const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit'}).formatToParts(new Date(timestamp));
+ const values=Object.fromEntries(parts.filter(part=>part.type!=='literal').map(part=>[part.type,part.value]));
+ return values.year+'-'+values.month;
+}
+function noticeText(html){
+ return String(html||'').replace(/<(script|style)[^>]*>[\s\S]*?<\/\1\s*>/gi,' ')
+  .replace(/<\s*\/?(?:div|p|br|li|h[1-6]|section|article)[^>]*>/gi,'\n')
+  .replace(/<[^>]*>/g,' ')
+  .replace(/&nbsp;|&#160;/gi,' ').replace(/&amp;/gi,'&').replace(/&lt;/gi,'<').replace(/&gt;/gi,'>').replace(/&quot;/gi,'"').replace(/&#39;|&apos;/gi,"'")
+  .replace(/&#(\d+);/g,(_,code)=>String.fromCodePoint(Number(code)))
+  .replace(/&#x([\da-f]+);/gi,(_,code)=>String.fromCodePoint(parseInt(code,16)))
+  .split('\n').map(line=>line.replace(/\s+/g,' ').trim()).filter(Boolean);
+}
+function releaseRoster(body){
+ const lines=noticeText(body);const heading=lines.findIndex(line=>/\bnew rangers? are here!?(?=\W|$)/i.test(line));
+ if(heading<0)return [];
+ const roster=[];
+ for(const line of lines.slice(heading+1)){
+  if(/^notes?\b/i.test(line))break;
+  const match=line.match(/^([1-9]\d?)\s*[- ]?Star\s+(.+)$/i);
+  if(!match||/\bultimate\s+evolved\b/i.test(match[2]))continue;
+  roster.push({grade:Number(match[1]),nameEn:match[2].normalize('NFC').replace(/\s+/g,' ').trim()});
+ }
+ return [...new Map(roster.map(row=>[row.grade+'\0'+row.nameEn.toLocaleLowerCase('en'),row])).values()];
+}
+function noticeReleaseMonth(value){
+ const timestamp=typeof value==='number'?value:Date.parse(value);
+ if(!Number.isFinite(timestamp)||timestamp<1_000_000_000_000) return null;
+ return releaseMonthJst(timestamp);
+}
+async function fetchNoticeJson(url,fetchImpl){
+ const response=await fetchImpl(url,{headers:{Accept:'application/json','User-Agent':'line-rangers-community-discovery/1.0'},redirect:'error',signal:AbortSignal.timeout(8000)});
+ if(!response.ok)throw new Error('release_notice_http_'+response.status);
+ if(!(response.headers.get('content-type')||'').toLowerCase().includes('json'))throw new Error('release_notice_content_type');
+ const declared=Number(response.headers.get('content-length')||0);
+ if(Number.isFinite(declared)&&declared>1_500_000)throw new Error('release_notice_too_large');
+ const result=JSON.parse(await boundedResponseText(response,1_500_000));
+ if(!result||typeof result!=='object'||!result.result||typeof result.result!=='object')throw new Error('release_notice_invalid_response');
+ return result.result;
+}
+export async function scanOfficialRangerReleaseNotices(catalogEntries,{fetchImpl=fetch,now=Date.now(),maxPages=8}={}){
+ if(!Array.isArray(catalogEntries)||!Number.isFinite(now)||!Number.isSafeInteger(maxPages)||maxPages<1||maxPages>12)throw new Error('invalid_release_notice_scan');
+ const currentMonth=releaseMonthJst(now),cutoff=Date.parse(currentMonth+'-01T00:00:00+09:00'),documents=[];let cursor='',lastCursor=null,finished=false,previousRegistered=Infinity;const seenIds=new Set();
+ for(let page=0;page<maxPages;page++){
+  const url=new URL('/v1/LGRGS/ios/document/notice',NOTICE_ORIGIN);url.searchParams.set('size','50');url.searchParams.set('lang','en');url.searchParams.set('fmt','html');if(cursor)url.searchParams.set('nextSeq',cursor);
+  const listed=await fetchNoticeJson(url.toString(),fetchImpl);if(!Array.isArray(listed.documents))throw new Error('release_notice_list_invalid');
+  for(const row of listed.documents){
+   const id=Number(row?.id),registered=row?.registered;
+   if(!Number.isSafeInteger(id)||id<1||typeof registered!=='number'||!Number.isFinite(registered)||typeof row.title!=='string')throw new Error('release_notice_list_item_invalid');
+   if(seenIds.has(id)||registered>previousRegistered)throw new Error('release_notice_list_order_changed');
+   seenIds.add(id);previousRegistered=registered;
+   if(registered>=cutoff&&registered<=now&&/\bnew rangers? are here!?(?=\W|$)/i.test(row.title))documents.push({id,registered,title:row.title});
+  }
+  if(listed.documents.some(row=>row.registered<cutoff)){finished=true;break;}
+  const next=typeof listed.nextSeq==='number'&&listed.nextSeq>0?String(listed.nextSeq):'';
+  if(!next||listed.documents.length===0){finished=true;break;}
+  if(next===cursor||next===lastCursor)throw new Error('release_notice_cursor_not_advancing');
+  lastCursor=cursor;cursor=next;
+ }
+ if(!finished)throw new Error('release_notice_scan_incomplete');
+ const byId=new Map();
+ for(const document of documents){
+  const url=new URL('/v1/LGRGS/ios/document/notice/'+document.id,NOTICE_ORIGIN);url.searchParams.set('lang','en');url.searchParams.set('fmt','html');
+  const detail=await fetchNoticeJson(url.toString(),fetchImpl);
+  if(Number(detail.id)!==document.id||typeof detail.body!=='string'||detail.body.length>500_000||Number(detail.registered)!==document.registered||String(detail.title||'').replace(/&amp;/gi,'&')!==document.title.replace(/&amp;/gi,'&'))throw new Error('release_notice_detail_invalid');
+  const lines=releaseRoster(detail.body);const month=noticeReleaseMonth(detail.registered??document.registered);if(!month)continue;
+  for(const ranger of lines){
+   const matches=catalogEntries.filter(entry=>entry&&Number(entry.grade)===ranger.grade&&typeof entry.nameEn==='string'&&entry.nameEn.normalize('NFC').replace(/\s+/g,' ').trim().toLocaleLowerCase('en')===ranger.nameEn.toLocaleLowerCase('en'));
+   const unique=[...new Map(matches.filter(entry=>typeof entry.id==='string'&&SAFE_ID.test(entry.id)).map(entry=>[entry.id,entry])).values()];
+   if(unique.length!==1)continue;
+   const [entry]=unique;const evidence={releaseMonth:month,noticeId:document.id,noticeTitle:document.title,noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice#'+document.id,publishedAt:new Date(detail.registered??document.registered).toISOString(),catalogId:entry.id,matchedName:ranger.nameEn,grade:ranger.grade,source:'notice2.line.me/LGRGS/ios/document/notice'};
+   const prior=byId.get(entry.id);if(!prior||Date.parse(evidence.publishedAt)<Date.parse(prior.publishedAt))byId.set(entry.id,evidence);
+  }
+ }
+ return Object.fromEntries(byId);
 }
 async function boundedResponseText(response,maxBytes){
  const reader=response.body?.getReader();
@@ -129,6 +207,16 @@ export function createOfficialCharacterVerifier(fetchImpl=fetch){
   const {basics}=await catalogs();
   if(!Array.isArray(basics))throw new Error('invalid_ranger_catalog');
   return [...new Set(basics.map(row=>row?.unitCode).filter(id=>typeof id==='string'&&SAFE_ID.test(id)))].sort();
+ };
+ verify.findOfficialReleaseEvidence=async()=>{
+  const source=await catalogs();const entries=[];
+  for(const ranger of source.basics){
+   if(!ranger||typeof ranger!=='object'||typeof ranger.unitCode!=='string')continue;
+   const unitNameCode=typeof ranger.unitNameCode==='string'&&SAFE_CODE.test(ranger.unitNameCode)?ranger.unitNameCode:ranger.unitCode+'_nm';
+   const nameEn=officialName(source.translations,'en',unitNameCode,ranger.unitCode);const grade=Number(ranger.grade);
+   if(nameEn&&Number.isSafeInteger(grade))entries.push({id:ranger.unitCode,nameEn,grade});
+  }
+  return scanOfficialRangerReleaseNotices(entries,{fetchImpl});
  };
  return verify;
 }
