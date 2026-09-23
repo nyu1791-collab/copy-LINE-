@@ -53,6 +53,7 @@ export function auditCommunityRelease(snapshot,registry,state){
  if(current>5)warnings.push('More than five confirmed topics in '+month+'; keep every verified character and review the release feed');
  if(day>=10&&current<3)warnings.push('Fewer than three confirmed topics in '+month+'; inspect the catalog and discovery candidates');
  if(state?.catalogStatus==='unavailable')warnings.push('Official Ranger catalog was temporarily unavailable; retry discovery on the next full sample');
+ if(state?.catalogInitialized===true&&typeof state.initializedAt==='string'&&Number.isFinite(Date.parse(state.initializedAt))){const baseline=monthParts(state.initializedAt);if(baseline.month===month&&baseline.day>1)warnings.push('Official catalog discovery baseline began on '+month+'-'+String(baseline.day).padStart(2,'0')+'; characters added earlier this month cannot be distinguished from older catalog entries without a prior catalog snapshot');}
  if(state?.catalogInitialized!==true)warnings.push('Official catalog baseline has not been established');
  const pending=Object.values(state?.candidates&&typeof state.candidates==='object'?state.candidates:{}).filter(candidate=>candidate&&typeof candidate==='object'&&candidate.firstSeenMonth===month);
  for(const candidate of pending){
