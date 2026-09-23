@@ -28,6 +28,16 @@ test('board UI exposes month archives and resynchronizes after a hidden tab retu
  assert.match(ui,/aria-label=\{t\.archive\}/);
 });
 
+
+test('automatic board topics require official metadata, a verified observation streak, and the canonical image',()=>{
+ const rules=readFileSync(new URL('../lib/rules.ts',import.meta.url),'utf8');
+ assert.match(rules,/topic\.source==='pvp-auto'/);
+ assert.match(rules,/topic\.metadataSource!=='rangers\.lerico\.net\/api\/getRangersBasics'/);
+ assert.match(rules,/Number\(topic\.observationCount\)<3/);
+ assert.match(rules,/expectedImage='https:\/\/rangers\.lerico\.net\/res\/'\+topic\.id/);
+ assert.match(rules,/return rateB-rateA\|\|ar-br/);
+});
+
 test('board API lists retained months and keeps archived boards read-only',()=>{
  const api=readFileSync(new URL('../app/api/board/route.ts',import.meta.url),'utf8');
  assert.match(api,/SELECT DISTINCT month FROM boards WHERE month<=\?/);
