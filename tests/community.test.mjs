@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 22118)
+Total output lines: 867
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
@@ -318,75 +321,7 @@ test('badges are manageable by Owner and moderators while roles stay protected',
  const {call,sql,clearLimits}=setup();await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');await call({action:'profile',name:'Member'},'member','','member@example.invalid');await call({action:'profile',name:'Target'},'target','','target@example.invalid');
  const ownerState=(await call(null,'owner-subject','','owner@example.invalid')).data;const memberState=(await call(null,'member','','member@example.invalid')).data;const targetState=(await call(null,'target','','target@example.invalid')).data;
  assert.equal((await call({action:'badge',target:memberState.me.id,badge:'helpful_contributor',enabled:true},'member','','member@example.invalid')).status,403);
- assert.equal((await call({action:'badge',target:memberState.me.id,badge:'helpful_contributor',enabled:true},'owner-subject','','owner@example.invalid')).status,200);
- assert.equal((await call({action:'badge',target:ownerState.me.id,badge:'helpful_contributor',enabled:true},'owner-subject','','owner@example.invalid')).status,200);
- const ownerWithBadge=(await call(null,'owner-subject','','owner@example.invalid')).data;assert.deepEqual(ownerWithBadge.me.badges,['helpful_contributor']);
- const ownerPost=(await call({action:'post',board:ownerState.board,body:'Owner contribution',request:crypto.randomUUID()},'owner-subject','','owner@example.invalid')).data.id;
- assert.deepEqual((await call(null,'owner-subject','','owner@example.invalid')).data.posts.find(post=>post.id===ownerPost).badges,['helpful_contributor']);
- const textPost=(await call({action:'post',board:ownerState.board,body:'Useful information',request:crypto.randomUUID()},'member','','member@example.invalid')).data.id;
- const listed=(await call(null,'member','','member@example.invalid')).data.posts.find(p=>p.id===textPost);assert.deepEqual(listed.badges,['helpful_contributor']);
- const admin=(await call(null,'owner-subject','?admin=1','owner@example.invalid')).data;assert.deepEqual(admin.users.find(u=>u.id===memberState.me.id).badges,['helpful_contributor']);
- clearLimits();assert.equal((await call({action:'moderate',operation:'moderator',target:memberState.me.id},'owner-subject','','owner@example.invalid')).status,200);
- assert.equal((await call({action:'badge',target:targetState.me.id,badge:'video_contributor',enabled:true},'member','','member@example.invalid')).status,200);
- assert.equal((await call({action:'badge',target:ownerState.me.id,badge:'video_contributor',enabled:true},'member','','member@example.invalid')).status,403);
- const moderatorAdmin=(await call(null,'member','?admin=1','member@example.invalid')).data;assert.deepEqual(moderatorAdmin.users.find(u=>u.id===targetState.me.id).badges,['video_contributor']);
- assert.equal((await call({action:'badge',target:targetState.me.id,badge:'video_contributor',enabled:false},'member','','member@example.invalid')).status,200);
- clearLimits();const video=crypto.randomUUID();sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?, 'visible',0,?,?)").run(video,ownerState.board,memberState.me.id,'Uploaded video',`media/${video}`,'video/mp4','clip.mp4',100,Date.now(),crypto.randomUUID());
- clearLimits();assert.equal((await call({action:'moderate',operation:'delete',target:video},'member','','member@example.invalid')).status,200);assert.equal(sql.prepare("SELECT status FROM posts WHERE id=?").get(video).status,'deleted');
-});
-test('Owner permission list includes named loginless users but excludes anonymous sessions',async()=>{
- const {call}=setup();
- const owner=await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');assert.equal(owner.status,200);
- const named=await call({action:'profile',name:'名前ありユーザー'},'');assert.equal(named.status,200);
- const anonymous=await call(null,'');assert.equal(anonymous.status,200);assert.equal(anonymous.data.me,null);
- const admin=(await call(null,'owner-subject','?admin=1','owner@example.invalid')).data;
- assert.ok(admin.users.some(u=>u.name==='名前ありユーザー'));
- assert.ok(!admin.users.some(u=>/^ゲスト-/.test(u.name)));
-});
-test('legacy named profiles remain manageable without exposing generated guest labels',async()=>{
- const {call,sql}=setup();
- await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');
- const legacyNamed=crypto.randomUUID();const legacyGuest=crypto.randomUUID();
- sql.prepare('INSERT INTO users(id,subject,name,role,created) VALUES(?,?,?,?,?)').run(legacyNamed,'legacy-named','保存済みの名前','user',Date.now());
- sql.prepare('INSERT INTO users(id,subject,name,role,created) VALUES(?,?,?,?,?)').run(legacyGuest,'legacy-guest','ゲスト-ABCD','user',Date.now());
- const admin=(await call(null,'owner-subject','?admin=1','owner@example.invalid')).data;
- assert.ok(admin.users.some(u=>u.id===legacyNamed));assert.ok(!admin.users.some(u=>u.id===legacyGuest));
-});
-test('server enforces bounded burst limits',async()=>{
- const {call}=setup();for(let i=0;i<3;i++)assert.equal((await call({action:'profile',name:'A'})).status,200);assert.equal((await call({action:'profile',name:'A'})).status,429);
-});
-test('helpful reactions are unique, removable, separate from likes, and names stay private',async()=>{
- const {call}=setup();await call({action:'profile',name:'Reader'});const board=(await call()).data.board;
- const post=(await call({action:'post',board,body:'A useful review',request:crypto.randomUUID()})).data.id;
- for(let i=0;i<2;i++)assert.equal((await call({action:'helpful',post,selected:true})).status,200);
- const row=(await call(null,'test-a','?sort=helpful')).data.posts[0];assert.equal(row.helpful,1);assert.equal(row.helped,true);assert.equal(row.likes,0);assert.equal('author' in row,false);
- assert.equal((await call(null,'test-a','?helpers='+post)).status,404);
- assert.equal((await call({action:'helpful',post,selected:false})).status,200);assert.equal((await call()).data.posts[0].helpful,0);
-});
-test('root comments can receive one direct text reply',async()=>{
- const {call,clearLimits}=setup();await call({action:'profile',name:'Author'});const board=(await call()).data.board;const root=(await call({action:'post',board,body:'Top-level review',request:crypto.randomUUID()})).data.id;
- clearLimits();const reply=await call({action:'post',board,parent:root,body:'Direct reply',request:crypto.randomUUID()});assert.equal(reply.status,200);clearLimits();
- const nested=await call({action:'post',board,parent:reply.data.id,body:'Nested ordinary reply',request:crypto.randomUUID()});assert.equal(nested.data.error,'text_only');
- assert.deepEqual((await call(null,'test-a','?replies='+root)).data.posts.map(p=>p.body),['Direct reply']);
-});
-test('initial board page uses a stable cursor after twenty posts and keeps offset only for ranked sorts',async()=>{
- const {call,sql}=setup();await call({action:'profile',name:'Author'});const state=(await call()).data;const now=Date.now();
- for(let i=0;i<21;i++)sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(crypto.randomUUID(),state.board,state.me.id,'Post '+i,now+i,crypto.randomUUID());
- const first=(await call()).data;assert.equal(first.posts.length,20);assert.equal(first.stats.comments,21);assert.match(first.nextCursor,/^[01]:\d+:[a-f0-9-]{36}$/);
- const second=(await call(null,'test-a','?cursor='+encodeURIComponent(first.nextCursor))).data;assert.equal(second.posts.length,1);assert.equal(second.nextCursor,null);
- assert.equal((await call(null,'test-a','?cursor=2:1:'+crypto.randomUUID())).status,400);
- assert.equal((await call(null,'test-a','?sort=likes&offset=20')).data.posts.length,1);
-});
-test('new-post checks return only records after the caller cursor and preserve exact board activity',async()=>{
- const {call,sql}=setup();await call({action:'profile',name:'Author'});const initial=(await call()).data;const created=Date.now();
- sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(crypto.randomUUID(),initial.board,initial.me.id,'Fresh board comment',created,crypto.randomUUID());
- const newer=(await call(null,'test-a','?newerThan='+initial.stats.latestCreated)).data;
- assert.equal(newer.posts.length,1);assert.equal(newer.count,1);assert.equal(newer.posts[0].body,'Fresh board comment');assert.equal(newer.latestCreated,created);
-});
-test('new-post cursor keeps same-timestamp records addressable by id',async()=>{
- const {call,sql}=setup();await call({action:'profile',name:'Author'});const initial=(await call()).data;const created=Date.now();
- const firstId='00000000-0000-4000-8000-000000000001';sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(firstId,initial.board,initial.me.id,'Same-time first',created,crypto.randomUUID());
- const state=(await call()).data;const cursor=`${state.stats.latestCreated}.${state.stats.latestId}`;const secondId='00000000-0000-4000-8000-000000000002';sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(secondId,initial.board,initial.me.id,'Same-time second',created,crypto.randomUUID());
+ assert.equal((awai…2118 tokens truncated…prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(secondId,initial.board,initial.me.id,'Same-time second',created,crypto.randomUUID());
  const newer=(await call(null,'test-a','?after='+encodeURIComponent(cursor))).data;assert.equal(newer.posts.length,1);assert.equal(newer.posts[0].body,'Same-time second');
  const countOnly=(await call(null,'test-a','?after='+encodeURIComponent(cursor)+'&countOnly=1')).data;assert.equal(countOnly.count,1);assert.equal(countOnly.latestId,secondId);
 });
@@ -789,20 +724,18 @@ test('Ranger detail parser keeps partial cards when Handbook translations are mi
 });
 
 
-test('board skill cards render as a compact horizontal scroll strip at phone widths',()=>{
+test('board skills use readable source tables and switch to one-card horizontal swipe on phones',()=>{
  const boardSkillComponent=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
  assert.ok(boardSkillComponent.includes('className="board-skill-scroller"'));
  assert.ok(boardSkillComponent.includes('className="board-skill-list"'));
- assert.ok(boardSkillComponent.includes('横スクロールで他のスキルを見る'));
- assert.ok(communityCss.includes('.board-skill-scroller{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;'));
- assert.ok(communityCss.includes('.board-skill-list{display:flex;flex-flow:row nowrap;'));
- assert.ok(communityCss.includes('.board-skill{flex:0 0 clamp(190px,62vw,250px);'));
- assert.ok(communityCss.includes('scroll-snap-type:x proximity'));
+ assert.ok(boardSkillComponent.includes('横にスワイプして他のスキルを見る'));
+ assert.ok(communityCss.includes('.board-skill-list{display:grid;grid-template-columns:minmax(0,1fr);'));
+ assert.ok(communityCss.includes('.board-skill-scroller{overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory'));
+ assert.ok(communityCss.includes('.board-skill-list{grid-auto-flow:column;grid-auto-columns:100%;'));
+ assert.ok(communityCss.includes('.board-skill-source-table{width:100%;table-layout:fixed;border-collapse:collapse;'));
+ assert.ok(communityCss.includes('@media(max-width:360px)'));
+ assert.ok(!communityCss.includes('.board-skill-source-effects'));
  assert.ok(communityCss.includes('.board-skill p{white-space:pre-line;color:#d8e4ee;font-size:13px;line-height:1.55}'));
- assert.ok(!communityCss.includes('.board-skill-list{display:grid;'));
- const availableWidth=390-36-24-6;
- const cardWidth=Math.min(250,Math.max(190,390*.62));
- assert.ok(availableWidth-cardWidth-8>=24,'a meaningful part of the next card should peek out on a 390px screen');
 });
 
 test('Cancer Sally source facts appear beside her portrait and stay language-aware',()=>{
@@ -837,6 +770,7 @@ test('Cancer Sally source skill tables show area, factor, duration, chance and c
   ['攻撃力アップ','330点','+400%','7秒'],
   ['攻撃射程アップ','330点','+20%','7秒'],
  ]);
+ assert.equal(fireworks.effects[0].difference,'説明文 +300% ／ 表 +400%');
  const ambush=boardSkillSourceDetails('u1631e-sally',1,'ja');
  assert.equal(ambush.probability,'40%');
  assert.equal(ambush.cooldown,'15秒');
@@ -846,21 +780,23 @@ test('Cancer Sally source skill tables show area, factor, duration, chance and c
   ['390点','−90%','12秒'],
   ['390点','ATK × 4,000%','—'],
  ]);
+ assert.equal(ambush.effects[2].difference,'説明文 攻撃速度−90% ／ 表 移動速度−90%');
  assert.equal(boardSkillSourceDetails('u1631e-sally',2,'ja'),null);
  assert.equal(boardSkillSourceDetails('other-ranger',0,'ja'),null);
  for(const language of rules.languages){
   const localized=boardSkillSourceDetails('u1631e-sally',0,language);
   assert.equal(localized.effects.length,2);
   assert.equal(localized.probability,'30%');
-  assert.ok(localized.note.length>0);
+  assert.ok(localized.title.length>0);
+  assert.ok(localized.effects[0].difference.length>0);
  }
  const component=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
  assert.match(component,/className="board-skill-source-details"/);
  assert.match(component,/className="board-skill-source-summary"/);
- assert.match(component,/sourceDetails\.areaLabel/);
- assert.match(component,/sourceDetails\.factorLabel/);
- assert.match(component,/sourceDetails\.durationLabel/);
- assert.match(component,/sourceDetails\?\.descriptionEffectsLabel\|\|copy\.effects/);
- assert.ok(communityCss.includes('.board-skill-list{display:flex;flex-flow:row nowrap;'));
+ assert.match(component,/className="board-skill-source-table"/);
+ assert.match(component,/scope="col"/);
+ assert.match(component,/effect\.difference&&/);
+ assert.match(component,/!!skill\.effects\.length&&!sourceDetails/);
+ assert.match(component,/data-label=\{sourceDetails\.areaLabel\}/);
  assert.ok(communityCss.includes('overflow-x:auto;overscroll-behavior-x:contain'));
 });
