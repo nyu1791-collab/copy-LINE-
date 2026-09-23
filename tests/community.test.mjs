@@ -8,6 +8,7 @@ const root=new URL('../',import.meta.url);
 function compile(path,require){const source=readFileSync(new URL(path,root),'utf8');const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const exports={};new Function('exports','require',code)(exports,require);return exports;}
 const rules=compile('lib/rules.ts',()=>{});
 const rangerInfo=compile('lib/ranger-info.ts',()=>{});
+const boardCharacterSource=compile('lib/board-character-source-details.ts',()=>({}));
 const rangerRouteSource=readFileSync(new URL('app/api/ranger-info/route.ts',root),'utf8');
 const {mediaRange}=compile('lib/media-range.ts',()=>{});
 const communitySource=readFileSync(new URL('app/community.tsx',root),'utf8');
@@ -802,4 +803,64 @@ test('board skill cards render as a compact horizontal scroll strip at phone wid
  const availableWidth=390-36-24-6;
  const cardWidth=Math.min(250,Math.max(190,390*.62));
  assert.ok(availableWidth-cardWidth-8>=24,'a meaningful part of the next card should peek out on a 390px screen');
+});
+
+test('Cancer Sally source facts appear beside her portrait and stay language-aware',()=>{
+ const {boardCharacterSourceProfile}=boardCharacterSource;
+ const profile=boardCharacterSourceProfile('u1631e-sally','ja');
+ assert.deepEqual(profile.stats.map(({label,value})=>[label,value]),[
+  ['属性','光（Max: 2）'],
+  ['ミネラル','1710'],
+  ['タイプ','知能'],
+  ['攻撃距離','580点'],
+ ]);
+ assert.match(profile.sourceUrl,/^https:\/\/rangers\.lerico\.net\/ja\/ranger\/u1631e-sally$/);
+ assert.equal(boardCharacterSourceProfile('unverified-ranger','ja'),null);
+ for(const language of rules.languages){
+  const localized=boardCharacterSourceProfile('u1631e-sally',language);
+  assert.equal(localized.stats.length,4);
+  assert.equal(localized.stats[1].value,'1710');
+  assert.equal(localized.stats[3].value.endsWith(localized.stats[3].label==='攻撃距離'?'点':language==='zh'?'點':'pt'),true);
+  assert.match(localized.sourceUrl,/^https:\/\/rangers\.lerico\.net\//);
+ }
+ assert.match(communitySource,/className="character-profile"/);
+ assert.match(communitySource,/className="character-source-link"/);
+ assert.match(communitySource,/aria-pressed=\{selected\}/);
+});
+
+test('Cancer Sally source skill tables show area, factor, duration, chance and cooldown separately from prose',()=>{
+ const {boardSkillSourceDetails}=boardCharacterSource;
+ const fireworks=boardSkillSourceDetails('u1631e-sally',0,'ja');
+ assert.equal(fireworks.probability,'30%');
+ assert.equal(fireworks.cooldown,'9秒');
+ assert.deepEqual(fireworks.effects.map(({name,area,factor,duration})=>[name,area,factor,duration]),[
+  ['攻撃力アップ','330点','+400%','7秒'],
+  ['攻撃射程アップ','330点','+20%','7秒'],
+ ]);
+ const ambush=boardSkillSourceDetails('u1631e-sally',1,'ja');
+ assert.equal(ambush.probability,'40%');
+ assert.equal(ambush.cooldown,'15秒');
+ assert.deepEqual(ambush.effects.map(({area,factor,duration})=>[area,factor,duration]),[
+  ['390点','—','3秒'],
+  ['390点','—','12秒'],
+  ['390点','−90%','12秒'],
+  ['390点','ATK × 4,000%','—'],
+ ]);
+ assert.equal(boardSkillSourceDetails('u1631e-sally',2,'ja'),null);
+ assert.equal(boardSkillSourceDetails('other-ranger',0,'ja'),null);
+ for(const language of rules.languages){
+  const localized=boardSkillSourceDetails('u1631e-sally',0,language);
+  assert.equal(localized.effects.length,2);
+  assert.equal(localized.probability,'30%');
+  assert.ok(localized.note.length>0);
+ }
+ const component=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
+ assert.match(component,/className="board-skill-source-details"/);
+ assert.match(component,/className="board-skill-source-summary"/);
+ assert.match(component,/sourceDetails\.areaLabel/);
+ assert.match(component,/sourceDetails\.factorLabel/);
+ assert.match(component,/sourceDetails\.durationLabel/);
+ assert.match(component,/sourceDetails\?\.descriptionEffectsLabel\|\|copy\.effects/);
+ assert.ok(communityCss.includes('.board-skill-list{display:flex;flex-flow:row nowrap;'));
+ assert.ok(communityCss.includes('overflow-x:auto;overscroll-behavior-x:contain'));
 });
