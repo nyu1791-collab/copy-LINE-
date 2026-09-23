@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {probeCharacterImage,safeCharacterImageUrl,verifiedMetadataFromCatalogs} from '../scripts/community-character-metadata.mjs';
+import {probeCharacterImage,safeCharacterImageUrl,verifiedMetadataFromCatalogs,scanOfficialRangerReleaseNotices} from '../scripts/community-character-metadata.mjs';
 
 const id='u1631e-sally';
 const basics=[{unitCode:id,unitNameCode:'unit_sally',grade:8,isTranscendentUnit:1,isHyperUnit:0}];
@@ -64,4 +64,44 @@ test('image verification checks file signatures instead of trusting the MIME hea
  assert.equal(fakeImage,false);
  const wrongType=await probeCharacterImage('https://rangers.lerico.net/res/'+id+'/'+id+'-thum.png',async()=>new Response(png,{status:206,headers:{'content-type':'text/html'}}));
  assert.equal(wrongType,false);
+});
+
+test('only current-month first-party new Ranger notices map exact name and grade to catalog IDs',async()=>{
+ const registered=Date.parse('2026-10-01T00:00:00.000Z');
+ const docs=[
+  {id:11,registered:Date.parse('2026-10-17T00:00:00.000Z'),title:'Odds Up for 2 New Rangers!'},
+  {id:10,registered,title:'New Rangers are here! Until the maintenance on 10/31'},
+  {id:9,registered:Date.parse('2026-09-30T14:59:00.000Z'),title:'Older notice'},
+ ];
+ const body='<div>■ New Rangers are here!</div><div>8-Star Cancer Sally</div><div>8-Star Gemini Boss</div><div>8-Star Ultimate Evolved Blue Gemini Boss</div><div>Notes</div><div>8-Star Ignored Name</div>';
+ const fetchImpl=async url=>{
+  const parsed=new URL(url);
+  const payload=parsed.pathname.endsWith('/notice')?{nextSeq:0,documents:docs}:{id:10,registered,title:docs[1].title,body};
+  return new Response(JSON.stringify({result:payload}),{status:200,headers:{'content-type':'application/json'}});
+ };
+ const evidence=await scanOfficialRangerReleaseNotices([
+  {id:'u1630e-sally',grade:8,nameEn:'Cancer Sally'},
+  {id:'u1628e-boss',grade:8,nameEn:'Gemini Boss'},
+  {id:'u1631e-sally',grade:9,nameEn:'Sun Cancer Sally'},
+  {id:'u1629e-boss',grade:9,nameEn:'Crown Gemini Boss'},
+ ],{fetchImpl,now:Date.parse('2026-10-20T00:00:00.000Z')});
+ assert.deepEqual(Object.keys(evidence).sort(),['u1628e-boss','u1630e-sally']);
+ assert.equal(evidence['u1630e-sally'].releaseMonth,'2026-10');
+ assert.equal(evidence['u1630e-sally'].noticeId,10);
+ assert.equal(evidence['u1630e-sally'].matchedName,'Cancer Sally');
+});
+
+test('an incomplete current-month official notice scan returns no promotable evidence',async()=>{
+ const fetchImpl=async()=>new Response(JSON.stringify({result:{nextSeq:123,documents:[{id:10,registered:Date.parse('2026-10-01T00:00:00.000Z'),title:'New Rangers are here!'}]}}),{status:200,headers:{'content-type':'application/json'}});
+ await assert.rejects(()=>scanOfficialRangerReleaseNotices([],{fetchImpl,now:Date.parse('2026-10-20T00:00:00.000Z'),maxPages:1}),/scan_incomplete/);
+});
+
+test('ambiguous catalog matches do not generate official release evidence',async()=>{
+ const registered=Date.parse('2026-10-01T00:00:00.000Z');
+ const fetchImpl=async url=>{
+  const parsed=new URL(url);const payload=parsed.pathname.endsWith('/notice')?{nextSeq:0,documents:[{id:10,registered,title:'New Rangers are here!'},{id:9,registered:Date.parse('2026-09-30T14:59:00.000Z'),title:'Older notice'}]}:{id:10,registered,title:'New Rangers are here!',body:'<div>New Rangers are here!</div><div>8-Star Cancer Sally</div><div>Notes</div>'};
+  return new Response(JSON.stringify({result:payload}),{status:200,headers:{'content-type':'application/json'}});
+ };
+ const evidence=await scanOfficialRangerReleaseNotices([{id:'u1630e-sally',grade:8,nameEn:'Cancer Sally'},{id:'u1632e-sally',grade:8,nameEn:'Cancer Sally'}],{fetchImpl,now:Date.parse('2026-10-20T00:00:00.000Z')});
+ assert.deepEqual(evidence,{});
 });
