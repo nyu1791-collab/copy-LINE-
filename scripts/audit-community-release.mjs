@@ -57,7 +57,8 @@ export function auditCommunityRelease(snapshot,registry,state){
  if(state?.catalogInitialized!==true)warnings.push('Official catalog baseline has not been established');
  const pending=Object.values(state?.candidates&&typeof state.candidates==='object'?state.candidates:{}).filter(candidate=>candidate&&typeof candidate==='object'&&candidate.firstSeenMonth===month);
  for(const candidate of pending){
-  if(candidate.eligible!==true)warnings.push('New character is awaiting official metadata or image validation: '+candidate.id);
+  if(candidate.eligible!==true)warnings.push('New character is awaiting official metadata validation: '+candidate.id);
+  if(candidate.imageVerified!==true)warnings.push('New character is awaiting official image validation: '+candidate.id);
  }
  return {rankingErrors,communityErrors,warnings,month,rankedCharacters:ranked.size,currentTopics:current,rankedTopics,skillVerifiedTopics:skillVerified,pendingCandidates:pending.length};
 }
