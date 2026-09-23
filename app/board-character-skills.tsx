@@ -3,13 +3,12 @@
 import {useEffect,useState} from 'react';
 import type {Language} from '@/lib/rules';
 import type {RangerInfo} from '@/lib/ranger-info';
-import {boardSkillSourceDetails} from '@/lib/board-character-source-details';
 
 const wording={
- ja:{title:'スキル情報',description:'説明',effects:'効果',scrollHint:'横にスワイプして他のスキルを見る',loading:'スキル情報を読み込み中…',unavailable:'スキル情報を現在取得できません。意見欄は利用できます。',retry:'再取得',source:'取得元を見る',discussion:'このキャラ専用の意見・投票・動画です。'},
- en:{title:'Skills',description:'Description',effects:'Effects',scrollHint:'Swipe sideways for other skills',loading:'Loading skills…',unavailable:'Skills are temporarily unavailable. This character’s discussion is still available.',retry:'Retry',source:'View source',discussion:'Opinions, votes and videos here belong to this character only.'},
- zh:{title:'技能資訊',description:'說明',effects:'效果',scrollHint:'橫向滑動查看其他技能',loading:'正在載入技能…',unavailable:'暫時無法取得技能資訊。仍可查看此角色的討論。',retry:'重試',source:'查看來源',discussion:'此處的意見、投票與影片僅屬於這名角色。'},
- th:{title:'ข้อมูลสกิล',description:'คำอธิบาย',effects:'เอฟเฟกต์',scrollHint:'เลื่อนด้านข้างเพื่อดูสกิลอื่น',loading:'กำลังโหลดสกิล…',unavailable:'ยังโหลดข้อมูลสกิลไม่ได้ แต่กระดานของตัวละครนี้ยังใช้งานได้',retry:'ลองอีกครั้ง',source:'ดูแหล่งข้อมูล',discussion:'ความคิดเห็น โหวต และวิดีโอในหน้านี้เป็นของตัวละครนี้เท่านั้น'},
+ ja:{title:'スキル情報',description:'説明',scrollHint:'横にスワイプして他のスキルを見る',loading:'スキル情報を読み込み中…',unavailable:'スキル情報を現在取得できません。意見欄は利用できます。',retry:'再取得',source:'取得元を見る',discussion:'このキャラ専用の意見・投票・動画です。'},
+ en:{title:'Skills',description:'Description',scrollHint:'Swipe sideways for other skills',loading:'Loading skills…',unavailable:'Skills are temporarily unavailable. This character’s discussion is still available.',retry:'Retry',source:'View source',discussion:'Opinions, votes and videos here belong to this character only.'},
+ zh:{title:'技能資訊',description:'說明',scrollHint:'橫向滑動查看其他技能',loading:'正在載入技能…',unavailable:'暫時無法取得技能資訊。仍可查看此角色的討論。',retry:'重試',source:'查看來源',discussion:'此處的意見、投票與影片僅屬於這名角色。'},
+ th:{title:'ข้อมูลสกิล',description:'คำอธิบาย',scrollHint:'เลื่อนด้านข้างเพื่อดูสกิลอื่น',loading:'กำลังโหลดสกิล…',unavailable:'ยังโหลดข้อมูลสกิลไม่ได้ แต่กระดานของตัวละครนี้ยังใช้งานได้',retry:'ลองอีกครั้ง',source:'ดูแหล่งข้อมูล',discussion:'ความคิดเห็น โหวต และวิดีโอในหน้านี้เป็นของตัวละครนี้เท่านั้น'},
 } satisfies Record<Language,Record<string,string>>;
 
 export function boardDiscussionNote(language:Language){return wording[language].discussion;}
@@ -57,21 +56,11 @@ export default function BoardCharacterSkills({unitCode,language,displayName}:{un
    <>
    {info.skills.length>1&&<p className="board-skill-scroll-hint">{copy.scrollHint}</p>}
    <div className="board-skill-scroller" role="region" aria-label={displayName+' · '+copy.title} tabIndex={info.skills.length>1?0:undefined}>
-   <div className="board-skill-list">{info.skills.map((skill,index)=>{
+   <div className="board-skill-list">{info.skills.map(skill=>{
     const icon=skillIcon(skill.iconUrl);
-    const sourceDetails=boardSkillSourceDetails(unitCode,index,language);
-    return <article className="board-skill" key={index}>
+    return <article className="board-skill" key={skill.name}>
      <div className="board-skill-heading">{icon&&<img src={icon} alt="" width="48" height="48" loading="lazy" decoding="async" onError={event=>{event.currentTarget.hidden=true;}}/>}<h3>{skill.name}</h3></div>
-     {sourceDetails&&<section className="board-skill-source-details" aria-label={sourceDetails.title}>
-      <dl className="board-skill-source-summary"><div><dt>{sourceDetails.probabilityLabel}</dt><dd>{sourceDetails.probability}</dd></div><div><dt>{sourceDetails.cooldownLabel}</dt><dd>{sourceDetails.cooldown}</dd></div></dl>
-      <table className="board-skill-source-table">
-       <caption>{sourceDetails.title}</caption>
-       <thead><tr><th scope="col">{sourceDetails.effectLabel}</th><th scope="col">{sourceDetails.areaLabel}</th><th scope="col">{sourceDetails.factorLabel}</th><th scope="col">{sourceDetails.durationLabel}</th></tr></thead>
-       <tbody>{sourceDetails.effects.map((effect,effectIndex)=><tr key={effectIndex}><th scope="row">{effect.name}{effect.difference&&<small className="board-skill-difference">{effect.difference}</small>}</th><td data-label={sourceDetails.areaLabel}>{effect.area}</td><td data-label={sourceDetails.factorLabel}>{effect.factor}</td><td data-label={sourceDetails.durationLabel}>{effect.duration}</td></tr>)}</tbody>
-      </table>
-     </section>}
      <h4>{copy.description}</h4><p>{skill.description}</p>
-     {!!skill.effects.length&&!sourceDetails&&<div className="board-skill-effects"><h4>{copy.effects}</h4><ul>{skill.effects.map((effect,i)=><li key={i}>{effect}</li>)}</ul></div>}
     </article>;
    })}</div></div></>}
  </section>;
