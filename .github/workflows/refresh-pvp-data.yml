@@ -9,6 +9,7 @@ on:
       - 'scripts/collect-pvp.mjs'
       - 'scripts/patch-pvp-metadata.mjs'
       - 'scripts/update-community-characters.mjs'
+      - 'scripts/community-character-metadata.mjs'
       - '.github/workflows/refresh-pvp-data.yml'
 permissions:
   contents: write
