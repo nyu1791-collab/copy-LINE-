@@ -790,8 +790,8 @@ test('Ranger detail parser keeps partial cards when Handbook translations are mi
 
 
 test('board skills use compact two-column cards on desktop and one column on mobile',()=>{
- assert.match(boardSkillsSource,/className="board-skill-list"/);
- assert.match(communityCss,/@media\(min-width:760px\)\{\.board-skill-list\{grid-template-columns:repeat\(2,minmax\(0,1fr)\);align-items:start\}\}/);
- assert.match(communityCss,/\.board-skill-list\{display:grid;gap:12px\}/);
- assert.match(communityCss,/\.board-skill\{min-width:0/);
+ assert.ok(boardSkillsSource.includes('className="board-skill-list"'));
+ assert.ok(communityCss.includes('@media(min-width:760px){.board-skill-list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}'));
+ assert.ok(communityCss.includes('.board-skill-list{display:grid;gap:12px}'));
+ assert.ok(communityCss.includes('.board-skill{min-width:0'));
 });
