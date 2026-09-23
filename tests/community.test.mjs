@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 22118)
-Total output lines: 867
-
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
@@ -321,7 +318,75 @@ test('badges are manageable by Owner and moderators while roles stay protected',
  const {call,sql,clearLimits}=setup();await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');await call({action:'profile',name:'Member'},'member','','member@example.invalid');await call({action:'profile',name:'Target'},'target','','target@example.invalid');
  const ownerState=(await call(null,'owner-subject','','owner@example.invalid')).data;const memberState=(await call(null,'member','','member@example.invalid')).data;const targetState=(await call(null,'target','','target@example.invalid')).data;
  assert.equal((await call({action:'badge',target:memberState.me.id,badge:'helpful_contributor',enabled:true},'member','','member@example.invalid')).status,403);
- assert.equal((awai…2118 tokens truncated…prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(secondId,initial.board,initial.me.id,'Same-time second',created,crypto.randomUUID());
+ assert.equal((await call({action:'badge',target:memberState.me.id,badge:'helpful_contributor',enabled:true},'owner-subject','','owner@example.invalid')).status,200);
+ assert.equal((await call({action:'badge',target:ownerState.me.id,badge:'helpful_contributor',enabled:true},'owner-subject','','owner@example.invalid')).status,200);
+ const ownerWithBadge=(await call(null,'owner-subject','','owner@example.invalid')).data;assert.deepEqual(ownerWithBadge.me.badges,['helpful_contributor']);
+ const ownerPost=(await call({action:'post',board:ownerState.board,body:'Owner contribution',request:crypto.randomUUID()},'owner-subject','','owner@example.invalid')).data.id;
+ assert.deepEqual((await call(null,'owner-subject','','owner@example.invalid')).data.posts.find(post=>post.id===ownerPost).badges,['helpful_contributor']);
+ const textPost=(await call({action:'post',board:ownerState.board,body:'Useful information',request:crypto.randomUUID()},'member','','member@example.invalid')).data.id;
+ const listed=(await call(null,'member','','member@example.invalid')).data.posts.find(p=>p.id===textPost);assert.deepEqual(listed.badges,['helpful_contributor']);
+ const admin=(await call(null,'owner-subject','?admin=1','owner@example.invalid')).data;assert.deepEqual(admin.users.find(u=>u.id===memberState.me.id).badges,['helpful_contributor']);
+ clearLimits();assert.equal((await call({action:'moderate',operation:'moderator',target:memberState.me.id},'owner-subject','','owner@example.invalid')).status,200);
+ assert.equal((await call({action:'badge',target:targetState.me.id,badge:'video_contributor',enabled:true},'member','','member@example.invalid')).status,200);
+ assert.equal((await call({action:'badge',target:ownerState.me.id,badge:'video_contributor',enabled:true},'member','','member@example.invalid')).status,403);
+ const moderatorAdmin=(await call(null,'member','?admin=1','member@example.invalid')).data;assert.deepEqual(moderatorAdmin.users.find(u=>u.id===targetState.me.id).badges,['video_contributor']);
+ assert.equal((await call({action:'badge',target:targetState.me.id,badge:'video_contributor',enabled:false},'member','','member@example.invalid')).status,200);
+ clearLimits();const video=crypto.randomUUID();sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,media_key,media_type,media_name,media_size,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,?,?,?,?, 'visible',0,?,?)").run(video,ownerState.board,memberState.me.id,'Uploaded video',`media/${video}`,'video/mp4','clip.mp4',100,Date.now(),crypto.randomUUID());
+ clearLimits();assert.equal((await call({action:'moderate',operation:'delete',target:video},'member','','member@example.invalid')).status,200);assert.equal(sql.prepare("SELECT status FROM posts WHERE id=?").get(video).status,'deleted');
+});
+test('Owner permission list includes named loginless users but excludes anonymous sessions',async()=>{
+ const {call}=setup();
+ const owner=await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');assert.equal(owner.status,200);
+ const named=await call({action:'profile',name:'名前ありユーザー'},'');assert.equal(named.status,200);
+ const anonymous=await call(null,'');assert.equal(anonymous.status,200);assert.equal(anonymous.data.me,null);
+ const admin=(await call(null,'owner-subject','?admin=1','owner@example.invalid')).data;
+ assert.ok(admin.users.some(u=>u.name==='名前ありユーザー'));
+ assert.ok(!admin.users.some(u=>/^ゲスト-/.test(u.name)));
+});
+test('legacy named profiles remain manageable without exposing generated guest labels',async()=>{
+ const {call,sql}=setup();
+ await call({action:'profile',name:'Owner'},'owner-subject','','owner@example.invalid');
+ const legacyNamed=crypto.randomUUID();const legacyGuest=crypto.randomUUID();
+ sql.prepare('INSERT INTO users(id,subject,name,role,created) VALUES(?,?,?,?,?)').run(legacyNamed,'legacy-named','保存済みの名前','user',Date.now());
+ sql.prepare('INSERT INTO users(id,subject,name,role,created) VALUES(?,?,?,?,?)').run(legacyGuest,'legacy-guest','ゲスト-ABCD','user',Date.now());
+ const admin=(await call(null,'owner-subject','?admin=1','owner@example.invalid')).data;
+ assert.ok(admin.users.some(u=>u.id===legacyNamed));assert.ok(!admin.users.some(u=>u.id===legacyGuest));
+});
+test('server enforces bounded burst limits',async()=>{
+ const {call}=setup();for(let i=0;i<3;i++)assert.equal((await call({action:'profile',name:'A'})).status,200);assert.equal((await call({action:'profile',name:'A'})).status,429);
+});
+test('helpful reactions are unique, removable, separate from likes, and names stay private',async()=>{
+ const {call}=setup();await call({action:'profile',name:'Reader'});const board=(await call()).data.board;
+ const post=(await call({action:'post',board,body:'A useful review',request:crypto.randomUUID()})).data.id;
+ for(let i=0;i<2;i++)assert.equal((await call({action:'helpful',post,selected:true})).status,200);
+ const row=(await call(null,'test-a','?sort=helpful')).data.posts[0];assert.equal(row.helpful,1);assert.equal(row.helped,true);assert.equal(row.likes,0);assert.equal('author' in row,false);
+ assert.equal((await call(null,'test-a','?helpers='+post)).status,404);
+ assert.equal((await call({action:'helpful',post,selected:false})).status,200);assert.equal((await call()).data.posts[0].helpful,0);
+});
+test('root comments can receive one direct text reply',async()=>{
+ const {call,clearLimits}=setup();await call({action:'profile',name:'Author'});const board=(await call()).data.board;const root=(await call({action:'post',board,body:'Top-level review',request:crypto.randomUUID()})).data.id;
+ clearLimits();const reply=await call({action:'post',board,parent:root,body:'Direct reply',request:crypto.randomUUID()});assert.equal(reply.status,200);clearLimits();
+ const nested=await call({action:'post',board,parent:reply.data.id,body:'Nested ordinary reply',request:crypto.randomUUID()});assert.equal(nested.data.error,'text_only');
+ assert.deepEqual((await call(null,'test-a','?replies='+root)).data.posts.map(p=>p.body),['Direct reply']);
+});
+test('initial board page uses a stable cursor after twenty posts and keeps offset only for ranked sorts',async()=>{
+ const {call,sql}=setup();await call({action:'profile',name:'Author'});const state=(await call()).data;const now=Date.now();
+ for(let i=0;i<21;i++)sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(crypto.randomUUID(),state.board,state.me.id,'Post '+i,now+i,crypto.randomUUID());
+ const first=(await call()).data;assert.equal(first.posts.length,20);assert.equal(first.stats.comments,21);assert.match(first.nextCursor,/^[01]:\d+:[a-f0-9-]{36}$/);
+ const second=(await call(null,'test-a','?cursor='+encodeURIComponent(first.nextCursor))).data;assert.equal(second.posts.length,1);assert.equal(second.nextCursor,null);
+ assert.equal((await call(null,'test-a','?cursor=2:1:'+crypto.randomUUID())).status,400);
+ assert.equal((await call(null,'test-a','?sort=likes&offset=20')).data.posts.length,1);
+});
+test('new-post checks return only records after the caller cursor and preserve exact board activity',async()=>{
+ const {call,sql}=setup();await call({action:'profile',name:'Author'});const initial=(await call()).data;const created=Date.now();
+ sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(crypto.randomUUID(),initial.board,initial.me.id,'Fresh board comment',created,crypto.randomUUID());
+ const newer=(await call(null,'test-a','?newerThan='+initial.stats.latestCreated)).data;
+ assert.equal(newer.posts.length,1);assert.equal(newer.count,1);assert.equal(newer.posts[0].body,'Fresh board comment');assert.equal(newer.latestCreated,created);
+});
+test('new-post cursor keeps same-timestamp records addressable by id',async()=>{
+ const {call,sql}=setup();await call({action:'profile',name:'Author'});const initial=(await call()).data;const created=Date.now();
+ const firstId='00000000-0000-4000-8000-000000000001';sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(firstId,initial.board,initial.me.id,'Same-time first',created,crypto.randomUUID());
+ const state=(await call()).data;const cursor=`${state.stats.latestCreated}.${state.stats.latestId}`;const secondId='00000000-0000-4000-8000-000000000002';sql.prepare("INSERT INTO posts(id,board,author,parent,body,video,status,pinned,created,request) VALUES(?,?,?,NULL,?,NULL,'visible',0,?,?)").run(secondId,initial.board,initial.me.id,'Same-time second',created,crypto.randomUUID());
  const newer=(await call(null,'test-a','?after='+encodeURIComponent(cursor))).data;assert.equal(newer.posts.length,1);assert.equal(newer.posts[0].body,'Same-time second');
  const countOnly=(await call(null,'test-a','?after='+encodeURIComponent(cursor)+'&countOnly=1')).data;assert.equal(countOnly.count,1);assert.equal(countOnly.latestId,secondId);
 });
