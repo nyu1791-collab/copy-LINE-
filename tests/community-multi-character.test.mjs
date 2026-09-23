@@ -14,19 +14,25 @@ function snapshot(updatedAt,rows,{complete=true,sampled=200}={}){
 }
 
 const rows=[
- {unit_code:'u2000e-alpha',name:'新キャラ Alpha',image:'https://rangers.lerico.net/res/u2000e-alpha/u2000e-alpha-thum.png',rank:4,adoption_rate:24.5},
- {unit_code:'u2001e-beta',name:'新キャラ Beta',image:'https://rangers.lerico.net/res/u2001e-beta/u2001e-beta-thum.png',rank:11,adoption_rate:12.0},
+ {unit_code:'u2000e-alpha',name:'新キャラ Alpha',image:'https://rangers.lerico.net/res/u2000e-alpha/u2000e-alpha-thum.png',rank:4,adoption_rate:13.0},
+ {unit_code:'u2001e-beta',name:'新キャラ Beta',image:'https://rangers.lerico.net/res/u2001e-beta/u2001e-beta-thum.png',rank:11,adoption_rate:35.0},
  {unit_code:'u2002e-gamma',name:'新キャラ Gamma',image:'https://rangers.lerico.net/res/u2002e-gamma/u2002e-gamma-thum.png',rank:null,adoption_rate:null},
 ];
 const noLegacy={ids:[]};
 function initialState(){return {schemaVersion:1,initialized:true,initializedAt:'2026-09-30T14:00:00.000Z',lastSnapshotAt:'2026-09-30T14:00:00.000Z',knownIds:['u1000e-old'],candidates:{}};}
+function metadataFor(id){
+ const row=rows.find(item=>item.unit_code===id);
+ if(!row)return null;
+ const tail=id.split('-').at(-1);
+ return {id,name:row.name,nameEn:'New '+tail,nameZh:'新角 '+tail,nameTh:'ใหม่ '+tail,unitNameCode:'unit_'+tail,stage:'e',grade:8,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt:'2026-10-01T00:00:00.000Z'};
+}
 
 async function threeConfirmedSnapshots({candidateRows=rows,legacyKnown=noLegacy,probe=async()=>true}={}){
  let registry={schemaVersion:1,characters:[]};
  let state=initialState();
  let result;
  for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-01T01:00:00+09:00','2026-10-01T02:00:00+09:00']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,candidateRows),history:{snapshots:[]},registry,state,legacyKnown,probe});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,candidateRows),history:{snapshots:[]},registry,state,legacyKnown,probe,verifyMetadata:metadataFor});
   registry=result.registry;state=result.state;
  }
  return result;
@@ -34,10 +40,10 @@ async function threeConfirmedSnapshots({candidateRows=rows,legacyKnown=noLegacy,
 
 test('multiple new characters are confirmed together without replacing each other',async()=>{
  const final=await threeConfirmedSnapshots();
- assert.deepEqual(final.promoted.map(topic=>topic.id),['u2000e-alpha','u2001e-beta','u2002e-gamma']);
- assert.deepEqual(final.registry.characters.map(topic=>topic.id),['u2000e-alpha','u2001e-beta','u2002e-gamma']);
+ assert.deepEqual(final.promoted.map(topic=>topic.id),['u2001e-beta','u2000e-alpha','u2002e-gamma']);
+ assert.deepEqual(final.registry.characters.map(topic=>topic.id),['u2001e-beta','u2000e-alpha','u2002e-gamma']);
  assert.equal(new Set(final.registry.characters.map(topic=>topic.id)).size,3);
- assert.ok(final.registry.characters.every(topic=>topic.releaseMonth==='2026-10'&&topic.confirmed===true));
+ assert.ok(final.registry.characters.every(topic=>topic.releaseMonth==='2026-10'&&topic.confirmed===true&&topic.nameEn&&topic.nameZh&&topic.nameTh));
  assert.equal(final.registry.characters.at(-1).pvpRank,null,'confirmed character without PvP rank stays last');
 });
 
@@ -53,8 +59,33 @@ test('historical character IDs cannot be promoted again when they reappear in Pv
 test('automatic topic promotion fails closed on partial PvP samples',async()=>{
  await assert.rejects(()=>updateCommunityCharacters({
   snapshot:snapshot('2026-10-01T00:00:00+09:00',rows,{sampled:199}),
-  history:{snapshots:[]},registry:{schemaVersion:1,characters:[]},state:initialState(),legacyKnown:noLegacy,probe:async()=>true,
+  history:{snapshots:[]},registry:{schemaVersion:1,characters:[]},state:initialState(),legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,
  }),/refusing incomplete PvP snapshot/);
+});
+
+test('metadata that is not present in the official localized unit catalog remains unpublished',async()=>{
+ const final=await threeConfirmedSnapshots({candidateRows:[rows[0]],verifyMetadata:async()=>null});
+ assert.deepEqual(final.promoted,[]);
+ assert.equal(final.state.candidates['u2000e-alpha'].metadataVerified,false);
+ assert.equal(final.state.candidates['u2000e-alpha'].consecutive,0);
+});
+
+test('a candidate crossing JST month end restarts its confirmation streak in the new month',async()=>{
+ let registry={schemaVersion:1,characters:[]};
+ let state={...initialState(),lastSnapshotAt:'2026-09-30T12:00:00.000Z'};
+ let result;
+ for(const updatedAt of ['2026-09-30T13:00:00.000Z','2026-09-30T14:00:00.000Z','2026-09-30T15:00:00.000Z']){
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
+  registry=result.registry;state=result.state;
+ }
+ assert.deepEqual(result.promoted,[]);
+ assert.equal(state.candidates['u2000e-alpha'].firstSeenMonth,'2026-10');
+ assert.equal(state.candidates['u2000e-alpha'].consecutive,1);
+ for(const updatedAt of ['2026-09-30T16:00:00.000Z','2026-09-30T17:00:00.000Z']){
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
+  registry=result.registry;state=result.state;
+ }
+ assert.equal(result.promoted[0].releaseMonth,'2026-10');
 });
 
 test('unverified character images never accumulate a promotion streak',async()=>{
