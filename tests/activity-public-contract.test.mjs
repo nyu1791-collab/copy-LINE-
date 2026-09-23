@@ -21,3 +21,10 @@ test('public activity feed returns only teaser data while preserving likes-first
  assert.match(route,/sessionFromHeaders\(h\)/);
  assert.doesNotMatch(route,/BOARD_OWNER_ACCESS_TOKEN|BOARD_OWNER_SUBJECT/);
 });
+
+
+test('monthly public topics include every available localized character name',()=>{
+ assert.match(route,/nameEn:character\\.nameEn\\?\\?null/);
+ assert.match(route,/nameZh:character\\.nameZh\\?\\?null/);
+ assert.match(route,/nameTh:character\\.nameTh\\?\\?null/);
+});
