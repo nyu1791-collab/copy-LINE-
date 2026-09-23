@@ -30,7 +30,6 @@ async function fetchJson(url,label,{attempts=5,timeout=15000}={}){
   }
   throw last||new Error(`${label} failed`);
 }
-async function readJson(path,fallback){try{return JSON.parse(await readFile(path,'utf8'))}catch{return fallback}}
 async function atomicJson(path,value){await mkdir(dirname(path),{recursive:true});const temp=`${path}.tmp`;await writeFile(temp,JSON.stringify(value,null,2)+'\n','utf8');await rename(temp,path)}
 function imageFor(code){if(!SAFE.test(code))throw new Error('unsafe unit code');return `${API}/res/${code}/${code}-thum.png`}
 function gearImage(code){if(!SAFE.test(code))throw new Error('unsafe gear code');return `${API}/res/gear_icon/${code}_icon.png`}
@@ -67,8 +66,11 @@ for(const c of chars.values()){const playerCount=c.players.size;const rankings={
 rows.sort((a,b)=>b.occurrence_count-a.occurrence_count||b.player_count-a.player_count||a.unit_code.localeCompare(b.unit_code));competitionRanks(rows);
 
 const now=new Date();
-const oldHistory=await readJson(HISTORY,{schema_version:1,snapshots:[]});
-const snapshots=Array.isArray(oldHistory?.snapshots)?oldHistory.snapshots.filter(x=>x&&typeof x==='object'&&Number.isFinite(Date.parse(x.updated_at))):[];
+// A malformed or missing comparison history is a hard data-quality failure;
+// silently resetting it would fabricate "history wait" for real baselines.
+const oldHistory=JSON.parse(await readFile(HISTORY,'utf8'));
+if(oldHistory?.schema_version!==1||!Array.isArray(oldHistory.snapshots))throw new Error('corrupt comparison history document');
+const snapshots=oldHistory.snapshots;
 function jstParts(date){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(date);return Object.fromEntries(parts.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]))}
 function dayKey(date){const p=jstParts(date);return p.year+'-'+p.month+'-'+p.day}
 applyPvPComparisons(rows,snapshots,now);

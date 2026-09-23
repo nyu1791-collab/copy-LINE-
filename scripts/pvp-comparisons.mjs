@@ -18,13 +18,11 @@ function previousMonthClose(now){
  const p=jstParts(now);
  return dayKey(new Date(Date.UTC(Number(p.year),Number(p.month)-1,0,12)));
 }
-function validHistory(snapshot){
- return snapshot&&Number.isFinite(Date.parse(snapshot.updated_at))&&Array.isArray(snapshot.characters)
-  &&(snapshot.target_players===undefined||snapshot.target_players===200)
-  &&(snapshot.sampled_players===undefined||snapshot.sampled_players===200)
-  &&snapshot.complete_target!==false;
-}
 function assertValidHistory(snapshot){
+ if(!snapshot||!Number.isFinite(Date.parse(snapshot.updated_at))||!Array.isArray(snapshot.characters))throw new Error('corrupt comparison history document');
+ if((snapshot.target_players!==undefined&&snapshot.target_players!==200)
+  ||(snapshot.sampled_players!==undefined&&snapshot.sampled_players!==200)
+  ||snapshot.complete_target===false)throw new Error('partial sample stored in comparison history');
  const seen=new Set();let slots=0;
  for(const row of snapshot.characters){
   if(typeof row?.unit_code!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(row.unit_code)||seen.has(row.unit_code)||!Number.isSafeInteger(row.occurrence_count)||row.occurrence_count<0||!Number.isSafeInteger(row.rank)||row.rank<1)throw new Error('corrupt comparison character history');
@@ -41,8 +39,9 @@ function assertValidHistory(snapshot){
  if(snapshot.character_slots!==undefined&&slots!==snapshot.character_slots)throw new Error('corrupt comparison slot history');
 }
 export function resolvePvPBaselines(history,now=new Date()){
- const eligible=history.filter(validHistory);
- for(const snapshot of eligible)assertValidHistory(snapshot);
+ if(!Array.isArray(history))throw new Error('corrupt comparison history document');
+ for(const snapshot of history)assertValidHistory(snapshot);
+ const eligible=history;
  const closeFor=key=>eligible.filter(snapshot=>{
   const date=new Date(snapshot.updated_at),p=jstParts(date);
   return dayKey(date)===key&&(p.hour==='23'||p.hour==='22');
