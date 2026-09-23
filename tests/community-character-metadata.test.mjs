@@ -66,17 +66,17 @@ test('image verification checks file signatures instead of trusting the MIME hea
  assert.equal(wrongType,false);
 });
 
-test('only current-month first-party new Ranger notices map exact name and grade to catalog IDs',async()=>{
+test('prior-month first-party release notices map exact name and grade to the maintenance-cycle month',async()=>{
  const registered=Date.parse('2026-10-01T00:00:00.000Z');
  const docs=[
   {id:11,registered:Date.parse('2026-10-17T00:00:00.000Z'),title:'Odds Up for 2 New Rangers!'},
-  {id:10,registered,title:'New Rangers are here! Until the maintenance on 10/31'},
-  {id:9,registered:Date.parse('2026-09-30T14:59:00.000Z'),title:'Older notice'},
+  {id:10,registered:Date.parse('2026-09-30T14:00:00.000Z'),title:'New Rangers are here! Until the maintenance on 10/31'},
+  {id:9,registered:Date.parse('2026-08-31T14:59:00.000Z'),title:'Older notice'},
  ];
- const body='<div>■ New Rangers are here!</div><div>8-Star Cancer Sally</div><div>8-Star Gemini Boss</div><div>8-Star Ultimate Evolved Blue Gemini Boss</div><div>Notes</div><div>8-Star Ignored Name</div>';
+ const body='<div>■ New Rangers are here!</div><div>After the maintenance on 9/30, until the maintenance on 10/31</div><div>8-Star Cancer Sally</div><div>8-Star Gemini Boss</div><div>8-Star Ultimate Evolved Blue Gemini Boss</div><div>Notes</div><div>8-Star Ignored Name</div>';
  const fetchImpl=async url=>{
   const parsed=new URL(url);
-  const payload=parsed.pathname.endsWith('/notice')?{nextSeq:0,documents:docs}:{id:10,registered,title:docs[1].title,body};
+  const payload=parsed.pathname.endsWith('/notice')?{nextSeq:0,documents:docs}:{id:10,registered:docs[1].registered,title:docs[1].title,body};
   return new Response(JSON.stringify({result:payload}),{status:200,headers:{'content-type':'application/json'}});
  };
  const evidence=await scanOfficialRangerReleaseNotices([
@@ -91,7 +91,7 @@ test('only current-month first-party new Ranger notices map exact name and grade
  assert.equal(evidence['u1630e-sally'].matchedName,'Cancer Sally');
 });
 
-test('an incomplete current-month official notice scan returns no promotable evidence',async()=>{
+test('an incomplete official notice scan returns no promotable evidence',async()=>{
  const fetchImpl=async()=>new Response(JSON.stringify({result:{nextSeq:123,documents:[{id:10,registered:Date.parse('2026-10-01T00:00:00.000Z'),title:'New Rangers are here!'}]}}),{status:200,headers:{'content-type':'application/json'}});
  await assert.rejects(()=>scanOfficialRangerReleaseNotices([],{fetchImpl,now:Date.parse('2026-10-20T00:00:00.000Z'),maxPages:1}),/scan_incomplete/);
 });
@@ -99,7 +99,7 @@ test('an incomplete current-month official notice scan returns no promotable evi
 test('ambiguous catalog matches do not generate official release evidence',async()=>{
  const registered=Date.parse('2026-10-01T00:00:00.000Z');
  const fetchImpl=async url=>{
-  const parsed=new URL(url);const payload=parsed.pathname.endsWith('/notice')?{nextSeq:0,documents:[{id:10,registered,title:'New Rangers are here!'},{id:9,registered:Date.parse('2026-09-30T14:59:00.000Z'),title:'Older notice'}]}:{id:10,registered,title:'New Rangers are here!',body:'<div>New Rangers are here!</div><div>8-Star Cancer Sally</div><div>Notes</div>'};
+  const parsed=new URL(url);const payload=parsed.pathname.endsWith('/notice')?{nextSeq:0,documents:[{id:10,registered,title:'New Rangers are here! Until the maintenance on 10/31'},{id:9,registered:Date.parse('2026-09-30T14:59:00.000Z'),title:'Older notice'}]}:{id:10,registered,title:'New Rangers are here! Until the maintenance on 10/31',body:'<div>New Rangers are here!</div><div>After the maintenance on 9/30, until the maintenance on 10/31</div><div>8-Star Cancer Sally</div><div>Notes</div>'};
   return new Response(JSON.stringify({result:payload}),{status:200,headers:{'content-type':'application/json'}});
  };
  const evidence=await scanOfficialRangerReleaseNotices([{id:'u1630e-sally',grade:8,nameEn:'Cancer Sally'},{id:'u1632e-sally',grade:8,nameEn:'Cancer Sally'}],{fetchImpl,now:Date.parse('2026-10-20T00:00:00.000Z')});
