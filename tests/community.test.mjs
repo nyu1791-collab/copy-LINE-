@@ -789,20 +789,18 @@ test('Ranger detail parser keeps partial cards when Handbook translations are mi
 });
 
 
-test('board skill cards render as a compact horizontal scroll strip at phone widths',()=>{
+test('board skills use readable source tables and switch to one-card horizontal swipe on phones',()=>{
  const boardSkillComponent=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
  assert.ok(boardSkillComponent.includes('className="board-skill-scroller"'));
  assert.ok(boardSkillComponent.includes('className="board-skill-list"'));
- assert.ok(boardSkillComponent.includes('横スクロールで他のスキルを見る'));
- assert.ok(communityCss.includes('.board-skill-scroller{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;'));
- assert.ok(communityCss.includes('.board-skill-list{display:flex;flex-flow:row nowrap;'));
- assert.ok(communityCss.includes('.board-skill{flex:0 0 clamp(190px,62vw,250px);'));
- assert.ok(communityCss.includes('scroll-snap-type:x proximity'));
+ assert.ok(boardSkillComponent.includes('横にスワイプして他のスキルを見る'));
+ assert.ok(communityCss.includes('.board-skill-list{display:grid;grid-template-columns:minmax(0,1fr);'));
+ assert.ok(communityCss.includes('.board-skill-scroller{overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory'));
+ assert.ok(communityCss.includes('.board-skill-list{grid-auto-flow:column;grid-auto-columns:100%;'));
+ assert.ok(communityCss.includes('.board-skill-source-table{width:100%;table-layout:fixed;border-collapse:collapse;'));
+ assert.ok(communityCss.includes('@media(max-width:360px)'));
+ assert.ok(!communityCss.includes('.board-skill-source-effects'));
  assert.ok(communityCss.includes('.board-skill p{white-space:pre-line;color:#d8e4ee;font-size:13px;line-height:1.55}'));
- assert.ok(!communityCss.includes('.board-skill-list{display:grid;'));
- const availableWidth=390-36-24-6;
- const cardWidth=Math.min(250,Math.max(190,390*.62));
- assert.ok(availableWidth-cardWidth-8>=24,'a meaningful part of the next card should peek out on a 390px screen');
 });
 
 test('Cancer Sally source facts appear beside her portrait and stay language-aware',()=>{
@@ -837,6 +835,7 @@ test('Cancer Sally source skill tables show area, factor, duration, chance and c
   ['攻撃力アップ','330点','+400%','7秒'],
   ['攻撃射程アップ','330点','+20%','7秒'],
  ]);
+ assert.equal(fireworks.effects[0].difference,'説明文 +300% ／ 表 +400%');
  const ambush=boardSkillSourceDetails('u1631e-sally',1,'ja');
  assert.equal(ambush.probability,'40%');
  assert.equal(ambush.cooldown,'15秒');
@@ -846,21 +845,23 @@ test('Cancer Sally source skill tables show area, factor, duration, chance and c
   ['390点','−90%','12秒'],
   ['390点','ATK × 4,000%','—'],
  ]);
+ assert.equal(ambush.effects[2].difference,'説明文 攻撃速度−90% ／ 表 移動速度−90%');
  assert.equal(boardSkillSourceDetails('u1631e-sally',2,'ja'),null);
  assert.equal(boardSkillSourceDetails('other-ranger',0,'ja'),null);
  for(const language of rules.languages){
   const localized=boardSkillSourceDetails('u1631e-sally',0,language);
   assert.equal(localized.effects.length,2);
   assert.equal(localized.probability,'30%');
-  assert.ok(localized.note.length>0);
+  assert.ok(localized.title.length>0);
+  assert.ok(localized.effects[0].difference.length>0);
  }
  const component=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
  assert.match(component,/className="board-skill-source-details"/);
  assert.match(component,/className="board-skill-source-summary"/);
- assert.match(component,/sourceDetails\.areaLabel/);
- assert.match(component,/sourceDetails\.factorLabel/);
- assert.match(component,/sourceDetails\.durationLabel/);
- assert.match(component,/sourceDetails\?\.descriptionEffectsLabel\|\|copy\.effects/);
- assert.ok(communityCss.includes('.board-skill-list{display:flex;flex-flow:row nowrap;'));
+ assert.match(component,/className="board-skill-source-table"/);
+ assert.match(component,/scope="col"/);
+ assert.match(component,/effect\.difference&&/);
+ assert.match(component,/!!skill\.effects\.length&&!sourceDetails/);
+ assert.match(component,/data-label=\{sourceDetails\.areaLabel\}/);
  assert.ok(communityCss.includes('overflow-x:auto;overscroll-behavior-x:contain'));
 });
