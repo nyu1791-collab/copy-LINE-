@@ -1,5 +1,6 @@
 import {mkdir,readFile,rename,writeFile} from 'node:fs/promises';
 import {dirname,resolve} from 'node:path';
+import {applyPvPComparisons} from './pvp-comparisons.mjs';
 
 const TARGET=200;
 const API='https://rangers.lerico.net';
@@ -69,22 +70,14 @@ const now=new Date();
 const oldHistory=await readJson(HISTORY,{schema_version:1,snapshots:[]});
 const snapshots=Array.isArray(oldHistory?.snapshots)?oldHistory.snapshots.filter(x=>x&&typeof x==='object'&&Number.isFinite(Date.parse(x.updated_at))):[];
 function jstParts(date){const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',hourCycle:'h23'}).formatToParts(date);return Object.fromEntries(parts.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]))}
-function dayKey(date){const p=jstParts(date);return `${p.year}-${p.month}-${p.day}`}
-function targetDay(offsetDays){return dayKey(new Date(now.getTime()-offsetDays*86400000))}
-function previousMonthCloseKey(){const p=jstParts(now);let y=Number(p.year),m=Number(p.month)-1;if(m===0){m=12;y--}const last=new Date(Date.UTC(y,m,0,14,0,0));return dayKey(last)}
-function closeFor(key){return snapshots.filter(s=>dayKey(new Date(s.updated_at))===key&&['22','23'].includes(jstParts(new Date(s.updated_at)).hour)).sort((a,b)=>Date.parse(b.updated_at)-Date.parse(a.updated_at))[0]||null}
-function nearestHour(){const target=now.getTime()-3600000;let best=null,delta=Infinity;for(const s of snapshots){const d=Math.abs(Date.parse(s.updated_at)-target);if(d<delta){best=s;delta=d}}return delta<=90*60000?best:null}
-const baselines={hour:nearestHour(),day:closeFor(targetDay(1)),week:closeFor(targetDay(7)),month:closeFor(previousMonthCloseKey())};
-function charMap(snapshot){return new Map((snapshot?.characters||[]).map(x=>[x.unit_code,x]))}
-const baselineMaps=Object.fromEntries(Object.entries(baselines).map(([k,v])=>[k,charMap(v)]));
-for(const row of rows){row.change={new:false,rank:0,occurrence_count:0,periods:{}};for(const period of ['hour','day','week','month']){const base=baselineMaps[period].get(row.unit_code);const source=baselines[period];row.change.periods[period]=base?{comparable:true,rank:Number(base.rank||0)-row.rank,occurrence_count:row.occurrence_count-Number(base.occurrence_count||0),from_updated_at:source.updated_at,interval_minutes:Number(((now-Date.parse(source.updated_at))/60000).toFixed(1))}:{comparable:false,rank:0,occurrence_count:0,from_updated_at:null,interval_minutes:null}}
- for(const type of TYPES){for(const item of row.equipment_rankings[type].items){item.change={periods:{}};for(const period of ['hour','day','week','month']){const baseChar=baselineMaps[period].get(row.unit_code);const baseItems=baseChar?.equipment?.[type]||[];const baseItem=baseItems.find(x=>x.item_code===item.item_code);const source=baselines[period];item.change.periods[period]=baseItem?{comparable:true,rank:Number(baseItem.rank||0)-item.rank,occurrence_count:item.occurrence_count-Number(baseItem.occurrence_count||0),from_updated_at:source.updated_at}:{comparable:false,rank:0,occurrence_count:0,from_updated_at:null}}}}}
+function dayKey(date){const p=jstParts(date);return p.year+'-'+p.month+'-'+p.day}
+applyPvPComparisons(rows,snapshots,now);
 
 const updatedAt=now.toISOString();
 const output={schema_version:11,updated_at:updatedAt,source:{name:'LINE Rangers Handbook PvP Tracker',url:'https://rangers.lerico.net/ja/pvp-tracker'},league:'レジェンド',target_players:TARGET,sampled_players:TARGET,character_slots:totalSlots,unique_characters:rows.length,complete_target:true,collection_quality:{sample_coverage:100,equipment_slots_expected:totalSlots*TYPES.length,equipment_slots_missing:missingEquipment,detail_fetch_failures:0,invalid_player_records:0,collection_started_at:new Date(started).toISOString(),collection_duration_seconds:Number(((Date.now()-started)/1000).toFixed(2))},characters:rows};
 if(output.character_slots<1500||output.character_slots>TARGET*10||output.unique_characters<10)throw new Error('quality gate rejected implausible aggregate');
 
-const compact={updated_at:updatedAt,characters:rows.map(row=>({unit_code:row.unit_code,rank:row.rank,occurrence_count:row.occurrence_count,equipment:Object.fromEntries(TYPES.map(type=>[type,row.equipment_rankings[type].items.map(x=>({item_code:x.item_code,rank:x.rank,occurrence_count:x.occurrence_count}))]))}))};
+const compact={updated_at:updatedAt,target_players:TARGET,sampled_players:TARGET,complete_target:true,character_slots:totalSlots,characters:rows.map(row=>({unit_code:row.unit_code,rank:row.rank,occurrence_count:row.occurrence_count,equipment:Object.fromEntries(TYPES.map(type=>[type,row.equipment_rankings[type].items.map(x=>({item_code:x.item_code,rank:x.rank,occurrence_count:x.occurrence_count}))]))}))};
 const combined=[...snapshots,compact].sort((a,b)=>Date.parse(a.updated_at)-Date.parse(b.updated_at));
 const recentCutoff=now.getTime()-6*3600000;const closeCutoff=now.getTime()-40*86400000;const closeByDay=new Map();for(const s of combined){const time=Date.parse(s.updated_at);const parts=jstParts(new Date(time));if(time>=closeCutoff&&['22','23'].includes(parts.hour))closeByDay.set(dayKey(new Date(time)),s)}
 const keep=new Map();for(const s of combined){if(Date.parse(s.updated_at)>=recentCutoff)keep.set(s.updated_at,s)}for(const s of closeByDay.values())keep.set(s.updated_at,s);const pruned=[...keep.values()].sort((a,b)=>Date.parse(a.updated_at)-Date.parse(b.updated_at)).slice(-96);

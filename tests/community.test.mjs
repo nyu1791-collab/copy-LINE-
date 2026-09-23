@@ -75,7 +75,7 @@ test('interaction UI uses local updates, resumable uploads, and does not reload 
 });
 test('new-character switching requires an explicitly confirmed month and identity',()=>{
  assert.deepEqual(rules.confirmedCharactersForMonth('2026-09').map(character=>character.id),['u1631e-sally']);
- assert.deepEqual(rules.confirmedCharactersForMonth('2026-10'),[]);
+ assert.deepEqual(rules.confirmedCharactersForMonth('2099-01'),[]);
  assert.equal(rules.isConfirmedCharacterForMonth('u1631e-sally','2026-09'),true);
  assert.equal(rules.isConfirmedCharacterForMonth('u1631e-sally','2026-10'),false);
  assert.equal(rules.isKnownCharacter('unverified-character'),false);
@@ -92,7 +92,7 @@ test('abandoned multipart sessions expire after a bounded lifetime',()=>{
  assert.equal(upload.uploadSessionExpired({created:Number.NaN},1000),true);
  assert.match(uploadSessionSource,/uploadSessionMaxAgeMs/);
 });
-function setup(){
+function setup(activeRules=rules){
  const deletedObjects=[];const sql=new DatabaseSync(':memory:');sql.exec('PRAGMA foreign_keys=ON');sql.exec(readFileSync(new URL('drizzle/0000_clumsy_penance.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0001_talented_gabe_jones.sql',root),'utf8'));
  const db={prepare(query){let args=[];return {bind(...a){args=a;return this;},async first(){return sql.prepare(query).get(...args)||null;},async all(){return {results:sql.prepare(query).all(...args)};},async run(){return sql.prepare(query).run(...args);}};},async batch(statements){sql.exec('BEGIN');try{const rows=[];for(const s of statements)rows.push(await s.run());sql.exec('COMMIT');return rows;}catch(e){sql.exec('ROLLBACK');throw e;}}};
  sql.exec(readFileSync(new URL('drizzle/0002_true_purifiers.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0003_thankful_firestar.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0004_yummy_warbird.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0005_bumpy_hellcat.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0006_quick_zuras.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0007_overjoyed_scorpion.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0008_free_phalanx.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0009_horizontal_media_groups.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0010_media_cleanup_queue.sql',root),'utf8'));sql.exec(readFileSync(new URL('drizzle/0012_character_name_en.sql',root),'utf8'));
@@ -106,14 +106,14 @@ function setup(){
  const requestContext=new AsyncLocalStorage();
  const anonymous=compile('lib/anonymous-session.ts',id=>{
   if(id==='cloudflare:workers')return {env:{BOARD_ANON_COOKIE_SECRET:'test-anon-cookie-secret-0123456789012345',BOARD_OWNER_SUBJECT:'owner-subject',BOARD_OWNER_ACCESS_TOKEN:'test-owner-access-token',BOARD_TRUST_UPSTREAM_AUTH:'test'}};
-  if(id==='@/lib/rules')return rules;
+  if(id==='@/lib/rules')return activeRules;
   throw new Error('Unexpected anonymous import '+id);
  });
  const api=compile('app/api/board/route.ts',id=>{
   if(id==='next/headers')return {headers:async()=>requestContext.getStore().headers};
   if(id==='cloudflare:workers')return {env:{BOARD_OWNER_EMAIL:'owner@example.invalid',BOARD_OWNER_SUBJECT:'owner-subject',BOARD_OWNER_ACCESS_TOKEN:'test-owner-access-token',BOARD_ANON_COOKIE_SECRET:'test-anon-cookie-secret-0123456789012345',BOARD_TRUST_UPSTREAM_AUTH:'test'}};
   if(id==='@/db/raw')return {database:()=>db,bucket:()=>({async delete(keys){deletedObjects.push(...(Array.isArray(keys)?keys:[keys]));}})};
-  if(id==='@/lib/rules')return rules;
+  if(id==='@/lib/rules')return activeRules;
   if(id==='@/lib/community-activity')return activity;
   if(id==='@/lib/community-flags')return flags;
   if(id==='@/lib/community-features')return featureTypes;
@@ -124,7 +124,7 @@ function setup(){
   if(id==='next/headers')return {headers:async()=>requestContext.getStore().headers};
   if(id==='@/db/raw')return {database:()=>db,bucket:()=>({async delete(keys){deletedObjects.push(...(Array.isArray(keys)?keys:[keys]));}})};
   if(id==='@/lib/community-activity')return activity;
-  if(id==='@/lib/rules')return rules;
+  if(id==='@/lib/rules')return activeRules;
   if(id==='@/lib/anonymous-session')return anonymous;
   throw new Error('Unexpected activity import '+id);
  });
@@ -143,6 +143,35 @@ function setup(){
 }
 test('JST month boundaries and leap/year transitions',()=>{
  assert.equal(rules.monthJST(new Date('2026-09-30T14:59:59Z')),'2026-09');assert.equal(rules.monthJST(new Date('2026-09-30T15:00:00Z')),'2026-10');assert.equal(rules.monthJST(new Date('2026-12-31T15:00:00Z')),'2027-01');assert.equal(rules.monthJST(new Date('2028-02-29T15:00:00Z')),'2028-03');assert.equal(rules.validMonth('2026-13'),false);
+});
+test('three monthly character boards keep posts, votes and comments in separate scopes',async()=>{
+ const month=rules.monthJST();
+ const original=rules.confirmedCharactersForMonth(month)[0];
+ const topics=[original,...['u5000e-alpha','u5001e-beta'].map((id,index)=>({
+  id,name:'New '+index,nameEn:'New '+index,nameZh:'新角 '+index,image:'https://rangers.lerico.net/res/'+id+'/'+id+'-thum.png',
+  releaseMonth:month,confirmed:true,pvpRank:null,adoptionRate:null,
+ }))];
+ const scopedRules={...rules,
+  confirmedCharactersForMonth:value=>value===month?topics:rules.confirmedCharactersForMonth(value),
+  isConfirmedCharacterForMonth:(id,value)=>value===month?topics.some(topic=>topic.id===id):rules.isConfirmedCharacterForMonth(id,value),
+ };
+ const {call,sql}=setup(scopedRules);
+ await call({action:'profile',name:'Character reviewer'},'reviewer');
+ const initial=await call(null,'reviewer');
+ assert.equal(initial.status,200);
+ assert.equal(initial.data.boards.length,3);
+ const [first,second,third]=initial.data.boards.map(board=>board.id);
+ assert.equal(new Set([first,second,third]).size,3);
+ const post=await call({action:'post',board:first,body:'About the first character',request:crypto.randomUUID()},'reviewer');
+ assert.equal(post.status,200);
+ assert.equal((await call({action:'vote',board:first,poll:'strength',choice:0},'reviewer')).status,200);
+ const firstView=await call(null,'reviewer','?board='+encodeURIComponent(first));
+ const secondView=await call(null,'reviewer','?board='+encodeURIComponent(second));
+ assert.equal(firstView.data.posts.length,1);
+ assert.equal(firstView.data.poll.length,1);
+ assert.equal(secondView.data.posts.length,0);
+ assert.equal(secondView.data.poll.length,0);
+ assert.equal(sql.prepare('SELECT board FROM posts WHERE id=?').get(post.data.id).board,first);
 });
 test('media types are explicitly allowlisted and video type is preserved',()=>{
  assert.equal(rules.mediaExtension('image/jpeg'),'jpg');assert.equal(rules.mediaExtension('video/mp4'),'mp4');assert.equal(rules.mediaExtension('image/svg+xml'),null);assert.equal(rules.isVideoMedia('video/quicktime'),true);assert.equal(rules.isVideoMedia('image/png'),false);

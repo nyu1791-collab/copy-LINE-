@@ -24,7 +24,7 @@ function metadataFor(id){
  const row=rows.find(item=>item.unit_code===id);
  if(!row)return null;
  const tail=id.split('-').at(-1);
- return {id,name:row.name,nameEn:'New '+tail,nameZh:'新角 '+tail,nameTh:'ใหม่ '+tail,unitNameCode:'unit_'+tail,stage:'e',grade:8,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt:'2026-10-01T00:00:00.000Z'};
+ return {id,name:row.name,nameEn:'New '+tail,nameZh:'新角 '+tail,nameTh:'ใหม่ '+tail,unitNameCode:'unit_'+tail,stage:'e',grade:8,skillsVerified:true,skillCount:2,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt:'2026-10-01T00:00:00.000Z'};
 }
 
 async function threeConfirmedSnapshots({candidateRows=rows,legacyKnown=noLegacy,probe=async()=>true,verifyMetadata=metadataFor}={}){
@@ -44,6 +44,7 @@ test('multiple new characters are confirmed together without replacing each othe
  assert.deepEqual(final.registry.characters.map(topic=>topic.id),['u2001e-beta','u2000e-alpha','u2002e-gamma']);
  assert.equal(new Set(final.registry.characters.map(topic=>topic.id)).size,3);
  assert.ok(final.registry.characters.every(topic=>topic.releaseMonth==='2026-10'&&topic.confirmed===true&&topic.nameEn&&topic.nameZh&&topic.nameTh));
+ assert.ok(final.registry.characters.every(topic=>topic.skillsVerified===true&&topic.skillCount===2));
  assert.equal(final.registry.characters.at(-1).pvpRank,null,'confirmed character without PvP rank stays last');
 });
 
@@ -102,6 +103,33 @@ test('unverified character images never accumulate a promotion streak',async()=>
  assert.equal(final.registry.characters.length,0);
  assert.equal(final.state.candidates['u2000e-alpha'].imageVerified,false);
  assert.equal(final.state.candidates['u2000e-alpha'].consecutive,0);
+});
+
+test('three catalog releases get separate monthly topics before any of them ranks in PvP',async()=>{
+ let state={...initialState(),catalogInitialized:true,knownCatalogIds:['u1000e-old']};
+ let registry={schemaVersion:1,characters:[]};
+ const prior={unit_code:'u1000e-old',rank:1,adoption_rate:12};
+ let final;
+ for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-01T01:00:00+09:00','2026-10-01T02:00:00+09:00']){
+  final=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[prior]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',...rows.map(row=>row.unit_code)]});
+  state=final.state;registry=final.registry;
+ }
+ assert.equal(final.promoted.length,3);
+ assert.ok(final.promoted.every(topic=>topic.discoveredFrom==='catalog'&&topic.pvpRank===null&&topic.adoptionRate===null&&topic.skillsVerified));
+ assert.equal(final.state.candidates['u1000e-old'],undefined);
+});
+
+test('a previously cataloged character newly ranked in PvP does not create an old-character board',async()=>{
+ const old={...rows[0]};
+ const result=await updateCommunityCharacters({snapshot:snapshot('2026-10-01T00:00:00+09:00',[old]),history:{snapshots:[]},registry:{schemaVersion:1,characters:[]},state:{...initialState(),catalogInitialized:true,knownCatalogIds:[old.unit_code]},legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>[old.unit_code]});
+ assert.deepEqual(result.promoted,[]);
+ assert.equal(result.state.candidates[old.unit_code],undefined);
+});
+
+test('missing official skill descriptions cannot promote a new character board',async()=>{
+ const result=await threeConfirmedSnapshots({candidateRows:[rows[0]],verifyMetadata:async id=>({...metadataFor(id),skillsVerified:false,skillCount:0})});
+ assert.equal(result.promoted.length,0);
+ assert.equal(result.state.candidates[rows[0].unit_code].consecutive,0);
 });
 
 test('board API backfills later confirmed topics and preserves PvP topic order',()=>{

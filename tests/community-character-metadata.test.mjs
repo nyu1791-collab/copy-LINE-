@@ -9,7 +9,21 @@ const localized={
  'en:UNIT':{unit_sally:'Cancer Sally'},
  'zh:UNIT':{unit_sally:'巨蟹座 莎莉'},
  'th:UNIT':{unit_sally:'แซลลี่ ราศีกรกฎ'},
+ 'ja:SKILL':{skill_sally_nm:'月の力',skill_sally_desc:'説明\n* 攻撃力アップ'},
+ 'en:SKILL':{skill_sally_nm:'Moon power',skill_sally_desc:'Description\n* Attack boost'},
+ 'zh:SKILL':{skill_sally_nm:'月之力',skill_sally_desc:'說明\n* 提升攻擊'},
 };
+
+test('official skill codes, descriptions and icon metadata must agree before publication',()=>{
+ const skilledBasics=[{...basics[0],skillCode:'sally_1'}];
+ const skills=[{skillCode:'sally_1',nameCode:'skill_sally_nm',descriptionCode:'skill_sally_desc',iconResourcePath:'sally.png'}];
+ const verified=verifiedMetadataFromCatalogs(id,skilledBasics,localized,'2026-09-23T00:00:00.000Z',skills);
+ assert.equal(verified.skillsVerified,true);
+ assert.equal(verified.skillCount,1);
+ const missing={...localized,'zh:SKILL':{}};
+ assert.equal(verifiedMetadataFromCatalogs(id,skilledBasics,missing,'2026-09-23T00:00:00.000Z',skills).skillsVerified,false);
+ assert.equal(verifiedMetadataFromCatalogs(id,skilledBasics,localized,'2026-09-23T00:00:00.000Z',[{...skills[0],iconResourcePath:'../bad.png'}]).skillsVerified,false);
+});
 
 test('new topics need an exact official ID and Japanese, English, and Chinese catalog names',()=>{
  const verified=verifiedMetadataFromCatalogs(id,basics,localized,'2026-09-23T00:00:00.000Z');

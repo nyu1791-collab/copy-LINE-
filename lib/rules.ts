@@ -82,6 +82,10 @@ export type CharacterTopic={
  unitNameCode?:string;
  evolutionStage?:'e';
  verifiedGrade?:number|null;
+ skillsVerified?:boolean;
+ skillCount?:number;
+ skillsVerifiedAt?:string|null;
+ discoveredFrom?:'pvp'|'catalog';
  observationCount?:number;
  firstObservedAt?:string;
  confirmedAt?:string|null;
@@ -97,7 +101,7 @@ function isSafeTopic(value:unknown):value is CharacterTopic{
  if(topic.nameEn!==undefined&& (typeof topic.nameEn!=='string'||!topic.nameEn.trim()||[...topic.nameEn].length>80))return false;
  if(topic.nameZh!==undefined&& (typeof topic.nameZh!=='string'||!topic.nameZh.trim()||[...topic.nameZh].length>80))return false;
  if(topic.source!==undefined&&topic.source!=='manual'&&topic.source!=='pvp-auto')return false;
- if(topic.source==='pvp-auto'&&(!topic.nameEn||!topic.nameZh||topic.metadataSource!=='rangers.lerico.net/api/getRangersBasics'||topic.evolutionStage!=='e'||typeof topic.unitNameCode!=='string'||!/^[A-Za-z0-9_-]{1,120}$/.test(topic.unitNameCode)||!Number.isSafeInteger(topic.observationCount)||Number(topic.observationCount)<3))return false;
+ if(topic.source==='pvp-auto'&&(!/^u\d+e-[a-z0-9_-]+$/i.test(String(topic.id))||!topic.nameEn||!topic.nameZh||topic.metadataSource!=='rangers.lerico.net/api/getRangersBasics'||topic.evolutionStage!=='e'||typeof topic.unitNameCode!=='string'||!/^[A-Za-z0-9_-]{1,120}$/.test(topic.unitNameCode)||!Number.isSafeInteger(topic.observationCount)||Number(topic.observationCount)<3||topic.skillsVerified!==true||!Number.isSafeInteger(topic.skillCount)||Number(topic.skillCount)<1||Number(topic.skillCount)>3||typeof topic.skillsVerifiedAt!=='string'||!Number.isFinite(Date.parse(topic.skillsVerifiedAt))))return false;
  if(topic.nameTh!==undefined&& (typeof topic.nameTh!=='string'||!topic.nameTh.trim()||[...topic.nameTh].length>80))return false;
  if(!validMonth(topic.releaseMonth)||topic.confirmed!==true)return false;
  if(typeof topic.image!=='string')return false;

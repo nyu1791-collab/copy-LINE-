@@ -40,3 +40,21 @@
 @media(max-width:600px){.post-author-line{align-items:flex-start;row-gap:5px}}
 
 .archive-selector{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 0 12px;min-width:0}.archive-selector span{color:#a6b6ca;font-size:14px;font-weight:700}.archive-selector select{flex:0 1 260px;width:min(100%,260px);min-height:48px}@media(max-width:600px){.archive-selector{align-items:stretch;flex-direction:column;gap:6px}.archive-selector select{flex:1;width:100%}}
+
+.board-scope-note{margin:10px 0;color:#a8d9c9;font-size:14px;overflow-wrap:anywhere}
+.board-skills{border:1px solid #315c58;border-radius:14px;background:#102333;padding:18px;margin:16px 0 24px;min-width:0}
+.board-skills-heading{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+.board-skills-heading h2{font-size:20px;font-weight:800;overflow-wrap:anywhere;min-width:0}
+.board-skills-heading a{color:#81c9ff;text-decoration:underline;text-underline-offset:3px;font-size:13px}
+.board-skills>p{color:#abc4d4;font-size:14px}
+.board-skills>p button{border:1px solid #3b8c75;background:#15382f;color:#a5f6d1;border-radius:8px;padding:8px 14px;min-height:44px;margin-left:7px}
+.board-skill-list{display:grid;gap:12px}
+.board-skill{min-width:0;padding:14px;border:1px solid #304760;border-radius:12px;background:#0b1b2c;overflow-wrap:anywhere}
+.board-skill-heading{display:flex;align-items:center;gap:12px;min-width:0;margin-bottom:8px}
+.board-skill-heading img{width:48px;height:48px;object-fit:contain;flex:none}
+.board-skill-heading h3{font-size:17px;font-weight:700;min-width:0}
+.board-skill h4{margin:12px 0 3px;color:#80dcb4;font-size:13px;font-weight:700}
+.board-skill p{white-space:pre-line;color:#d8e4ee;font-size:14px;line-height:1.75}
+.board-skill-effects{border-top:1px solid #304760;margin-top:14px;padding-top:5px}
+.board-skill-effects ul{padding-left:22px;margin:6px 0 0;display:grid;gap:6px;font-size:14px;line-height:1.7}
+@media(max-width:600px){.board-skills{padding:14px}.board-skill{padding:12px}.board-skill-heading{align-items:flex-start}.board-skill-heading h3{font-size:16px}}

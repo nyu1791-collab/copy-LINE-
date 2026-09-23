@@ -10,6 +10,8 @@ on:
       - 'scripts/patch-pvp-metadata.mjs'
       - 'scripts/update-community-characters.mjs'
       - 'scripts/community-character-metadata.mjs'
+      - 'scripts/audit-community-release.mjs'
+      - 'scripts/pvp-comparisons.mjs'
       - '.github/workflows/refresh-pvp-data.yml'
 permissions:
   contents: write
@@ -29,10 +31,16 @@ jobs:
         run: node scripts/collect-pvp.mjs
       - name: Apply trusted display metadata
         run: node scripts/patch-pvp-metadata.mjs
+      - name: Validate complete ranking and occurrence totals
+        run: node scripts/audit-community-release.mjs --ranking-only
       - name: Discover multi-character community topics
         id: community_discovery
         continue-on-error: true
         run: node scripts/update-community-characters.mjs
+      - name: Audit separate monthly boards and skill verification
+        id: community_audit
+        continue-on-error: true
+        run: node scripts/audit-community-release.mjs
       - name: Commit only validated snapshot and discovery changes
         run: |
           git config user.name 'github-actions[bot]'
@@ -40,10 +48,11 @@ jobs:
           git add \
             public/pvp/data/character_usage.json \
             public/pvp/data/character_usage_history.json
-          if [ "${{ steps.community_discovery.outcome }}" = "success" ]; then
+          if [ "${{ steps.community_discovery.outcome }}" = "success" ] && [ "${{ steps.community_audit.outcome }}" = "success" ]; then
             git add config/community-characters.json data/community-character-discovery.json
           else
-            echo "::warning::Community discovery failed; keeping PvP snapshot publication independent."
+            echo "::warning::Community discovery or audit failed; keeping PvP snapshot publication independent."
+            git restore -- config/community-characters.json data/community-character-discovery.json
           fi
           if git diff --cached --quiet; then
             echo 'No PvP snapshot or community discovery change.'

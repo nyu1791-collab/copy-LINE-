@@ -21,6 +21,27 @@ function officialName(catalogs,language,key,id){
  }
  return '';
 }
+function officialSkillDetails(ranger,skills,catalogs){
+ if(!Array.isArray(skills))return null;
+ const codes=[ranger.skillCode,ranger.skillCode2,ranger.skillCode3]
+  .filter(code=>typeof code==='string'&&SAFE_CODE.test(code))
+  .filter((code,index,list)=>list.indexOf(code)===index).slice(0,3);
+ if(!codes.length)return null;
+ const byCode=new Map(skills.filter(row=>row&&typeof row==='object'&&typeof row.skillCode==='string').map(row=>[row.skillCode,row]));
+ for(const code of codes){
+  const skill=byCode.get(code);
+  if(!skill||typeof skill.iconResourcePath!=='string'||!/^[A-Za-z0-9._-]{1,180}$/.test(skill.iconResourcePath))return null;
+  const nameCode=typeof skill.nameCode==='string'&&SAFE_CODE.test(skill.nameCode)?skill.nameCode:code+'_nm';
+  const descriptionCode=typeof skill.descriptionCode==='string'&&SAFE_CODE.test(skill.descriptionCode)?skill.descriptionCode:code+'_desc';
+  for(const language of ['ja','en','zh']){
+   const catalog=catalogRecord(catalogs?.[language+':SKILL']);
+   const title=cleanName(catalog?.[nameCode]);
+   const description=typeof catalog?.[descriptionCode]==='string'?catalog[descriptionCode].trim():'';
+   if(!title||!description||description.length>1200||/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f<>]/u.test(description))return null;
+  }
+ }
+ return {skillsVerified:true,skillCount:codes.length};
+}
 export function safeCharacterImageUrl(value,id){
  if(typeof value!=='string'||!SAFE_ID.test(id))return null;
  try{
@@ -30,7 +51,7 @@ export function safeCharacterImageUrl(value,id){
   return url.href===expected?url.href:null;
  }catch{return null;}
 }
-export function verifiedMetadataFromCatalogs(id,basics,catalogs,verifiedAt=new Date().toISOString()){
+export function verifiedMetadataFromCatalogs(id,basics,catalogs,verifiedAt=new Date().toISOString(),skills){
  if(typeof id!=='string'||!SAFE_ID.test(id)||!Array.isArray(basics))return null;
  const ranger=basics.find(row=>row&&typeof row==='object'&&row.unitCode===id);
  if(!ranger)return null;
@@ -41,7 +62,8 @@ export function verifiedMetadataFromCatalogs(id,basics,catalogs,verifiedAt=new D
  if(!name||!nameEn||!nameZh)return null;
  const nameTh=officialName(catalogs,'th',unitNameCode,id)||null;
  const grade=Number(ranger.grade);
- return {id,name,nameEn,nameZh,nameTh,unitNameCode,stage:'e',grade:Number.isSafeInteger(grade)&&grade>0&&grade<=20?grade:null,transcendent:Number(ranger.isTranscendentUnit)===1,hyper:Number(ranger.isHyperUnit)===1,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt};
+ const skillDetails=officialSkillDetails(ranger,skills,catalogs);
+ return {id,name,nameEn,nameZh,nameTh,unitNameCode,stage:'e',grade:Number.isSafeInteger(grade)&&grade>0&&grade<=20?grade:null,transcendent:Number(ranger.isTranscendentUnit)===1,hyper:Number(ranger.isHyperUnit)===1,skillsVerified:!!skillDetails,skillCount:skillDetails?.skillCount||0,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt};
 }
 async function boundedResponseText(response,maxBytes){
  const reader=response.body?.getReader();
@@ -86,19 +108,29 @@ export function createOfficialCharacterVerifier(fetchImpl=fetch){
   if(!catalogPromise){
    catalogPromise=(async()=>{
     const basicsPromise=fetchJson('/api/getRangersBasics',fetchImpl);
+    const skillsPromise=fetchJson('/api/getSkills',fetchImpl,3_500_000);
     const languagePromises=LANGUAGES.map(async language=>{
-     const path='/api/v2/translate?keys='+encodeURIComponent(language+':UNIT');
-     try{return [language,await fetchJson(path,fetchImpl)];}
+     const path='/api/v2/translate?keys='+encodeURIComponent(language+':UNIT,'+language+':SKILL');
+     try{return [language,await fetchJson(path,fetchImpl,4_000_000)];}
      catch(error){if(language==='th')return [language,null];throw error;}
     });
-    const [basics,languages]=await Promise.all([basicsPromise,Promise.all(languagePromises)]);
-    const translations=Object.fromEntries(languages.map(([language,value])=>[language+':UNIT',value?.[language+':UNIT']??value?.[language]??value]));
-    return {basics,translations};
+    const [basics,skills,languages]=await Promise.all([basicsPromise,skillsPromise,Promise.all(languagePromises)]);
+    const translations=Object.fromEntries(languages.flatMap(([language,value])=>[
+     [language+':UNIT',value?.[language+':UNIT']??value?.[language]??value],
+     [language+':SKILL',value?.[language+':SKILL']??null],
+    ]));
+    return {basics,skills,translations};
    })();
   }
   return catalogPromise;
  }
- return async function verify(id){const source=await catalogs();return verifiedMetadataFromCatalogs(id,source.basics,source.translations);};
+ async function verify(id){const source=await catalogs();return verifiedMetadataFromCatalogs(id,source.basics,source.translations,new Date().toISOString(),source.skills);}
+ verify.listCatalogUnitIds=async()=>{
+  const {basics}=await catalogs();
+  if(!Array.isArray(basics))throw new Error('invalid_ranger_catalog');
+  return [...new Set(basics.map(row=>row?.unitCode).filter(id=>typeof id==='string'&&SAFE_ID.test(id)))].sort();
+ };
+ return verify;
 }
 const imageSignatureChecks=[
  bytes=>bytes.length>=3&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff,
