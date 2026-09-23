@@ -29,7 +29,7 @@ function metadataFor(id){
  return {id,name:row.name,nameEn:'New '+tail,nameZh:'新角 '+tail,nameTh:'ใหม่ '+tail,unitNameCode:'unit_'+tail,stage:'e',grade:8,skillsVerified:true,skillCount:2,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt:'2026-10-01T00:00:00.000Z'};
 }
 function releaseEvidenceFor(id,releaseMonth='2026-10'){
- return {releaseMonth,noticeId:100028330,noticeTitle:'New Rangers are here!',noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice#100028330',publishedAt:'2026-09-30T15:00:00.000Z',catalogId:id,matchedName:metadataFor(id)?.nameEn||'New character',grade:8,source:'notice2.line.me/LGRGS/ios/document/notice'};
+ return {releaseMonth,noticeId:100028330,noticeTitle:'New Rangers are here!',noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice',publishedAt:'2026-09-30T15:00:00.000Z',catalogId:id,matchedName:metadataFor(id)?.nameEn||'New character',grade:8,source:'notice2.line.me/LGRGS/ios/document/notice'};
 }
 const releaseEvidenceForRows=async candidateRows=>Object.fromEntries(candidateRows.map(row=>[row.unit_code,releaseEvidenceFor(row.unit_code)]));
 
