@@ -58,3 +58,5 @@
 .board-skill-effects{border-top:1px solid #304760;margin-top:14px;padding-top:5px}
 .board-skill-effects ul{padding-left:22px;margin:6px 0 0;display:grid;gap:6px;font-size:14px;line-height:1.7}
 @media(max-width:600px){.board-skills{padding:14px}.board-skill{padding:12px}.board-skill-heading{align-items:flex-start}.board-skill-heading h3{font-size:16px}}
+
+@media(min-width:760px){.board-skill-list{grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}}
