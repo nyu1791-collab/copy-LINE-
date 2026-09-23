@@ -12,6 +12,7 @@ const rangerRouteSource=readFileSync(new URL('app/api/ranger-info/route.ts',root
 const {mediaRange}=compile('lib/media-range.ts',()=>{});
 const communitySource=readFileSync(new URL('app/community.tsx',root),'utf8');
 const communityCss=readFileSync(new URL('app/community.css',root),'utf8');
+const boardSkillsSource=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
 const pageSource=readFileSync(new URL('app/page.tsx',root),'utf8');
 const lazyImageSource=readFileSync(new URL('app/lazy-image.tsx',root),'utf8');
 const videoPlayerSource=readFileSync(new URL('app/video-player.tsx',root),'utf8');
@@ -785,4 +786,12 @@ test('Ranger detail parser keeps partial cards when Handbook translations are mi
    iconUrl:'https://rangers.lerico.net/res/skill_icon/skill_icon_hsk1615_brown.png',
   },
  ]);
+});
+
+
+test('board skills use compact two-column cards on desktop and one column on mobile',()=>{
+ assert.match(boardSkillsSource,/className="board-skill-list"/);
+ assert.match(communityCss,/@media\\(min-width:760px\\)\\{\\.board-skill-list\\{grid-template-columns:repeat\\(2,minmax\\(0,1fr)\\);align-items:start\\}\\}/);
+ assert.match(communityCss,/\\.board-skill-list\\{display:grid;gap:12px\\}/);
+ assert.match(communityCss,/\\.board-skill\\{min-width:0/);
 });
