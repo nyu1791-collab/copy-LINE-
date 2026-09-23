@@ -10,7 +10,7 @@ function snapshot(){
  ]};
 }
 function topic(id,rank){
- return {id,releaseMonth:month,name:'キャラ',nameEn:'New character',nameZh:'新角',source:'pvp-auto',image:'https://rangers.lerico.net/res/'+id+'/'+id+'-thum.png',pvpRank:rank,verifiedGrade:8,releaseEvidence:{releaseMonth:month,noticeId:100028330,noticeTitle:'New Rangers are here!',noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice#100028330',publishedAt:'2026-10-01T00:00:00.000Z',catalogId:id,matchedName:'New character',grade:8,source:'notice2.line.me/LGRGS/ios/document/notice'},skillsVerified:true,skillCount:2,skillsVerifiedAt:'2026-10-19T00:00:00.000Z',observationCount:3};
+ return {id,releaseMonth:month,name:'キャラ',nameEn:'New character',nameZh:'新角',source:'pvp-auto',image:'https://rangers.lerico.net/res/'+id+'/'+id+'-thum.png',pvpRank:rank,verifiedGrade:8,releaseEvidence:{releaseMonth:month,noticeId:100028330,noticeTitle:'New Rangers are here!',noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice',publishedAt:'2026-10-01T00:00:00.000Z',catalogId:id,matchedName:'New character',grade:8,source:'notice2.line.me/LGRGS/ios/document/notice'},skillsVerified:true,skillCount:2,skillsVerifiedAt:'2026-10-19T00:00:00.000Z',observationCount:3};
 }
 const state={catalogInitialized:true,catalogStatus:'verified',candidates:{}};
 
