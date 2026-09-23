@@ -12,6 +12,7 @@ const rangerRouteSource=readFileSync(new URL('app/api/ranger-info/route.ts',root
 const {mediaRange}=compile('lib/media-range.ts',()=>{});
 const communitySource=readFileSync(new URL('app/community.tsx',root),'utf8');
 const communityCss=readFileSync(new URL('app/community.css',root),'utf8');
+const boardSkillsSource=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
 const pageSource=readFileSync(new URL('app/page.tsx',root),'utf8');
 const lazyImageSource=readFileSync(new URL('app/lazy-image.tsx',root),'utf8');
 const videoPlayerSource=readFileSync(new URL('app/video-player.tsx',root),'utf8');
@@ -785,4 +786,18 @@ test('Ranger detail parser keeps partial cards when Handbook translations are mi
    iconUrl:'https://rangers.lerico.net/res/skill_icon/skill_icon_hsk1615_brown.png',
   },
  ]);
+});
+
+
+test('board skills stay compact in one horizontal scroll row on narrow screens',()=>{
+ assert.ok(boardSkillsSource.includes('className="board-skill-list"'));
+ assert.ok(boardSkillsSource.includes('className="board-skill-scroller"'));
+ assert.ok(boardSkillsSource.includes('tabIndex={info.skills.length>1?0:undefined}'));
+ assert.ok(communityCss.includes('.board-skill-scroller{max-width:100%;min-width:0;overflow-x:auto;'));
+ assert.ok(communityCss.includes('.board-skill-list{display:flex;flex-flow:row nowrap;'));
+ assert.ok(communityCss.includes('.board-skill{flex:0 0 clamp(220px,72vw,320px);'));
+ assert.ok(communityCss.includes('scroll-snap-type:x proximity'));
+ assert.ok(boardSkillsSource.includes('横スクロールで他のスキルを見る'));
+ assert.ok(communityCss.includes('.board-skill p{white-space:pre-line;color:#d8e4ee;font-size:13px;line-height:1.55}'));
+ assert.ok(!communityCss.includes('grid-template-columns:repeat(2,minmax(0,1fr));align-items:start'));
 });
