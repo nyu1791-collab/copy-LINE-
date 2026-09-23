@@ -74,18 +74,26 @@ test('a candidate crossing JST month end restarts its confirmation streak in the
  let registry={schemaVersion:1,characters:[]};
  let state={...initialState(),lastSnapshotAt:'2026-09-30T12:00:00.000Z'};
  let result;
- for(const updatedAt of ['2026-09-30T13:00:00.000Z','2026-09-30T14:00:00.000Z','2026-09-30T15:00:00.000Z']){
+ for(const updatedAt of ['2026-09-30T13:00:00.000Z','2026-09-30T13:30:00.000Z','2026-09-30T14:00:00.000Z']){
   result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
   registry=result.registry;state=result.state;
  }
  assert.deepEqual(result.promoted,[]);
  assert.equal(state.candidates['u2000e-alpha'].firstSeenMonth,'2026-10');
  assert.equal(state.candidates['u2000e-alpha'].consecutive,1);
- for(const updatedAt of ['2026-09-30T16:00:00.000Z','2026-09-30T17:00:00.000Z']){
+ for(const updatedAt of ['2026-09-30T15:00:00.000Z','2026-09-30T16:00:00.000Z']){
   result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
   registry=result.registry;state=result.state;
  }
  assert.equal(result.promoted[0].releaseMonth,'2026-10');
+});
+
+
+test('out-of-order snapshots cannot extend a new-character streak',async()=>{
+ let registry={schemaVersion:1,characters:[]};let state=initialState();
+ const first=await updateCommunityCharacters({snapshot:snapshot('2026-10-01T00:00:00+09:00',[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
+ const second=await updateCommunityCharacters({snapshot:snapshot('2026-10-01T01:00:00+09:00',[rows[0]]),history:{snapshots:[]},registry:first.registry,state:first.state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
+ await assert.rejects(()=>updateCommunityCharacters({snapshot:snapshot('2026-10-01T00:30:00+09:00',[rows[0]]),history:{snapshots:[]},registry:second.registry,state:second.state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor}),/out-of-order community snapshot/);
 });
 
 test('unverified character images never accumulate a promotion streak',async()=>{
