@@ -27,12 +27,12 @@ function metadataFor(id){
  return {id,name:row.name,nameEn:'New '+tail,nameZh:'新角 '+tail,nameTh:'ใหม่ '+tail,unitNameCode:'unit_'+tail,stage:'e',grade:8,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt:'2026-10-01T00:00:00.000Z'};
 }
 
-async function threeConfirmedSnapshots({candidateRows=rows,legacyKnown=noLegacy,probe=async()=>true}={}){
+async function threeConfirmedSnapshots({candidateRows=rows,legacyKnown=noLegacy,probe=async()=>true,verifyMetadata=metadataFor}={}){
  let registry={schemaVersion:1,characters:[]};
  let state=initialState();
  let result;
  for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-01T01:00:00+09:00','2026-10-01T02:00:00+09:00']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,candidateRows),history:{snapshots:[]},registry,state,legacyKnown,probe,verifyMetadata:metadataFor});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,candidateRows),history:{snapshots:[]},registry,state,legacyKnown,probe,verifyMetadata});
   registry=result.registry;state=result.state;
  }
  return result;
