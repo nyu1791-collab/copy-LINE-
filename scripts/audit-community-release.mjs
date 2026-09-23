@@ -38,6 +38,8 @@ export function auditCommunityRelease(snapshot,registry,state){
   seen.add(key);
   if(topic?.source==='pvp-auto'){
    if(topic.skillsVerified!==true||!Number.isSafeInteger(topic.skillCount)||topic.skillCount<1||topic.skillCount>3||!Number.isFinite(Date.parse(topic.skillsVerifiedAt))||!Number.isSafeInteger(topic.observationCount)||topic.observationCount<3)communityErrors.push('unverified skill or observation for '+id);
+   const evidence=topic.releaseEvidence;
+   if(!evidence||evidence.catalogId!==id||evidence.releaseMonth!==topicMonth||evidence.source!=='notice2.line.me/LGRGS/ios/document/notice'||!Number.isSafeInteger(evidence.noticeId)||typeof evidence.matchedName!=='string'||evidence.matchedName!==topic.nameEn||!Number.isSafeInteger(evidence.grade)||evidence.grade!==topic.verifiedGrade||!Number.isFinite(Date.parse(evidence.publishedAt))||!/^https:\/\/notice2\.line\.me\/LGRGS\/ios\/document\/notice#\d+$/.test(evidence.noticeUrl||''))communityErrors.push('missing or invalid official release evidence for '+id);
    else if(topicMonth===month)skillVerified++;
    if(topic.image!==IMAGE_ROOT+id+'/'+id+'-thum.png')communityErrors.push('unexpected character image for '+id);
    if(!topic.name||!topic.nameEn||!topic.nameZh)communityErrors.push('missing localized names for '+id);
@@ -53,12 +55,15 @@ export function auditCommunityRelease(snapshot,registry,state){
  if(current>5)warnings.push('More than five confirmed topics in '+month+'; keep every verified character and review the release feed');
  if(day>=10&&current<3)warnings.push('Fewer than three confirmed topics in '+month+'; inspect the catalog and discovery candidates');
  if(state?.catalogStatus==='unavailable')warnings.push('Official Ranger catalog was temporarily unavailable; retry discovery on the next full sample');
+ if(state?.releaseNoticeStatus==='unavailable')warnings.push('Official new-character announcement feed was unavailable; new monthly topics remain fail-closed');
  if(state?.catalogInitialized===true&&typeof state.initializedAt==='string'&&Number.isFinite(Date.parse(state.initializedAt))){const baseline=monthParts(state.initializedAt);if(baseline.month===month&&baseline.day>1)warnings.push('Official catalog discovery baseline began on '+month+'-'+String(baseline.day).padStart(2,'0')+'; characters added earlier this month cannot be distinguished from older catalog entries without a prior catalog snapshot');}
  if(state?.catalogInitialized!==true)warnings.push('Official catalog baseline has not been established');
  const pending=Object.values(state?.candidates&&typeof state.candidates==='object'?state.candidates:{}).filter(candidate=>candidate&&typeof candidate==='object'&&candidate.firstSeenMonth===month);
  for(const candidate of pending){
   if(candidate.eligible!==true)warnings.push('New character is awaiting official metadata validation: '+candidate.id);
   if(candidate.imageVerified!==true)warnings.push('New character is awaiting official image validation: '+candidate.id);
+  if(!candidate.releaseEvidence||candidate.releaseEvidence.catalogId!==candidate.id)warnings.push('New character is awaiting an exact official release-announcement/catalog match: '+candidate.id);
+  else if(candidate.releaseEvidence.releaseMonth!==month)warnings.push('Verified first release announcement is outside the current month: '+candidate.id);
  }
  return {rankingErrors,communityErrors,warnings,month,rankedCharacters:ranked.size,currentTopics:current,rankedTopics,skillVerifiedTopics:skillVerified,pendingCandidates:pending.length};
 }
