@@ -786,3 +786,20 @@ test('Ranger detail parser keeps partial cards when Handbook translations are mi
   },
  ]);
 });
+
+
+test('board skill cards render as a compact horizontal scroll strip at phone widths',()=>{
+ const boardSkillComponent=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
+ assert.ok(boardSkillComponent.includes('className="board-skill-scroller"'));
+ assert.ok(boardSkillComponent.includes('className="board-skill-list"'));
+ assert.ok(boardSkillComponent.includes('横スクロールで他のスキルを見る'));
+ assert.ok(communityCss.includes('.board-skill-scroller{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;'));
+ assert.ok(communityCss.includes('.board-skill-list{display:flex;flex-flow:row nowrap;'));
+ assert.ok(communityCss.includes('.board-skill{flex:0 0 clamp(190px,62vw,250px);'));
+ assert.ok(communityCss.includes('scroll-snap-type:x proximity'));
+ assert.ok(communityCss.includes('.board-skill p{white-space:pre-line;color:#d8e4ee;font-size:13px;line-height:1.55}'));
+ assert.ok(!communityCss.includes('.board-skill-list{display:grid;'));
+ const availableWidth=390-36-24-6;
+ const cardWidth=Math.min(250,Math.max(190,390*.62));
+ assert.ok(availableWidth-cardWidth-8>=24,'a meaningful part of the next card should peek out on a 390px screen');
+});
