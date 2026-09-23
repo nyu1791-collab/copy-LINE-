@@ -19,7 +19,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: community-feature-tests-\${{ github.event.pull_request.number }}
+  group: community-feature-tests-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
