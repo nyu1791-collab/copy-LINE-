@@ -49,6 +49,7 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
  for(const id of known)delete nextState.candidates[id];
  if(!nextState.initialized){for(const id of historyIds(oldHistory))known.add(id);for(const row of rows)known.add(row.unit_code);nextState.initialized=true;nextState.initializedAt=updatedAt;nextState.knownIds=[...known].sort();return {registry:currentRegistry,state:nextState,promoted:[],initialized:true};}
  const previousSnapshotAt=typeof currentState.lastSnapshotAt==='string'&&Number.isFinite(Date.parse(currentState.lastSnapshotAt))?currentState.lastSnapshotAt:null;
+ if(previousSnapshotAt&&Date.parse(updatedAt)<Date.parse(previousSnapshotAt))throw new Error('refusing out-of-order community snapshot');
  const promoted=[];
  for(const [id,candidate] of Object.entries(nextState.candidates)){if(!rowMap.has(id)&&candidate&&typeof candidate==='object')candidate.consecutive=0;}
  for(const row of rows){
@@ -59,7 +60,7 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
   const prior=nextState.candidates[id]&&typeof nextState.candidates[id]==='object'?nextState.candidates[id]:{};
   const sameSnapshot=prior.lastSeenAt===updatedAt;
   const monthChanged=!!prior.firstSeenMonth&&prior.firstSeenMonth!==releaseMonth;
-  const gapOk=prior.lastSeenAt&&Number.isFinite(Date.parse(prior.lastSeenAt))?Date.parse(updatedAt)-Date.parse(prior.lastSeenAt)<=MAX_GAP_MS:false;
+  const gapMs=prior.lastSeenAt&&Number.isFinite(Date.parse(prior.lastSeenAt))?Date.parse(updatedAt)-Date.parse(prior.lastSeenAt):null;const gapOk=typeof gapMs==='number'&&gapMs>=0&&gapMs<=MAX_GAP_MS;
   let metadata=baseEligible?validateOfficialMetadata(prior.metadata,id):null;
   if(baseEligible&&!metadata){try{metadata=validateOfficialMetadata(await verify(id),id);}catch{metadata=null;}}
   const name=metadata?.name||candidateName(row);
