@@ -72,7 +72,7 @@ export async function GET(request:Request){
 
   const currentMonth=monthJST();
   const confirmedTopics=confirmedCharactersForMonth(currentMonth);
-  const topics=confirmedTopics.map(character=>({id:`${currentMonth}:${character.id}`,character:character.id,name:character.name,image:character.image,month:currentMonth}));
+  const topics=confirmedTopics.map(character=>({id:`${currentMonth}:${character.id}`,character:character.id,name:character.name,nameEn:character.nameEn??null,nameZh:character.nameZh??null,nameTh:character.nameTh??null,image:character.image,month:currentMonth}));
   const boardIds=topics.map(topic=>topic.id);
   if(!boardIds.length)return respond({unread:0,videos:0,comments:0,featured:null,topics:[]},200,setCookie);
   const slots=boardIds.map(()=>'?').join(',');
