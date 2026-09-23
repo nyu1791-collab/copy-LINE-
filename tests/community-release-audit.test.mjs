@@ -40,6 +40,11 @@ test('skill validation and duplicate topics fail the community gate while monthl
  assert.ok(report.warnings.some(message=>message.includes('Fewer than three')));
 });
 
+test('a mid-month catalog baseline warns that earlier releases cannot be reconstructed safely',()=>{
+ const report=auditCommunityRelease(snapshot(),{characters:[topic('u2000e-alpha',1)]},{...state,initializedAt:'2026-10-16T00:00:00.000Z'});
+ assert.ok(report.warnings.some(message=>message.includes('2026-10-16')&&message.includes('prior catalog snapshot')));
+});
+
 test('a sixth verified character is reported and retained',()=>{
  const topics=Array.from({length:6},(_,i)=>topic('u200'+i+'e-new',null));
  const report=auditCommunityRelease(snapshot(),{characters:topics},state);
