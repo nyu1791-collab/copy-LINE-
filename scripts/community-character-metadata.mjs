@@ -150,7 +150,7 @@ export async function scanOfficialRangerReleaseNotices(catalogEntries,{fetchImpl
    const matches=catalogEntries.filter(entry=>entry&&Number(entry.grade)===ranger.grade&&typeof entry.nameEn==='string'&&entry.nameEn.normalize('NFC').replace(/\s+/g,' ').trim().toLocaleLowerCase('en')===ranger.nameEn.toLocaleLowerCase('en'));
    const unique=[...new Map(matches.filter(entry=>typeof entry.id==='string'&&SAFE_ID.test(entry.id)).map(entry=>[entry.id,entry])).values()];
    if(unique.length!==1)continue;
-   const [entry]=unique;const evidence={releaseMonth:month,noticeId:document.id,noticeTitle:document.title,noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice#'+document.id,publishedAt:new Date(detail.registered??document.registered).toISOString(),catalogId:entry.id,matchedName:ranger.nameEn,grade:ranger.grade,source:'notice2.line.me/LGRGS/ios/document/notice'};
+   const [entry]=unique;const evidence={releaseMonth:month,noticeId:document.id,noticeTitle:document.title,noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice',publishedAt:new Date(detail.registered??document.registered).toISOString(),catalogId:entry.id,matchedName:ranger.nameEn,grade:ranger.grade,source:'notice2.line.me/LGRGS/ios/document/notice'};
    const prior=byId.get(entry.id);if(!prior||Date.parse(evidence.publishedAt)<Date.parse(prior.publishedAt))byId.set(entry.id,evidence);
   }
  }
