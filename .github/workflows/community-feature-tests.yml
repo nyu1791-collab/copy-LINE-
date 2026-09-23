@@ -36,3 +36,5 @@ jobs:
         run: npm run install:ci
       - name: Build and run community regression suite
         run: npm test
+      - name: Lint application and Worker code
+        run: npm run lint
