@@ -101,7 +101,7 @@ function isSafeTopic(value:unknown):value is CharacterTopic{
  if(topic.nameTh!==undefined&& (typeof topic.nameTh!=='string'||!topic.nameTh.trim()||[...topic.nameTh].length>80))return false;
  if(!validMonth(topic.releaseMonth)||topic.confirmed!==true)return false;
  if(typeof topic.image!=='string')return false;
- try{const url=new URL(topic.image);if(url.protocol!=='https:'||url.hostname!=='rangers.lerico.net')return false;}catch{return false;}
+ try{const url=new URL(topic.image);if(url.protocol!=='https:'||url.hostname!=='rangers.lerico.net')return false;const expectedImage='https://rangers.lerico.net/res/'+topic.id+'/'+topic.id+'-thum.png';if(topic.source==='pvp-auto'&&url.href!==expectedImage)return false;}catch{return false;}
  if(topic.pvpRank!==null&&topic.pvpRank!==undefined&&(!Number.isSafeInteger(topic.pvpRank)||Number(topic.pvpRank)<1))return false;
  if(topic.adoptionRate!==null&&topic.adoptionRate!==undefined&&(typeof topic.adoptionRate!=='number'||!Number.isFinite(topic.adoptionRate)||topic.adoptionRate<0||topic.adoptionRate>100))return false;
  return true;
