@@ -34,6 +34,9 @@ function validateOfficialMetadata(value,id){
 function candidateName(row){const value=typeof row.name==='string'?row.name.normalize('NFC').replace(/\s+/g,' ').trim():'';return value&&value!==row.unit_code&&[...value].length<=80?value:null;}
 function snapshotRank(row){return Number.isSafeInteger(row.rank)&&row.rank>0?row.rank:null;}
 function adoptionRate(row){return typeof row.adoption_rate==='number'&&Number.isFinite(row.adoption_rate)&&row.adoption_rate>=0&&row.adoption_rate<=100?row.adoption_rate:null;}
+function validReleaseEvidence(value,id){
+ return !!value&&typeof value==='object'&&!Array.isArray(value)&&value.catalogId===id&&/^20\d{2}-(0[1-9]|1[0-2])$/.test(value.releaseMonth||'')&&Number.isSafeInteger(value.noticeId)&&value.noticeId>0&&typeof value.noticeTitle==='string'&&/\bnew rangers? are here!?(?=\W|$)/i.test(value.noticeTitle)&&typeof value.noticeUrl==='string'&&value.noticeUrl==='https://notice2.line.me/LGRGS/ios/document/notice#'+value.noticeId&&typeof value.matchedName==='string'&&value.matchedName.trim().length>0&&[...value.matchedName].length<=240&&Number.isSafeInteger(value.grade)&&value.grade>0&&value.grade<=20&&value.source==='notice2.line.me/LGRGS/ios/document/notice'&&typeof value.publishedAt==='string'&&Number.isFinite(Date.parse(value.publishedAt));
+}
 
 export const probeImage=probeCharacterImage;
 
@@ -67,7 +70,7 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
  if(typeof findReleases==='function'){
   try{
    const found=await findReleases();if(!found||typeof found!=='object'||Array.isArray(found))throw new Error('invalid_release_evidence');
-   releaseNotices=Object.fromEntries(Object.entries(found).filter(([id,value])=>SAFE_ID.test(id)&&value&&typeof value==='object'&&value.catalogId===id&&/^20\d{2}-(0[1-9]|1[0-2])$/.test(value.releaseMonth)&&Number.isSafeInteger(value.noticeId)&&typeof value.publishedAt==='string'&&Number.isFinite(Date.parse(value.publishedAt))));
+   releaseNotices=Object.fromEntries(Object.entries(found).filter(([id,value])=>SAFE_ID.test(id)&&validReleaseEvidence(value,id)));
    nextState.releaseNoticeStatus='verified';
   }catch{nextState.releaseNoticeStatus='unavailable';}
  }
@@ -84,7 +87,7 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
   if(known.has(id)||registeredIds.has(id))continue;
   const row=rowMap.get(id);
   const prior=nextState.candidates[id]&&typeof nextState.candidates[id]==='object'?nextState.candidates[id]:{};
-  const releaseEvidence=releaseNotices[id]||prior.releaseEvidence||null;
+  let releaseEvidence=releaseNotices[id]||(validReleaseEvidence(prior.releaseEvidence,id)?prior.releaseEvidence:null);
   // An old catalog entry ranking for the first time is not a newly released
   // unit. New catalog IDs can receive a board before they appear in PvP.
   if(officialIds&&currentState.catalogInitialized===true&&!newlyCataloged.has(id)&&!nextState.candidates[id]&&!releaseEvidence)continue;
@@ -96,6 +99,7 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
   const gapMs=prior.lastSeenAt&&Number.isFinite(Date.parse(prior.lastSeenAt))?Date.parse(updatedAt)-Date.parse(prior.lastSeenAt):null;const gapOk=typeof gapMs==='number'&&gapMs>=0&&gapMs<=MAX_GAP_MS;
   let metadata=baseEligible?validateOfficialMetadata(prior.metadata,id):null;
   if(baseEligible&&!metadata){try{metadata=validateOfficialMetadata(await verify(id),id);}catch{metadata=null;}}
+  if(releaseEvidence&&(!metadata||releaseEvidence.grade!==metadata.grade||releaseEvidence.matchedName.normalize('NFC').replace(/\s+/g,' ').trim().toLocaleLowerCase('en')!==metadata.nameEn.normalize('NFC').replace(/\s+/g,' ').trim().toLocaleLowerCase('en')))releaseEvidence=null;
   const name=metadata?.name||(row?candidateName(row):null);
   const eligible=baseEligible&&!!metadata&&!!name;
   let imageVerified=eligible&&prior.verifiedImageUrl===image;
