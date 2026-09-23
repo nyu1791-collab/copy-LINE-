@@ -789,18 +789,19 @@ test('Ranger detail parser keeps partial cards when Handbook translations are mi
 });
 
 
-test('board skills use readable source tables and switch to one-card horizontal swipe on phones',()=>{
+test('board skills use the source explanation only and switch to compact horizontal cards on phones',()=>{
  const boardSkillComponent=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
  assert.ok(boardSkillComponent.includes('className="board-skill-scroller"'));
  assert.ok(boardSkillComponent.includes('className="board-skill-list"'));
  assert.ok(boardSkillComponent.includes('横にスワイプして他のスキルを見る'));
+ assert.match(boardSkillComponent,/\{skill\.description\}/);
+ assert.doesNotMatch(boardSkillComponent,/boardSkillSourceDetails|skill\.effects\.map|board-skill-source-table|board-skill-difference/);
  assert.ok(communityCss.includes('.board-skill-list{display:grid;grid-template-columns:minmax(0,1fr);'));
  assert.ok(communityCss.includes('.board-skill-scroller{overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory'));
  assert.ok(communityCss.includes('.board-skill-list{grid-auto-flow:column;grid-auto-columns:100%;'));
- assert.ok(communityCss.includes('.board-skill-source-table{width:100%;table-layout:fixed;border-collapse:collapse;'));
- assert.ok(communityCss.includes('@media(max-width:360px)'));
- assert.ok(!communityCss.includes('.board-skill-source-effects'));
- assert.ok(communityCss.includes('.board-skill p{white-space:pre-line;color:#d8e4ee;font-size:13px;line-height:1.55}'));
+ assert.doesNotMatch(communityCss,/board-skill-source-table|board-skill-difference|#e5c987/);
+ assert.match(communityCss,/\.board-skill\{min-width:0;padding:10px/);
+ assert.ok(communityCss.includes('.board-skill p{white-space:pre-line;color:#d8e4ee;font-size:13px;line-height:1.5}'));
 });
 
 test('Cancer Sally source facts appear beside her portrait and stay language-aware',()=>{
@@ -826,42 +827,18 @@ test('Cancer Sally source facts appear beside her portrait and stay language-awa
  assert.match(communitySource,/aria-pressed=\{selected\}/);
 });
 
-test('Cancer Sally source skill tables show area, factor, duration, chance and cooldown separately from prose',()=>{
- const {boardSkillSourceDetails}=boardCharacterSource;
- const fireworks=boardSkillSourceDetails('u1631e-sally',0,'ja');
- assert.equal(fireworks.probability,'30%');
- assert.equal(fireworks.cooldown,'9秒');
- assert.deepEqual(fireworks.effects.map(({name,area,factor,duration})=>[name,area,factor,duration]),[
-  ['攻撃力アップ','330点','+400%','7秒'],
-  ['攻撃射程アップ','330点','+20%','7秒'],
+test('Cancer Sally skill descriptions stay prose and omit reconstructed table values',()=>{
+ const {parseRangerInfoData}=rangerInfo;
+ const parsed=parseRangerInfoData(
+  [{unitCode:'cancer-sally',unitNameCode:'unit_sally',grade:10,skillCode:'s1',skillCode2:'s2'}],
+  [{skillCode:'s1',nameCode:'s1_name',descriptionCode:'s1_desc',iconResourcePath:'skill1.png'},{skillCode:'s2',nameCode:'s2_name',descriptionCode:'s2_desc',iconResourcePath:'skill2.png'}],
+  {'ja:UNIT':{unit_sally:'かに座 サリー'},'ja:SKILL':{s1_name:'キラキラ花火',s1_desc:'光る蟹の形をした花火を打ち上げ、味方に良い効果を与える。',s2_name:'地中からの奇襲',s2_desc:'大きなハサミで敵を奇襲攻撃し、悪い効果を与える。'}},
+  'cancer-sally','ja',
+ );
+ assert.deepEqual(parsed.skills.map(skill=>[skill.name,skill.description]),[
+  ['キラキラ花火','光る蟹の形をした花火を打ち上げ、味方に良い効果を与える。'],
+  ['地中からの奇襲','大きなハサミで敵を奇襲攻撃し、悪い効果を与える。'],
  ]);
- assert.equal(fireworks.effects[0].difference,'説明文 +300% ／ 表 +400%');
- const ambush=boardSkillSourceDetails('u1631e-sally',1,'ja');
- assert.equal(ambush.probability,'40%');
- assert.equal(ambush.cooldown,'15秒');
- assert.deepEqual(ambush.effects.map(({area,factor,duration})=>[area,factor,duration]),[
-  ['390点','—','3秒'],
-  ['390点','—','12秒'],
-  ['390点','−90%','12秒'],
-  ['390点','ATK × 4,000%','—'],
- ]);
- assert.equal(ambush.effects[2].difference,'説明文 攻撃速度−90% ／ 表 移動速度−90%');
- assert.equal(boardSkillSourceDetails('u1631e-sally',2,'ja'),null);
- assert.equal(boardSkillSourceDetails('other-ranger',0,'ja'),null);
- for(const language of rules.languages){
-  const localized=boardSkillSourceDetails('u1631e-sally',0,language);
-  assert.equal(localized.effects.length,2);
-  assert.equal(localized.probability,'30%');
-  assert.ok(localized.title.length>0);
-  assert.ok(localized.effects[0].difference.length>0);
- }
- const component=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
- assert.match(component,/className="board-skill-source-details"/);
- assert.match(component,/className="board-skill-source-summary"/);
- assert.match(component,/className="board-skill-source-table"/);
- assert.match(component,/scope="col"/);
- assert.match(component,/effect\.difference&&/);
- assert.match(component,/!!skill\.effects\.length&&!sourceDetails/);
- assert.match(component,/data-label=\{sourceDetails\.areaLabel\}/);
- assert.ok(communityCss.includes('overflow-x:auto;overscroll-behavior-x:contain'));
+ assert.deepEqual(parsed.skills.map(skill=>skill.effects),[[],[]]);
+ assert.equal(boardCharacterSource.boardSkillSourceDetails,undefined);
 });
