@@ -109,7 +109,7 @@ async function fetchNoticeJson(url,fetchImpl){
 }
 export async function scanOfficialRangerReleaseNotices(catalogEntries,{fetchImpl=fetch,now=Date.now(),maxPages=8}={}){
  if(!Array.isArray(catalogEntries)||!Number.isFinite(now)||!Number.isSafeInteger(maxPages)||maxPages<1||maxPages>12)throw new Error('invalid_release_notice_scan');
- const currentMonth=releaseMonthJst(now),cutoff=Date.parse(currentMonth+'-01T00:00:00+09:00'),documents=[];let cursor='',lastCursor=null,finished=false,previousRegistered=Infinity;const seenIds=new Set();
+ const currentMonth=releaseMonthJst(now),[year,month]=currentMonth.split('-').map(Number),previousMonth=new Date(Date.UTC(year,month-2,1)).toISOString().slice(0,7),cutoff=Date.parse(previousMonth+'-01T00:00:00+09:00'),documents=[];let cursor='',lastCursor=null,finished=false,previousRegistered=Infinity;const seenIds=new Set();
  for(let page=0;page<maxPages;page++){
   const url=new URL('/v1/LGRGS/ios/document/notice',NOTICE_ORIGIN);url.searchParams.set('size','50');url.searchParams.set('lang','en');url.searchParams.set('fmt','html');if(cursor)url.searchParams.set('nextSeq',cursor);
   const listed=await fetchNoticeJson(url.toString(),fetchImpl);if(!Array.isArray(listed.documents))throw new Error('release_notice_list_invalid');
@@ -132,7 +132,20 @@ export async function scanOfficialRangerReleaseNotices(catalogEntries,{fetchImpl
   const url=new URL('/v1/LGRGS/ios/document/notice/'+document.id,NOTICE_ORIGIN);url.searchParams.set('lang','en');url.searchParams.set('fmt','html');
   const detail=await fetchNoticeJson(url.toString(),fetchImpl);
   if(Number(detail.id)!==document.id||typeof detail.body!=='string'||detail.body.length>500_000||Number(detail.registered)!==document.registered||String(detail.title||'').replace(/&amp;/gi,'&')!==document.title.replace(/&amp;/gi,'&'))throw new Error('release_notice_detail_invalid');
-  const lines=releaseRoster(detail.body);const month=noticeReleaseMonth(detail.registered??document.registered);if(!month)continue;
+  const lines=releaseRoster(detail.body);const publishedAt=detail.registered??document.registered;if(!noticeReleaseMonth(publishedAt))continue;
+  const maintenanceDates=[...detail.body.matchAll(/maintenance\s+(?:on|of)\s+(\d{1,2})[./-](\d{1,2})(?:[./-](20\d{2}))?/gi)].map(match=>({month:Number(match[1]),day:Number(match[2]),year:match[3]?Number(match[3]):null}));
+  const titleEnd=detail.title.match(/until\s+(?:the\s+)?maintenance\s+(?:on|of)\s+(\d{1,2})[./-](\d{1,2})(?:[./-](20\d{2}))?/i);
+  if(maintenanceDates.length<2||!titleEnd)continue;
+  const jstDate=(entry,yearValue)=>Date.UTC(yearValue,entry.month-1,entry.day)-9*60*60*1000;
+  const publishedTime=typeof publishedAt==='number'?publishedAt:Date.parse(publishedAt);const start=maintenanceDates[0];const end={month:Number(titleEnd[1]),day:Number(titleEnd[2]),year:titleEnd[3]?Number(titleEnd[3]):null};
+  const startYears=start.year?[start.year]:[new Date(publishedTime).getUTCFullYear()-1,new Date(publishedTime).getUTCFullYear(),new Date(publishedTime).getUTCFullYear()+1];
+  const startTimes=startYears.map(yearValue=>jstDate(start,yearValue)).filter(value=>value<=publishedTime+24*60*60*1000).sort((a,b)=>b-a);
+  if(!startTimes.length)continue;const startTime=startTimes[0];const endYears=end.year?[end.year]:[new Date(startTime).getUTCFullYear(),new Date(startTime).getUTCFullYear()+1];
+  const endTimes=endYears.map(yearValue=>jstDate(end,yearValue)).filter(value=>value>startTime).sort((a,b)=>a-b);
+  if(!endTimes.length)continue;const endTime=endTimes[0];
+  const windowStartMonth=releaseMonthJst(startTime),month=releaseMonthJst(endTime);
+  const nextMonth=releaseMonthJst(Date.parse(windowStartMonth+'-01T00:00:00+09:00')+32*24*60*60*1000);
+  if(nextMonth!==month||endTime<publishedTime-24*60*60*1000)continue;
   for(const ranger of lines){
    const matches=catalogEntries.filter(entry=>entry&&Number(entry.grade)===ranger.grade&&typeof entry.nameEn==='string'&&entry.nameEn.normalize('NFC').replace(/\s+/g,' ').trim().toLocaleLowerCase('en')===ranger.nameEn.toLocaleLowerCase('en'));
    const unique=[...new Map(matches.filter(entry=>typeof entry.id==='string'&&SAFE_ID.test(entry.id)).map(entry=>[entry.id,entry])).values()];
