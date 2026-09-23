@@ -1,0 +1,40 @@
+name: community-feature-tests
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'config/community-characters.json'
+      - 'lib/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - '.github/workflows/refresh-pvp-data.yml'
+      - '.github/workflows/community-feature-tests.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'wrangler.jsonc'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: community-feature-tests-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.13.0'
+          cache: npm
+      - name: Install locked dependencies
+        run: npm run install:ci
+      - name: Build and run community regression suite
+        run: npm test
+      - name: Lint application and Worker code
+        run: npm run lint

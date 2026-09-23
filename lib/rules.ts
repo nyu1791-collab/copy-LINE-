@@ -78,6 +78,16 @@ export type CharacterTopic={
  releaseMonth:string;
  confirmed:boolean;
  source?:'manual'|'pvp-auto';
+ metadataSource?:string;
+ unitNameCode?:string;
+ evolutionStage?:'e';
+ verifiedGrade?:number|null;
+ skillsVerified?:boolean;
+ skillCount?:number;
+ skillsVerifiedAt?:string|null;
+ discoveredFrom?:'pvp'|'catalog';
+ observationCount?:number;
+ firstObservedAt?:string;
  confirmedAt?:string|null;
  pvpRank?:number|null;
  adoptionRate?:number|null;
@@ -90,10 +100,12 @@ function isSafeTopic(value:unknown):value is CharacterTopic{
  if(typeof topic.name!=='string'||!topic.name.trim()||[...topic.name].length>80)return false;
  if(topic.nameEn!==undefined&& (typeof topic.nameEn!=='string'||!topic.nameEn.trim()||[...topic.nameEn].length>80))return false;
  if(topic.nameZh!==undefined&& (typeof topic.nameZh!=='string'||!topic.nameZh.trim()||[...topic.nameZh].length>80))return false;
+ if(topic.source!==undefined&&topic.source!=='manual'&&topic.source!=='pvp-auto')return false;
+ if(topic.source==='pvp-auto'&&(!/^u\d+e-[a-z0-9_-]+$/i.test(String(topic.id))||!topic.nameEn||!topic.nameZh||topic.metadataSource!=='rangers.lerico.net/api/getRangersBasics'||topic.evolutionStage!=='e'||typeof topic.unitNameCode!=='string'||!/^[A-Za-z0-9_-]{1,120}$/.test(topic.unitNameCode)||!Number.isSafeInteger(topic.observationCount)||Number(topic.observationCount)<3||topic.skillsVerified!==true||!Number.isSafeInteger(topic.skillCount)||Number(topic.skillCount)<1||Number(topic.skillCount)>3||typeof topic.skillsVerifiedAt!=='string'||!Number.isFinite(Date.parse(topic.skillsVerifiedAt))))return false;
  if(topic.nameTh!==undefined&& (typeof topic.nameTh!=='string'||!topic.nameTh.trim()||[...topic.nameTh].length>80))return false;
  if(!validMonth(topic.releaseMonth)||topic.confirmed!==true)return false;
  if(typeof topic.image!=='string')return false;
- try{const url=new URL(topic.image);if(url.protocol!=='https:'||url.hostname!=='rangers.lerico.net')return false;}catch{return false;}
+ try{const url=new URL(topic.image);if(url.protocol!=='https:'||url.hostname!=='rangers.lerico.net')return false;const expectedImage='https://rangers.lerico.net/res/'+topic.id+'/'+topic.id+'-thum.png';if(topic.source==='pvp-auto'&&url.href!==expectedImage)return false;}catch{return false;}
  if(topic.pvpRank!==null&&topic.pvpRank!==undefined&&(!Number.isSafeInteger(topic.pvpRank)||Number(topic.pvpRank)<1))return false;
  if(topic.adoptionRate!==null&&topic.adoptionRate!==undefined&&(typeof topic.adoptionRate!=='number'||!Number.isFinite(topic.adoptionRate)||topic.adoptionRate<0||topic.adoptionRate>100))return false;
  return true;
@@ -127,9 +139,11 @@ export const characters:readonly CharacterTopic[]=Object.freeze(safeRows.filter(
 
 export function confirmedCharactersForMonth(month:string){
  return characters.filter(character=>character.confirmed&&character.releaseMonth===month).sort((a,b)=>{
+  const rateA=typeof a.adoptionRate==='number'?a.adoptionRate:-1;
+  const rateB=typeof b.adoptionRate==='number'?b.adoptionRate:-1;
   const ar=Number.isSafeInteger(a.pvpRank)?Number(a.pvpRank):Number.MAX_SAFE_INTEGER;
   const br=Number.isSafeInteger(b.pvpRank)?Number(b.pvpRank):Number.MAX_SAFE_INTEGER;
-  return ar-br||(b.adoptionRate||0)-(a.adoptionRate||0)||a.id.localeCompare(b.id);
+  return rateB-rateA||ar-br||a.id.localeCompare(b.id);
  });
 }
 export function isKnownCharacter(id:string){return characters.some(character=>character.id===id);}
