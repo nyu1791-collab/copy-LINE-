@@ -28,13 +28,17 @@ function metadataFor(id){
  const tail=id.split('-').at(-1);
  return {id,name:row.name,nameEn:'New '+tail,nameZh:'新角 '+tail,nameTh:'ใหม่ '+tail,unitNameCode:'unit_'+tail,stage:'e',grade:8,skillsVerified:true,skillCount:2,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt:'2026-10-01T00:00:00.000Z'};
 }
+function releaseEvidenceFor(id,releaseMonth='2026-10'){
+ return {releaseMonth,noticeId:100028330,noticeTitle:'New Rangers are here!',noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice#100028330',publishedAt:'2026-09-30T15:00:00.000Z',catalogId:id,matchedName:metadataFor(id)?.nameEn||'New character',grade:8,source:'notice2.line.me/LGRGS/ios/document/notice'};
+}
+const releaseEvidenceForRows=async candidateRows=>Object.fromEntries(candidateRows.map(row=>[row.unit_code,releaseEvidenceFor(row.unit_code)]));
 
-async function threeConfirmedSnapshots({candidateRows=rows,legacyKnown=noLegacy,probe=async()=>true,verifyMetadata=metadataFor}={}){
+async function threeConfirmedSnapshots({candidateRows=rows,legacyKnown=noLegacy,probe=async()=>true,verifyMetadata=metadataFor,findReleaseEvidence=()=>releaseEvidenceForRows(candidateRows)}={}){
  let registry={schemaVersion:1,characters:[]};
  let state=initialState();
  let result;
  for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-01T01:00:00+09:00','2026-10-01T02:00:00+09:00']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,candidateRows),history:{snapshots:[]},registry,state,legacyKnown,probe,verifyMetadata});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,candidateRows),history:{snapshots:[]},registry,state,legacyKnown,probe,verifyMetadata,findReleaseEvidence});
   registry=result.registry;state=result.state;
  }
  return result;
@@ -66,6 +70,14 @@ test('automatic topic promotion fails closed on partial PvP samples',async()=>{
  }),/refusing incomplete PvP snapshot/);
 });
 
+test('repeated complete snapshots do not publish a character without current-month official release evidence',async()=>{
+ const final=await threeConfirmedSnapshots({candidateRows:[rows[0]],findReleaseEvidence:async()=>({})});
+ assert.deepEqual(final.promoted,[]);
+ assert.equal(final.registry.characters.length,0);
+ assert.equal(final.state.candidates['u2000e-alpha'].consecutive,0);
+ assert.equal(final.state.candidates['u2000e-alpha'].releaseEvidence,null);
+});
+
 test('metadata that is not present in the official localized unit catalog remains unpublished',async()=>{
  const final=await threeConfirmedSnapshots({candidateRows:[rows[0]],verifyMetadata:async()=>null});
  assert.deepEqual(final.promoted,[]);
@@ -73,19 +85,19 @@ test('metadata that is not present in the official localized unit catalog remain
  assert.equal(final.state.candidates['u2000e-alpha'].consecutive,0);
 });
 
-test('a candidate crossing JST month end restarts its confirmation streak in the new month',async()=>{
+test('a candidate crossing JST month end starts its verified release streak on the official release date',async()=>{
  let registry={schemaVersion:1,characters:[]};
  let state={...initialState(),lastSnapshotAt:'2026-09-30T12:00:00.000Z'};
  let result;
  for(const updatedAt of ['2026-09-30T13:00:00.000Z','2026-09-30T14:00:00.000Z','2026-09-30T15:00:00.000Z']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
   registry=result.registry;state=result.state;
  }
  assert.deepEqual(result.promoted,[]);
  assert.equal(state.candidates['u2000e-alpha'].firstSeenMonth,'2026-10');
  assert.equal(state.candidates['u2000e-alpha'].consecutive,1);
  for(const updatedAt of ['2026-09-30T16:00:00.000Z','2026-09-30T17:00:00.000Z']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
   registry=result.registry;state=result.state;
  }
  assert.equal(result.promoted[0].releaseMonth,'2026-10');
@@ -113,12 +125,25 @@ test('three catalog releases get separate monthly topics before any of them rank
  const prior={unit_code:'u1000e-old',rank:1,adoption_rate:12};
  let final;
  for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-01T01:00:00+09:00','2026-10-01T02:00:00+09:00']){
-  final=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[prior]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',...rows.map(row=>row.unit_code)]});
+  final=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[prior]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',...rows.map(row=>row.unit_code)],findReleaseEvidence:()=>releaseEvidenceForRows(rows)});
   state=final.state;registry=final.registry;
  }
  assert.equal(final.promoted.length,3);
  assert.ok(final.promoted.every(topic=>topic.discoveredFrom==='catalog'&&topic.pvpRank===null&&topic.adoptionRate===null&&topic.skillsVerified));
  assert.equal(final.state.candidates['u1000e-old'],undefined);
+});
+
+test('an exact current-month release notice can qualify a unit already present in the catalog baseline',async()=>{
+ const id=rows[0].unit_code;
+ let state={...initialState(),catalogInitialized:true,knownCatalogIds:['u1000e-old',id]};
+ let registry={schemaVersion:1,characters:[]};
+ let result;
+ for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-01T01:00:00+09:00','2026-10-01T02:00:00+09:00']){
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',id],findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
+  registry=result.registry;state=result.state;
+ }
+ assert.deepEqual(result.promoted.map(topic=>topic.id),[id]);
+ assert.equal(registry.characters[0].pvpRank,null);
 });
 
 test('an existing monthly board receives its real PvP rank after the character first ranks',async()=>{
@@ -127,11 +152,11 @@ test('an existing monthly board receives its real PvP rank after the character f
  let result;
  const old={unit_code:'u1000e-old',rank:1,adoption_rate:12};
  for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-01T01:00:00+09:00','2026-10-01T02:00:00+09:00']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[old]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',rows[0].unit_code]});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[old]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',rows[0].unit_code],findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
   state=result.state;registry=result.registry;
  }
  assert.equal(registry.characters[0].pvpRank,null);
- const ranked=await updateCommunityCharacters({snapshot:snapshot('2026-10-01T03:00:00+09:00',[old,{...rows[0],rank:7,adoption_rate:18}]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',rows[0].unit_code]});
+ const ranked=await updateCommunityCharacters({snapshot:snapshot('2026-10-01T03:00:00+09:00',[old,{...rows[0],rank:7,adoption_rate:18}]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',rows[0].unit_code],findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
  assert.equal(ranked.promoted.length,0);
  assert.equal(ranked.registry.characters.length,1);
  assert.equal(ranked.registry.characters[0].pvpRank,7);
