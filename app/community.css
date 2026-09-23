@@ -62,3 +62,30 @@
 .board-skill-effects{border-top:1px solid #304760;margin-top:10px;padding-top:4px}
 .board-skill-effects ul{padding-left:18px;margin:4px 0 0;display:grid;gap:4px;font-size:12px;line-height:1.5}
 @media(max-width:600px){.board-skills{padding:12px}.board-skill{padding:9px}.board-skill-heading{align-items:flex-start}.board-skill-heading h3{font-size:14px}}
+
+/* Source-backed character facts sit beside the selected ranger portrait. */
+.character-option{min-width:0}
+.character-option.with-source-profile{grid-column:1/-1}
+.character{width:100%}
+.character-copy{flex:1;min-width:0}
+.character-with-source-profile{flex-direction:row;align-items:center;gap:12px}
+.character-with-source-profile img{width:65px;height:75px;align-self:auto}
+.character-profile{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px 10px;margin:7px 0 0;padding:0}
+.character-profile>div{min-width:0;border-left:2px solid #3b8d73;padding-left:7px}
+.character-profile dt{color:#a6b6ca;font-size:11px;line-height:1.35}
+.character-profile dd{margin:1px 0 0;color:#edf3fa;font-size:13px;font-weight:700;overflow-wrap:anywhere;line-height:1.4}
+.character-source-link{display:inline-flex;margin:4px 0 0 92px;color:#81c9ff;text-decoration:underline;text-underline-offset:2px;font-size:11px;min-height:24px;align-items:center}
+.board-skill-source-details{border-top:1px solid #304760;margin:8px 0 6px;padding-top:6px}
+.board-skill-source-details>h4{margin:0 0 3px;color:#80dcb4;font-size:12px;font-weight:700}
+.board-skill-source-note{margin:0 0 6px!important;color:#9db5c9!important;font-size:10px!important;line-height:1.4!important}
+.board-skill-source-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px;margin:0 0 6px;padding:0}
+.board-skill-source-summary>div{min-width:0;background:#13283b;border-radius:6px;padding:4px 6px}
+.board-skill-source-summary dt,.board-skill-source-effects dt{color:#9db5c9;font-size:10px;line-height:1.3}
+.board-skill-source-summary dd,.board-skill-source-effects dd{margin:1px 0 0;color:#edf3fa;font-size:11px;font-weight:700;line-height:1.4;overflow-wrap:anywhere}
+.board-skill-source-effects{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.board-skill-source-effects>li{min-width:0;border:1px solid #2c435a;border-radius:7px;padding:5px 6px;background:#0d1d2e}
+.board-skill-source-effects>li>strong{display:block;color:#e2ebf3;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+.board-skill-source-effects dl{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 7px;margin:4px 0 0;padding:0}
+.board-skill-source-effects dl>div{min-width:0}
+.board-skill-source-effects dl>div:last-child:nth-child(odd){grid-column:1/-1}
+@media(max-width:600px){.character-with-source-profile{align-items:flex-start;padding:10px;gap:9px}.character-with-source-profile img{width:56px;height:64px;flex:none}.character-profile{grid-template-columns:repeat(2,minmax(0,1fr));gap:5px 7px}.character-profile dt{font-size:10px}.character-profile dd{font-size:12px}.character-source-link{margin-left:75px}.board-skill-source-details{margin-top:7px}.board-skill-source-note{font-size:10px!important}}
