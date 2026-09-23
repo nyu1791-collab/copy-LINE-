@@ -53,6 +53,7 @@ export default function BoardCharacterSkills({unitCode,language,displayName}:{un
  return <section className="board-skills" aria-label={displayName+' · '+copy.title}>
   <div className="board-skills-heading"><h2>{displayName} · {copy.title}</h2>{info&&<a href={sourceLink(info.sourceUrl,unitCode,language)||undefined} target="_blank" rel="noopener noreferrer">{copy.source}</a>}</div>
   {!ready||!info&&!result.error?<p role="status">{copy.loading}</p>:result.error?<p role="status">{copy.unavailable} <button type="button" onClick={()=>setAttempt(value=>value+1)}>{copy.retry}</button></p>:
+   <>
    {info.skills.length>1&&<p className="board-skill-scroll-hint">{copy.scrollHint}</p>}
    <div className="board-skill-scroller" role="region" aria-label={copy.title} tabIndex={info.skills.length>1?0:undefined}>
    <div className="board-skill-list">{info.skills.map((skill,index)=>{
@@ -62,6 +63,6 @@ export default function BoardCharacterSkills({unitCode,language,displayName}:{un
      <h4>{copy.description}</h4><p>{skill.description}</p>
      {!!skill.effects.length&&<div className="board-skill-effects"><h4>{copy.effects}</h4><ul>{skill.effects.map((effect,i)=><li key={i}>{effect}</li>)}</ul></div>}
     </article>;
-   })}</div></div>}
+   })}</div></div></>}
  </section>;
 }
