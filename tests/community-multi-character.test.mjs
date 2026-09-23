@@ -74,14 +74,14 @@ test('a candidate crossing JST month end restarts its confirmation streak in the
  let registry={schemaVersion:1,characters:[]};
  let state={...initialState(),lastSnapshotAt:'2026-09-30T12:00:00.000Z'};
  let result;
- for(const updatedAt of ['2026-09-30T13:00:00.000Z','2026-09-30T13:30:00.000Z','2026-09-30T14:00:00.000Z']){
+ for(const updatedAt of ['2026-09-30T13:00:00.000Z','2026-09-30T14:00:00.000Z','2026-09-30T15:00:00.000Z']){
   result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
   registry=result.registry;state=result.state;
  }
  assert.deepEqual(result.promoted,[]);
  assert.equal(state.candidates['u2000e-alpha'].firstSeenMonth,'2026-10');
  assert.equal(state.candidates['u2000e-alpha'].consecutive,1);
- for(const updatedAt of ['2026-09-30T15:00:00.000Z','2026-09-30T16:00:00.000Z']){
+ for(const updatedAt of ['2026-09-30T16:00:00.000Z','2026-09-30T17:00:00.000Z']){
   result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
   registry=result.registry;state=result.state;
  }
