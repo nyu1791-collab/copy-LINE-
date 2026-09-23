@@ -119,6 +119,23 @@ test('three catalog releases get separate monthly topics before any of them rank
  assert.equal(final.state.candidates['u1000e-old'],undefined);
 });
 
+test('an existing monthly board receives its real PvP rank after the character first ranks',async()=>{
+ let state={...initialState(),catalogInitialized:true,knownCatalogIds:['u1000e-old']};
+ let registry={schemaVersion:1,characters:[]};
+ let result;
+ const old={unit_code:'u1000e-old',rank:1,adoption_rate:12};
+ for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-01T01:00:00+09:00','2026-10-01T02:00:00+09:00']){
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[old]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',rows[0].unit_code]});
+  state=result.state;registry=result.registry;
+ }
+ assert.equal(registry.characters[0].pvpRank,null);
+ const ranked=await updateCommunityCharacters({snapshot:snapshot('2026-10-01T03:00:00+09:00',[old,{...rows[0],rank:7,adoption_rate:18}]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',rows[0].unit_code]});
+ assert.equal(ranked.promoted.length,0);
+ assert.equal(ranked.registry.characters.length,1);
+ assert.equal(ranked.registry.characters[0].pvpRank,7);
+ assert.equal(ranked.registry.characters[0].adoptionRate,18);
+});
+
 test('a previously cataloged character newly ranked in PvP does not create an old-character board',async()=>{
  const old={...rows[0]};
  const result=await updateCommunityCharacters({snapshot:snapshot('2026-10-01T00:00:00+09:00',[old]),history:{snapshots:[]},registry:{schemaVersion:1,characters:[]},state:{...initialState(),catalogInitialized:true,knownCatalogIds:[old.unit_code]},legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>[old.unit_code]});
