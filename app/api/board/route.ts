@@ -5,7 +5,7 @@ import { enrichPosts,logicalPostAnchorSql as logicalPostAnchor } from '@/lib/com
 import {abuseNetworkBucket,displayNameCookie,guestCookieForSubject,guestName,sessionFromHeaders,type AnonymousSession,verifyPublicViewerToken} from '@/lib/anonymous-session';
 import {loadCommunityFeatureFlags,requireCommunityFeature} from '@/lib/community-flags';
 import {isCommunityFeatureName} from '@/lib/community-features';
-import { confirmedCharactersForMonth,isConfirmedCharacterForMonth,isVideoMedia,monthJST,validMonth,textInput,validateReply,mayModerate,contributionBadges,ownerDisplayName,type Role } from '@/lib/rules';
+import { characters,confirmedCharactersForMonth,isConfirmedCharacterForMonth,isVideoMedia,monthJST,validMonth,textInput,validateReply,mayModerate,contributionBadges,ownerDisplayName,type Role } from '@/lib/rules';
 export const dynamic='force-dynamic';
 type User={id:string;name:string;display_name_set:number;role:Role;badges?:string[]};
 type BoardStats={videos:number;comments:number;todayComments:number;unread:number;latestCreated:number;latestId:string|null};
@@ -110,12 +110,12 @@ export async function GET(request:Request){try{
   return reply({hidden,reports,users:usersWithBadges,flags});
  }
  const current=monthJST();const requested=u.searchParams.get('month')||current;if(!validMonth(requested)||requested>current)throw new Error('invalid_request');
- // Only explicitly confirmed evaluation topics are seeded for the current JST
- // month. Insert only topics that are still missing, so a second or third new
- // character confirmed later in the same month gets its own board immediately.
+ // A verified topic may have been published without anyone visiting the board
+ // during its release month. Backfill it when that archived month is opened;
+ // INSERT OR IGNORE never changes an existing board or its discussion.
  let boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;
  const confirmedTopics=confirmedCharactersForMonth(requested);
- if(requested===current&&confirmedTopics.length){
+ if(confirmedTopics.length){
   const existingCharacters=new Set(boards.map(b=>String(b.character)));
   const missingTopics=confirmedTopics.filter(c=>!existingCharacters.has(c.id));
   if(missingTopics.length){
@@ -132,7 +132,9 @@ export async function GET(request:Request){try{
   boards=confirmedTopics.flatMap(c=>{const row=boardByCharacter.get(c.id);return row?[{...row,name:c.name,nameEn:c.nameEn||null,nameZh:c.nameZh||null,nameTh:c.nameTh||null,image:c.image}]:[];});
  }
  const monthRows=(await db.prepare('SELECT DISTINCT month FROM boards WHERE month<=? ORDER BY month DESC LIMIT 1200').bind(current).all<{month:string}>()).results;
- const availableMonths=[...new Set([current,...monthRows.map(row=>String(row.month))].filter(value=>validMonth(value)&&value<=current))].sort((a,b)=>b.localeCompare(a));
+ // Registry months must remain selectable even if their D1 board was never
+ // initialized before JST month rollover. Also retain DB-only old archives.
+ const availableMonths=[...new Set([current,...monthRows.map(row=>String(row.month)),...characters.map(topic=>topic.releaseMonth)].filter(value=>validMonth(value)&&value<=current))].sort((a,b)=>b.localeCompare(a));
  const board=u.searchParams.get('board')||String(boards[0]?.id||'');let parent=u.searchParams.get('video');const requestedGroup=u.searchParams.get('group');if(parent&&requestedGroup)throw new Error('invalid_request');
  if(board&&!boards.some(b=>b.id===board))throw new Error('not_found');
  let mediaItems:Record<string,unknown>[]=[];let video=null;if(requestedGroup){if(!/^[a-f0-9-]{36}$/.test(requestedGroup))throw new Error('invalid_request');const groupOwner=await db.prepare("SELECT author FROM posts WHERE board=? AND media_group=? AND parent IS NULL AND status='visible' ORDER BY created ASC,id ASC LIMIT 1").bind(board,requestedGroup).first<{author:string}>();if(!groupOwner)throw new Error('not_found');const grouped=(await db.prepare("SELECT id,video,media_type mediaType,media_name mediaName,media_size mediaSize,media_group mediaGroup,created FROM posts WHERE board=? AND author=? AND media_group=? AND parent IS NULL AND status='visible' ORDER BY created ASC,id ASC").bind(board,groupOwner.author,requestedGroup).all()).results as Record<string,unknown>[];const anchor=grouped.find(item=>!!item.video||String(item.mediaType||'').startsWith('video/'))||grouped[0];parent=String(anchor.id);video=await visiblePost(parent);if(!video||!isVideoPost(video)||video.parent||video.board!==board)throw new Error('not_found');mediaItems=grouped;}else if(parent){video=await visiblePost(parent);if(!video||!isVideoPost(video)||video.parent||video.board!==board)throw new Error('not_found');}

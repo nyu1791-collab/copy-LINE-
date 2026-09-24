@@ -47,6 +47,14 @@ test('board API lists retained months and keeps archived boards read-only',()=>{
  assert.doesNotMatch(api,/DELETE FROM boards/i);
 });
 
+test('an unvisited release month remains selectable and its verified topics are backfilled without replacing posts',()=>{
+ const api=readFileSync(new URL('../app/api/board/route.ts',import.meta.url),'utf8');
+ assert.match(api,/const confirmedTopics=confirmedCharactersForMonth\(requested\);\s*if\(confirmedTopics\.length\)/);
+ assert.match(api,/INSERT OR IGNORE INTO boards\(id,month,character,name,name_en,image\)/);
+ assert.match(api,/\.\.\.characters\.map\(topic=>topic\.releaseMonth\)/);
+ assert.doesNotMatch(api,/DELETE FROM boards|DROP TABLE boards/i);
+});
+
 test('community discovery failure cannot suppress the PvP snapshot commit',()=>{
  const workflow=readFileSync(new URL('../.github/workflows/refresh-pvp-data.yml',import.meta.url),'utf8');
  assert.match(workflow,/id: community_discovery\s+continue-on-error: true/);
