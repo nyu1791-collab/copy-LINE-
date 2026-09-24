@@ -5,10 +5,10 @@ import type {Language} from '@/lib/rules';
 import type {RangerInfo} from '@/lib/ranger-info';
 
 const wording={
- ja:{title:'スキル情報',effects:'効果',loading:'スキル情報を読み込み中…',unavailable:'スキル情報を現在取得できません。意見欄は利用できます。',retry:'再取得',discussion:'このキャラ専用の意見・投票・動画です。'},
- en:{title:'Skills',effects:'Effects',loading:'Loading skills…',unavailable:'Skills are temporarily unavailable. This character’s discussion is still available.',retry:'Retry',discussion:'Opinions, votes and videos here belong to this character only.'},
- zh:{title:'技能資訊',effects:'效果',loading:'正在載入技能…',unavailable:'暫時無法取得技能資訊。仍可查看此角色的討論。',retry:'重試',discussion:'此處的意見、投票與影片僅屬於這名角色。'},
- th:{title:'ข้อมูลสกิล',effects:'เอฟเฟกต์',loading:'กำลังโหลดสกิล…',unavailable:'ยังโหลดข้อมูลสกิลไม่ได้ แต่กระดานของตัวละครนี้ยังใช้งานได้',retry:'ลองอีกครั้ง',discussion:'ความคิดเห็น โหวต และวิดีโอในหน้านี้เป็นของตัวละครนี้เท่านั้น'},
+ ja:{title:'スキル情報',effects:'効果',scrollHint:'横スワイプで他のスキル',loading:'スキル情報を読み込み中…',unavailable:'スキル情報を現在取得できません。意見欄は利用できます。',retry:'再取得',discussion:'このキャラ専用の意見・投票・動画です。'},
+ en:{title:'Skills',effects:'Effects',scrollHint:'Swipe for more skills',loading:'Loading skills…',unavailable:'Skills are temporarily unavailable. This character’s discussion is still available.',retry:'Retry',discussion:'Opinions, votes and videos here belong to this character only.'},
+ zh:{title:'技能資訊',effects:'效果',scrollHint:'左右滑動看其他技能',loading:'正在載入技能…',unavailable:'暫時無法取得技能資訊。仍可查看此角色的討論。',retry:'重試',discussion:'此處的意見、投票與影片僅屬於這名角色。'},
+ th:{title:'ข้อมูลสกิล',effects:'เอฟเฟกต์',scrollHint:'ปัดเพื่อดูสกิลอื่น',loading:'กำลังโหลดสกิล…',unavailable:'ยังโหลดข้อมูลสกิลไม่ได้ แต่กระดานของตัวละครนี้ยังใช้งานได้',retry:'ลองอีกครั้ง',discussion:'ความคิดเห็น โหวต และวิดีโอในหน้านี้เป็นของตัวละครนี้เท่านั้น'},
 } satisfies Record<Language,Record<string,string>>;
 
 export function boardDiscussionNote(language:Language){return wording[language].discussion;}
@@ -54,6 +54,7 @@ export default function BoardCharacterSkills({unitCode,language,displayName}:{un
   <div className="board-skills-heading"><h2>{displayName} · {copy.title}</h2></div>
   {!ready||!info&&!result.error?<p role="status">{copy.loading}</p>:result.error?<p role="status">{copy.unavailable} <button type="button" onClick={()=>setAttempt(value=>value+1)}>{copy.retry}</button></p>:
    <>
+   {info.skills.length>1&&<p className="board-skill-scroll-hint">{copy.scrollHint}</p>}
    <div className="board-skill-scroller" role="region" aria-label={displayName+' · '+copy.title} tabIndex={info.skills.length>1?0:undefined}>
    <div className="board-skill-list">{info.skills.map(skill=>{
     const icon=skillIcon(skill.iconUrl);

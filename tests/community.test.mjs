@@ -789,17 +789,27 @@ test('Ranger detail parser keeps partial cards when Handbook translations are mi
 });
 
 
-test('board skills show source effects only in compact horizontal cards',()=>{
+test('board skills show source effects only in compact swipe cards',()=>{
  const boardSkillComponent=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
  assert.ok(boardSkillComponent.includes('className="board-skill-scroller"'));
  assert.ok(boardSkillComponent.includes('className="board-skill-list"'));
- assert.match(boardSkillComponent,/\{skill\.effects\.map\(\(effect,index\)/);
- assert.doesNotMatch(boardSkillComponent,/skill\.description|scrollHint|boardSkillSourceDetails|board-skill-source-table|board-skill-difference/);
+ assert.ok(boardSkillComponent.includes('className="board-skill-scroll-hint"'));
+ assert.ok(boardSkillComponent.includes('{skill.effects.map((effect,index)'));
+ assert.ok(!boardSkillComponent.includes('<table'));
+ assert.ok(!boardSkillComponent.includes('skill.description'));
+ assert.ok(!boardSkillComponent.includes('boardSkillSourceDetails'));
+ assert.ok(!boardSkillComponent.includes('board-skill-source-table'));
+ assert.ok(!boardSkillComponent.includes('board-skill-difference'));
  assert.ok(communityCss.includes('.board-skill-scroller{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;'));
  assert.ok(communityCss.includes('.board-skill-list{display:flex;align-items:stretch;gap:8px;width:100%;min-width:0}'));
  assert.ok(communityCss.includes('.board-skill{flex:0 0 min(320px,calc(100% - 36px));'));
+ assert.ok(communityCss.includes('@media(max-width:600px){.board-skill{flex-basis:100%}}'));
+ assert.ok(communityCss.includes('.board-skill-heading img{width:36px;height:36px;object-fit:contain;flex:none}'));
  assert.ok(communityCss.includes('.board-skill-effects ul{padding-left:16px;margin:0;display:grid;gap:2px;'));
- assert.doesNotMatch(communityCss,/board-skill-source-table|board-skill-difference|#e5c987|board-skill-scroll-hint|\.board-skill p/);
+ assert.ok(!communityCss.includes('board-skill-source-table'));
+ assert.ok(!communityCss.includes('board-skill-difference'));
+ assert.ok(!communityCss.includes('#e5c987'));
+ assert.ok(!communityCss.includes('.board-skill p'));
 });
 test('Cancer Sally source facts appear beside her portrait and stay language-aware',()=>{
  const {boardCharacterSourceProfile}=boardCharacterSource;
