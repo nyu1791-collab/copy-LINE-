@@ -54,6 +54,26 @@ test('multiple new characters are confirmed together without replacing each othe
  assert.equal(final.registry.characters.at(-1).pvpRank,null,'confirmed character without PvP rank stays last');
 });
 
+test('missed scheduled slots do not prevent three verified full observations',async()=>{
+ let registry={schemaVersion:1,characters:[]},state=initialState(),result;
+ for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-01T08:00:00+09:00','2026-10-01T16:00:00+09:00']){
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
+  registry=result.registry;state=result.state;
+ }
+ assert.deepEqual(result.promoted.map(topic=>topic.id),[rows[0].unit_code]);
+ assert.equal(registry.characters[0].observationCount,3);
+});
+
+test('a gap beyond one day resets the streak and duplicate snapshots cannot extend it',async()=>{
+ let registry={schemaVersion:1,characters:[]},state=initialState(),result;
+ for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-02T01:00:00+09:00','2026-10-02T01:00:00+09:00','2026-10-02T02:00:00+09:00']){
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
+  registry=result.registry;state=result.state;
+ }
+ assert.deepEqual(result.promoted,[]);
+ assert.equal(state.candidates[rows[0].unit_code].consecutive,2);
+});
+
 test('next month promotion appends a board without changing the old board identity or stored discussion',async()=>{
  const october=await threeConfirmedSnapshots({candidateRows:[rows[0]]});
  const old=structuredClone(october.registry.characters[0]);
@@ -113,6 +133,12 @@ test('metadata that is not present in the official localized unit catalog remain
  assert.deepEqual(final.promoted,[]);
  assert.equal(final.state.candidates['u2000e-alpha'].metadataVerified,false);
  assert.equal(final.state.candidates['u2000e-alpha'].consecutive,0);
+});
+
+test('automatic topics require all four localized names, including Thai',async()=>{
+ const final=await threeConfirmedSnapshots({candidateRows:[rows[0]],verifyMetadata:async id=>({...metadataFor(id),nameTh:null})});
+ assert.deepEqual(final.promoted,[]);
+ assert.equal(final.state.candidates[rows[0].unit_code].metadataVerified,false);
 });
 
 test('a candidate crossing JST month end starts its verified release streak on the official release date',async()=>{
