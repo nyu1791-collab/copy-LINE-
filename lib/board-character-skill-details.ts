@@ -1,4 +1,5 @@
 import type {Language} from '@/lib/rules';
+import type {SourceSkillDetails} from '@/lib/ranger-info';
 
 type EffectKey='attackPower'|'attackRange'|'removeInvincibility'|'preventDebuffRemoval'|'attackSpeedDown'|'damageOnce';
 type RawRow={effect:EffectKey;area:number;factor:string|null;durationSeconds:number|null};
@@ -54,6 +55,20 @@ export function boardCharacterSkillDetails(unitCode:string,skillIndex:number,ski
    area:row.area+labels.points,
    factor:row.factor==='attack4000'?labels.damageFactor:row.factor||'—',
    duration:row.durationSeconds===null?'—':row.durationSeconds+labels.seconds,
+  })),
+ };
+}
+
+export function boardSourceSkillDetails(source:SourceSkillDetails|undefined,effectCount:number,language:Language):SkillDetails|null{
+ if(!source||!Array.isArray(source.rows)||source.rows.length!==effectCount||effectCount<1||effectCount>12||!Number.isInteger(source.probability)||source.probability<0||source.probability>100||!Number.isInteger(source.cooldownSeconds)||source.cooldownSeconds<0||source.cooldownSeconds>180)return null;
+ const labels=detailLabels[language];
+ return {
+  labels,probability:source.probability+'%',cooldown:source.cooldownSeconds+labels.seconds,
+  rows:source.rows.map(row=>({
+   effect:row.effect,
+   area:Number.isSafeInteger(row.area)&&Number(row.area)>0?row.area+labels.points:'—',
+   factor:row.factor||'—',
+   duration:Number.isSafeInteger(row.durationSeconds)&&Number(row.durationSeconds)>=0?row.durationSeconds+labels.seconds:'—',
   })),
  };
 }

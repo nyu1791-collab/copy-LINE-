@@ -9,7 +9,9 @@ export type RangerSkillInfo={
  description:string;
  effects:string[];
  iconUrl:string|null;
+ details?:SourceSkillDetails;
 };
+export type SourceSkillDetails={probability:number;cooldownSeconds:number;rows:Array<{effect:string;area:number|null;factor:string|null;durationSeconds:number|null}>};
 export type RangerInfo={unitCode:string;language:RangerInfoLanguage;name:string;skills:RangerSkillInfo[];sourceUrl:string};
 
 type BasicRanger={
@@ -27,6 +29,10 @@ type SkillRow={
  nameCode?:unknown;
  descriptionCode?:unknown;
  iconResourcePath?:unknown;
+ probability?:unknown;
+ skillDelayTime?:unknown;
+ range?:unknown;
+ subSkills?:unknown;
 };
 
 export function validRangerUnitCode(value:string){return UNIT_CODE_PATTERN.test(value);}
@@ -100,6 +106,43 @@ export function splitSkillDescription(value:unknown){
  return {description,effects};
 }
 
+// Only the structured chance, cooldown and range come from getSkills. Effect
+// names, factors and durations come from the translated explanation, which can
+// correct the source's numeric effect table. Ambiguous data stays unstructured.
+export function sourceSkillDetails(skill:SkillRow,effects:string[]):SourceSkillDetails|null{
+ if(!effects.length||effects.length>12)return null;
+ const chance=Number(skill.probability),cooldown=Number(skill.skillDelayTime);
+ if(skill.probability==null||skill.skillDelayTime==null||!Number.isFinite(chance)||chance<0||chance>1||!Number.isSafeInteger(cooldown)||cooldown<0||cooldown>180)return null;
+ const percentage=Math.round(chance*100);
+ if(Math.abs(chance*100-percentage)>0.001)return null;
+ const children=Array.isArray(skill.subSkills)?skill.subSkills:[];
+ const areas=[skill,...children].map(row=>record(row)?.range);
+ const stableArea=(effects.length===1||children.length>=effects.length-1)&&areas.every(area=>area===areas[0])&&Number.isSafeInteger(areas[0])&&Number(areas[0])>0&&Number(areas[0])<=5000?Number(areas[0]):null;
+ const rows=effects.map(effect=>{
+  const normalized=effect.normalize('NFKC');
+  const times=[...normalized.matchAll(/(\d{1,3})\s*(?:秒|seconds?|secs?|s\b|วินาที)/giu)];
+  const durationSeconds=times.length===1?Number(times[0][1]):null;
+  const factors=[...normalized.matchAll(/(\d{1,5}(?:,\d{3})?(?:\.\d+)?)\s*%/gu)];
+  let factor:string|null=null;
+  let label=effect.trim();
+  if(factors.length===1){
+   const amount=factors[0][1];
+   const prefix=normalized.slice(0,factors[0].index);
+   const suffix=normalized.slice(factors[0].index!+factors[0][0].length);
+   const damage=/[×*]\s*$/u.test(prefix);
+   const down=/ダウン|減少|低下|降低|ลด|decreas|reduc|\bdown\b/iu.test(suffix);
+   const up=/アップ|増加|上昇|提升|提高|เพิ่ม|increas|boost|\bup\b/iu.test(normalized);
+   factor=(damage?'×':down?'-':up?'+':'')+amount+'%';
+   label=normalized.replace(factors[0][0],'').replace(/[×*]\s*(?=の|範囲|damage|dmg)/giu,'');
+  }
+  if(times.length===1)label=label.replace(/\s*[（(]\s*\d{1,3}\s*(?:秒|seconds?|secs?|s\b|วินาที)\s*[）)]/giu,'');
+  label=label.replace(/^の/u,'').replace(/\s+by\s*$/iu,'').replace(/\s{2,}/gu,' ').trim();
+  if(!label)label=effect.trim();
+  return {effect:label.slice(0,220),area:stableArea,factor,durationSeconds};
+ });
+ return {probability:percentage,cooldownSeconds:cooldown,rows};
+}
+
 export function parseRangerInfoData(
  basics:unknown,
  skills:unknown,
@@ -160,11 +203,13 @@ export function parseRangerInfoData(
   const parts=translatedDescription
    ? splitSkillDescription(translatedDescription)
    : {description:missingDescription,effects:[] as string[]};
+  const details=sourceSkillDetails(skill,parts.effects);
   result.push({
    name:skillName,
    description:parts.description,
    effects:parts.effects,
    iconUrl:rangerSkillIconUrl(skill.iconResourcePath),
+   ...(details?{details}:{}),
   });
  }
  if(!result.length)throw new Error('skills_missing');

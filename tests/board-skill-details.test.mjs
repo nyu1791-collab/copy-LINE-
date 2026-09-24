@@ -8,7 +8,7 @@ const source=readFileSync(new URL('lib/board-character-skill-details.ts',root),'
 const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;
 const exports={};
 new Function('exports','require',code)(exports,()=>{});
-const {boardCharacterSkillDetails}=exports;
+const {boardCharacterSkillDetails,boardSourceSkillDetails}=exports;
 
 test('Cancer Sally skill details use the authoritative prose value and omit the prose block',()=>{
  const fireworks=boardCharacterSkillDetails('u1631e-sally',0,2,2,'ja');
@@ -48,10 +48,26 @@ test('skill details are localized and fail closed for unknown or mismatched sour
  assert.equal(boardCharacterSkillDetails('u1631e-sally',2,2,2,'ja'),null);
 });
 
+test('new characters use structured source chance, cooldown, area and prose effects in every language',()=>{
+ const source={probability:35,cooldownSeconds:11,rows:[
+  {effect:'攻撃力アップ',area:320,factor:'+250%',durationSeconds:8},
+  {effect:'攻撃速度ダウン',area:320,factor:'-45%',durationSeconds:6},
+ ]};
+ for(const language of ['ja','en','zh','th']){
+  const details=boardSourceSkillDetails(source,2,language);
+  assert.equal(details.probability,'35%');
+  assert.equal(details.rows[0].factor,'+250%');
+  assert.equal(details.rows[1].factor,'-45%');
+  assert.ok(details.rows[0].area.startsWith('320'));
+  assert.ok(details.rows[0].duration.startsWith('8'));
+ }
+ assert.equal(boardSourceSkillDetails(source,1,'ja'),null);
+});
+
 test('the board renders source metrics without the duplicate prose block or a wide HTML table',()=>{
  const component=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
  const css=readFileSync(new URL('app/community.css',root),'utf8');
- assert.match(component,/boardCharacterSkillDetails\(unitCode,index,info\.skills\.length,skill\.effects\.length,language\)/);
+ assert.match(component,/boardCharacterSkillDetails\(unitCode,index,info\.skills\.length,skill\.effects\.length,language\)\|\|boardSourceSkillDetails\(skill\.details/);
  assert.match(component,/className="board-skill-detail-table" role="table"/);
  assert.match(component,/role="columnheader"/);
  assert.doesNotMatch(component,/skill\.description/);

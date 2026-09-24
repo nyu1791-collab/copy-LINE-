@@ -9,7 +9,7 @@ const staleCacheTtlMs=7*24*60*60*1000;
 const upstreamTimeoutMs=5_000;
 const upstreamRetryDelaysMs=[0,350] as const;
 const upstreamCacheTtlSeconds=6*60*60;
-const durableCacheVersion='v1';
+const durableCacheVersion='v2';
 const successCacheControl='public, max-age=21600, stale-if-error=86400';
 const staleCacheControl='public, max-age=300, stale-if-error=86400';
 
