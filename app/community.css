@@ -81,3 +81,13 @@
  .character-profile dd{font-size:12px}
  .character-source-link{margin-left:75px}
 }
+
+.board-skill-details{min-width:0;margin-top:4px}
+.board-skill-detail-meta{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0;color:#aebfd0;font-size:11px;line-height:1.35}
+.board-skill-detail-meta strong{color:#e5edf5}
+.board-skill-detail-table{display:grid;min-width:0;color:#d8e4ee;font-size:11px;line-height:1.35}
+.board-skill-detail-row{display:grid;grid-template-columns:minmax(0,1fr) 42px 70px 44px;gap:3px;align-items:start;min-width:0;padding:4px 0;border-top:1px solid #304760}
+.board-skill-detail-row>span{min-width:0;overflow-wrap:anywhere}
+.board-skill-detail-row>span:not(:first-child){text-align:right}
+.board-skill-detail-head{padding:2px 0 3px;color:#91a7bd;font-size:10px}
+@media(max-width:360px){.board-skill-detail-row{grid-template-columns:minmax(0,1fr) 40px 62px 40px;gap:2px;font-size:10px}.board-skill-detail-head{font-size:9px}}
