@@ -10,7 +10,9 @@ const LEGACY_KNOWN=resolve('config/community-known-legacy-ids.json');
 const STATE=resolve('data/community-character-discovery.json');
 const TARGET=200;
 const REQUIRED_CONSECUTIVE=3;
-const MAX_GAP_MS=3*60*60*1000;
+// GitHub may skip scheduled slots; require three distinct full snapshots in
+// sequence while allowing the scheduled collector to recover within a day.
+const MAX_GAP_MS=24*60*60*1000;
 const SAFE_ID=/^u\d+e-[a-z0-9_-]+$/i;
 
 export async function readJson(path,fallback){try{return JSON.parse(await readFile(path,'utf8'));}catch(error){if(error&&typeof error==='object'&&error.code==='ENOENT')return fallback;throw error;}}
@@ -28,7 +30,7 @@ function validateOfficialMetadata(value,id){
  const nameEn=candidateName({name:value.nameEn,unit_code:id});
  const nameZh=candidateName({name:value.nameZh,unit_code:id});
  const nameTh=value.nameTh==null?null:candidateName({name:value.nameTh,unit_code:id});
- if(!name||!nameEn||!nameZh||typeof value.unitNameCode!=='string'||!/^[A-Za-z0-9_-]{1,120}$/.test(value.unitNameCode)||value.skillsVerified!==true||!Number.isSafeInteger(value.skillCount)||value.skillCount<1||value.skillCount>3||!Number.isFinite(Date.parse(value.verifiedAt)))return null;
+ if(!name||!nameEn||!nameZh||!nameTh||typeof value.unitNameCode!=='string'||!/^[A-Za-z0-9_-]{1,120}$/.test(value.unitNameCode)||value.skillsVerified!==true||!Number.isSafeInteger(value.skillCount)||value.skillCount<1||value.skillCount>3||!Number.isFinite(Date.parse(value.verifiedAt)))return null;
  return {id,name,nameEn,nameZh,nameTh,unitNameCode:value.unitNameCode,stage:'e',grade:Number.isSafeInteger(value.grade)?value.grade:null,skillsVerified:true,skillCount:value.skillCount,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt:value.verifiedAt};
 }
 function candidateName(row){const value=typeof row.name==='string'?row.name.normalize('NFC').replace(/\s+/g,' ').trim():'';return value&&value!==row.unit_code&&[...value].length<=80?value:null;}
