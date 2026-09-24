@@ -113,7 +113,7 @@ test('collector fails closed unless all 200 Legend players validate',async()=>{
   assert.match(collector,/refusing partial ranking/);
   assert.match(collector,/refusing incomplete player details/);
   assert.match(collector,/public\/pvp\/data\/character_usage\.json/);
-  assert.match(workflow,/cron: '17 \* \* \* \*'/);
+  assert.match(workflow,/cron: '12,42 \* \* \* \*'/);
   assert.match(workflow,/permissions:\n  contents: write/);
   for(const path of [
     'public/pvp/data/character_usage.json',
