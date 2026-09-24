@@ -50,14 +50,16 @@
 .board-skill-scroller{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory;scroll-behavior:smooth;-webkit-overflow-scrolling:touch;padding:2px 2px 8px;scrollbar-width:thin;scrollbar-color:#54758f transparent}
 .board-skill-scroller:focus-visible{outline:2px solid #42dca0;outline-offset:2px}
 .board-skill-scroller::-webkit-scrollbar{height:5px}.board-skill-scroller::-webkit-scrollbar-thumb{background:#54758f;border-radius:999px}
+.board-skill-scroll-hint{margin:0 0 6px;color:#afc1d2;font-size:12px;line-height:1.35}
 .board-skill-list{display:flex;align-items:stretch;gap:8px;width:100%;min-width:0}
 .board-skill{flex:0 0 min(320px,calc(100% - 36px));min-width:0;padding:9px;border:1px solid #304760;border-radius:10px;background:#0b1b2c;overflow-wrap:anywhere;scroll-snap-align:start}
 .board-skill-heading{display:flex;align-items:center;gap:7px;min-width:0;margin-bottom:4px}
-.board-skill-heading img{width:30px;height:30px;object-fit:contain;flex:none}
+.board-skill-heading img{width:36px;height:36px;object-fit:contain;flex:none}
 .board-skill-heading h3{font-size:14px;font-weight:700;min-width:0}
 .board-skill h4{margin:4px 0 2px;color:#80dcb4;font-size:11px;font-weight:700}
 .board-skill-effects ul{padding-left:16px;margin:0;display:grid;gap:2px;color:#d8e4ee;font-size:12px;line-height:1.45}
 .board-skill-effects li{overflow-wrap:anywhere}
+@media(max-width:600px){.board-skill{flex-basis:100%}}
 
 /* Source-backed character facts sit beside the selected ranger portrait. */
 .character-option{min-width:0}
