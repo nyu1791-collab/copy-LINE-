@@ -10,12 +10,12 @@ type SkillDetails={
  rows:Array<{effect:string;area:string;factor:string;duration:string}>;
 };
 
-// Numeric rows were transcribed from the Ranger Handbook skill tables for Cancer Sally
-// on 2026-09-24. The prose is intentionally omitted; it conflicts with the table for
-// the first skill's attack coefficient. Unknown or mismatched data fails closed.
+// Numeric rows were transcribed from the Ranger Handbook for Cancer Sally on 2026-09-24.
+// When the source prose conflicts with a table value, the prose value is authoritative;
+// the attack-up factor is +300%. The explanatory prose itself is omitted from the UI.
 const verifiedSkills:RawSkill[]=[
  {probability:30,cooldownSeconds:9,rows:[
-  {effect:'attackPower',area:330,factor:'+400%',durationSeconds:7},
+  {effect:'attackPower',area:330,factor:'+300%',durationSeconds:7},
   {effect:'attackRange',area:330,factor:'+20%',durationSeconds:7},
  ]},
  {probability:40,cooldownSeconds:15,rows:[
