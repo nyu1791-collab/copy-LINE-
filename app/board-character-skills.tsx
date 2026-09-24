@@ -3,6 +3,7 @@
 import {useEffect,useState} from 'react';
 import type {Language} from '@/lib/rules';
 import type {RangerInfo} from '@/lib/ranger-info';
+import {boardCharacterSkillDetails} from '@/lib/board-character-skill-details';
 
 const wording={
  ja:{title:'スキル情報',effects:'効果',scrollHint:'横スワイプで他のスキル',loading:'スキル情報を読み込み中…',unavailable:'スキル情報を現在取得できません。意見欄は利用できます。',retry:'再取得',discussion:'このキャラ専用の意見・投票・動画です。'},
@@ -56,11 +57,31 @@ export default function BoardCharacterSkills({unitCode,language,displayName}:{un
    <>
    {info.skills.length>1&&<p className="board-skill-scroll-hint">{copy.scrollHint}</p>}
    <div className="board-skill-scroller" role="region" aria-label={displayName+' · '+copy.title} tabIndex={info.skills.length>1?0:undefined}>
-   <div className="board-skill-list">{info.skills.map(skill=>{
+   <div className="board-skill-list">{info.skills.map((skill,index)=>{
     const icon=skillIcon(skill.iconUrl);
+    const details=boardCharacterSkillDetails(unitCode,index,info.skills.length,skill.effects.length,language);
     return <article className="board-skill" key={skill.name}>
      <div className="board-skill-heading">{icon&&<img src={icon} alt="" width="48" height="48" loading="lazy" decoding="async" onError={event=>{event.currentTarget.hidden=true;}}/>}<h3>{skill.name}</h3></div>
-     {!!skill.effects.length&&<div className="board-skill-effects"><h4>{copy.effects}</h4><ul>{skill.effects.map((effect,index)=><li key={index}>{effect}</li>)}</ul></div>}
+     {details?<div className="board-skill-details">
+      <div className="board-skill-detail-meta" aria-label={skill.name+' '+details.labels.details}>
+       <span>{details.labels.probability} <strong>{details.probability}</strong></span>
+       <span>{details.labels.cooldown} <strong>{details.cooldown}</strong></span>
+      </div>
+      <div className="board-skill-detail-table" role="table" aria-label={skill.name+' '+details.labels.details}>
+       <div className="board-skill-detail-row board-skill-detail-head" role="row">
+        <span role="columnheader">{details.labels.effect}</span>
+        <span role="columnheader">{details.labels.area}</span>
+        <span role="columnheader">{details.labels.factor}</span>
+        <span role="columnheader">{details.labels.duration}</span>
+       </div>
+       {details.rows.map((row,rowIndex)=><div className="board-skill-detail-row" role="row" key={rowIndex}>
+        <span role="rowheader">{row.effect}</span>
+        <span role="cell">{row.area}</span>
+        <span role="cell">{row.factor}</span>
+        <span role="cell">{row.duration}</span>
+       </div>)}
+      </div>
+     </div>:!!skill.effects.length&&<div className="board-skill-effects"><h4>{copy.effects}</h4><ul>{skill.effects.map((effect,index)=><li key={index}>{effect}</li>)}</ul></div>}
     </article>;
    })}</div></div></>}
  </section>;
