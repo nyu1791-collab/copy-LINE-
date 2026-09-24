@@ -10,10 +10,10 @@ const exports={};
 new Function('exports','require',code)(exports,()=>{});
 const {boardCharacterSkillDetails}=exports;
 
-test('Cancer Sally skill detail rows match the current source table and omit conflicting prose',()=>{
+test('Cancer Sally skill details use the authoritative prose value and omit the prose block',()=>{
  const fireworks=boardCharacterSkillDetails('u1631e-sally',0,2,2,'ja');
  assert.deepEqual(fireworks.rows,[
-  {effect:'攻撃力アップ',area:'330点',factor:'+400%',duration:'7秒'},
+  {effect:'攻撃力アップ',area:'330点',factor:'+300%',duration:'7秒'},
   {effect:'攻撃射程アップ',area:'330点',factor:'+20%',duration:'7秒'},
  ]);
  assert.equal(fireworks.probability,'30%');
