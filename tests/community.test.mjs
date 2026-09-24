@@ -744,7 +744,7 @@ test('Ranger detail route isolates language catalogs and tolerates transient Han
  assert.ok(rangerRouteSource.includes("'400-499':0"));
  assert.ok(rangerRouteSource.includes("'500-599':0"));
  assert.ok(rangerRouteSource.includes('const staleCacheTtlMs=7*24*60*60*1000'));
- assert.ok(rangerRouteSource.includes("const durableCacheVersion='v1'"));
+ assert.ok(rangerRouteSource.includes("const durableCacheVersion='v2'"));
  assert.ok(rangerRouteSource.includes('caches.default.match'));
  assert.ok(rangerRouteSource.includes('caches.default.put'));
  assert.ok(rangerRouteSource.includes('readDurableResponseCache(request,unit,language)'));

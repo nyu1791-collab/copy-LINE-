@@ -3,7 +3,7 @@
 import {useEffect,useState} from 'react';
 import type {Language} from '@/lib/rules';
 import type {RangerInfo} from '@/lib/ranger-info';
-import {boardCharacterSkillDetails} from '@/lib/board-character-skill-details';
+import {boardCharacterSkillDetails,boardSourceSkillDetails} from '@/lib/board-character-skill-details';
 
 const wording={
  ja:{title:'スキル情報',effects:'効果',scrollHint:'横スワイプで他のスキル',loading:'スキル情報を読み込み中…',unavailable:'スキル情報を現在取得できません。意見欄は利用できます。',retry:'再取得',discussion:'このキャラ専用の意見・投票・動画です。'},
@@ -53,13 +53,13 @@ export default function BoardCharacterSkills({unitCode,language,displayName}:{un
  const info=ready?result.info:null;
  return <section className="board-skills" aria-label={displayName+' · '+copy.title}>
   <div className="board-skills-heading"><h2>{displayName} · {copy.title}</h2></div>
-  {!ready||!info&&!result.error?<p role="status">{copy.loading}</p>:result.error?<p role="status">{copy.unavailable} <button type="button" onClick={()=>setAttempt(value=>value+1)}>{copy.retry}</button></p>:
+  {!ready?<p role="status">{copy.loading}</p>:result.error||!info?<p role="status">{copy.unavailable} <button type="button" onClick={()=>setAttempt(value=>value+1)}>{copy.retry}</button></p>:
    <>
    {info.skills.length>1&&<p className="board-skill-scroll-hint">{copy.scrollHint}</p>}
    <div className="board-skill-scroller" role="region" aria-label={displayName+' · '+copy.title} tabIndex={info.skills.length>1?0:undefined}>
    <div className="board-skill-list">{info.skills.map((skill,index)=>{
     const icon=skillIcon(skill.iconUrl);
-    const details=boardCharacterSkillDetails(unitCode,index,info.skills.length,skill.effects.length,language);
+    const details=boardCharacterSkillDetails(unitCode,index,info.skills.length,skill.effects.length,language)||boardSourceSkillDetails(skill.details,skill.effects.length,language);
     return <article className="board-skill" key={skill.name}>
      <div className="board-skill-heading">{icon&&<img src={icon} alt="" width="48" height="48" loading="lazy" decoding="async" onError={event=>{event.currentTarget.hidden=true;}}/>}<h3>{skill.name}</h3></div>
      {details?<div className="board-skill-details">
