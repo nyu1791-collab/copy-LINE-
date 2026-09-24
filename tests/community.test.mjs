@@ -789,21 +789,18 @@ test('Ranger detail parser keeps partial cards when Handbook translations are mi
 });
 
 
-test('board skills use the source explanation only and switch to compact horizontal cards on phones',()=>{
+test('board skills show source effects only in compact horizontal cards',()=>{
  const boardSkillComponent=readFileSync(new URL('app/board-character-skills.tsx',root),'utf8');
  assert.ok(boardSkillComponent.includes('className="board-skill-scroller"'));
  assert.ok(boardSkillComponent.includes('className="board-skill-list"'));
- assert.ok(boardSkillComponent.includes('横にスワイプして他のスキルを見る'));
- assert.match(boardSkillComponent,/\{skill\.description\}/);
- assert.doesNotMatch(boardSkillComponent,/boardSkillSourceDetails|skill\.effects\.map|board-skill-source-table|board-skill-difference/);
- assert.ok(communityCss.includes('.board-skill-list{display:grid;grid-template-columns:minmax(0,1fr);'));
- assert.ok(communityCss.includes('.board-skill-scroller{overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x mandatory'));
- assert.ok(communityCss.includes('.board-skill-list{grid-auto-flow:column;grid-auto-columns:100%;'));
- assert.doesNotMatch(communityCss,/board-skill-source-table|board-skill-difference|#e5c987/);
- assert.match(communityCss,/\.board-skill\{min-width:0;padding:10px/);
- assert.ok(communityCss.includes('.board-skill p{white-space:pre-line;color:#d8e4ee;font-size:13px;line-height:1.5}'));
+ assert.match(boardSkillComponent,/\{skill\.effects\.map\(\(effect,index\)/);
+ assert.doesNotMatch(boardSkillComponent,/skill\.description|scrollHint|boardSkillSourceDetails|board-skill-source-table|board-skill-difference/);
+ assert.ok(communityCss.includes('.board-skill-scroller{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;'));
+ assert.ok(communityCss.includes('.board-skill-list{display:flex;align-items:stretch;gap:8px;width:100%;min-width:0}'));
+ assert.ok(communityCss.includes('.board-skill{flex:0 0 min(320px,calc(100% - 36px));'));
+ assert.ok(communityCss.includes('.board-skill-effects ul{padding-left:16px;margin:0;display:grid;gap:2px;'));
+ assert.doesNotMatch(communityCss,/board-skill-source-table|board-skill-difference|#e5c987|board-skill-scroll-hint|\.board-skill p/);
 });
-
 test('Cancer Sally source facts appear beside her portrait and stay language-aware',()=>{
  const {boardCharacterSourceProfile}=boardCharacterSource;
  const profile=boardCharacterSourceProfile('u1631e-sally','ja');
