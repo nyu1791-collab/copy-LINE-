@@ -2,7 +2,10 @@ name: refresh-pvp-data
 on:
   workflow_dispatch:
   schedule:
+    # Retry midway through the hour so one missed GitHub schedule does not
+    # defer official catalog and release-notice discovery for another hour.
     - cron: '17 * * * *'
+    - cron: '37 * * * *'
   push:
     branches: [main]
     paths:
