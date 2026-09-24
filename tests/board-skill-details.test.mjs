@@ -23,7 +23,7 @@ test('Cancer Sally skill details use the authoritative prose value and omit the 
  assert.deepEqual(ambush.rows,[
   {effect:'敵の無敵を消す（臨時）',area:'390点',factor:'—',duration:'3秒'},
   {effect:'デバフ解除阻止',area:'390点',factor:'—',duration:'12秒'},
-  {effect:'移動速度減少',area:'390点',factor:'-90%',duration:'12秒'},
+  {effect:'攻撃速度減少',area:'390点',factor:'-90%',duration:'12秒'},
   {effect:'ダメージ（一回）',area:'390点',factor:'攻撃力×4,000%',duration:'—'},
  ]);
  assert.equal(ambush.probability,'40%');
