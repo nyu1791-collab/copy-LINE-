@@ -1,6 +1,6 @@
 {
   "schema_version": 11,
-  "updated_at": "2026-09-24T21:28:56.451Z",
+  "updated_at": "2026-09-25T00:00:30.784Z",
   "source": {
     "name": "LINE Rangers Handbook PvP Tracker",
     "url": "https://rangers.lerico.net/ja/pvp-tracker"
@@ -17,8 +17,8 @@
     "equipment_slots_missing": 9,
     "detail_fetch_failures": 0,
     "invalid_player_records": 0,
-    "collection_started_at": "2026-09-24T21:28:41.759Z",
-    "collection_duration_seconds": 14.71
+    "collection_started_at": "2026-09-25T00:00:18.161Z",
+    "collection_duration_seconds": 12.64
   },
   "characters": [
     {
