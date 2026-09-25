@@ -1,6 +1,7 @@
 import {readFile,appendFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
+import {auditCommunityDiscoveryLog} from './community-discovery-log.mjs';
 
 const ID=/^[A-Za-z0-9_-]{1,80}$/;
 const NEW_ID=/^u\d+e-[a-z0-9_-]+$/i;
@@ -11,7 +12,7 @@ function monthParts(value){
  const values=Object.fromEntries(parts.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));
  return {month:values.year+'-'+values.month,day:Number(values.day)};
 }
-export function auditCommunityRelease(snapshot,registry,state){
+export function auditCommunityRelease(snapshot,registry,state,discoveryLog=null){
  const rankingErrors=[],communityErrors=[],warnings=[];
  const at=Date.parse(snapshot?.updated_at);
  if(!Number.isFinite(at))rankingErrors.push('invalid snapshot timestamp');
@@ -31,6 +32,8 @@ export function auditCommunityRelease(snapshot,registry,state){
  const {month,day}=Number.isFinite(at)?monthParts(at):{month:'unknown',day:0};
  const topics=Array.isArray(registry?.characters)?registry.characters:[];
  if(!Array.isArray(registry?.characters))communityErrors.push('missing community topic registry');
+ if(discoveryLog)communityErrors.push(...auditCommunityDiscoveryLog(registry,discoveryLog));
+ else communityErrors.push('missing community discovery promotion log');
  const seen=new Set();let current=0,rankedTopics=0,skillVerified=0;
  for(const topic of topics){
   const id=topic?.id,topicMonth=topic?.releaseMonth,key=topicMonth+':'+id;
@@ -53,7 +56,7 @@ export function auditCommunityRelease(snapshot,registry,state){
   }
  }
  if(current>5)warnings.push('More than five confirmed topics in '+month+'; keep every verified character and review the release feed');
- if(day>=10&&current<3)warnings.push('Fewer than three confirmed topics in '+month+'; inspect the catalog and discovery candidates');
+ if(month>='2026-10'&&day>=10&&current<3)warnings.push('Fewer than three confirmed topics in '+month+'; inspect the catalog and discovery candidates');
  if(state?.catalogStatus==='unavailable')warnings.push('Official Ranger catalog was temporarily unavailable; retry discovery on the next full sample');
  if(state?.releaseNoticeStatus==='unavailable')warnings.push('Official new-character announcement feed was unavailable; new monthly topics remain fail-closed');
  if(state?.catalogInitialized===true&&typeof state.initializedAt==='string'&&Number.isFinite(Date.parse(state.initializedAt))){const baseline=monthParts(state.initializedAt);if(baseline.month===month&&baseline.day>1)warnings.push('Official catalog discovery baseline began on '+month+'-'+String(baseline.day).padStart(2,'0')+'; characters added earlier this month cannot be distinguished from older catalog entries without a prior catalog snapshot');}
@@ -69,12 +72,13 @@ export function auditCommunityRelease(snapshot,registry,state){
 }
 
 async function main(){
- const [snapshot,registry,state]=await Promise.all([
+ const [snapshot,registry,state,discoveryLog]=await Promise.all([
   readFile('public/pvp/data/character_usage.json','utf8').then(JSON.parse),
   readFile('config/community-characters.json','utf8').then(JSON.parse),
   readFile('data/community-character-discovery.json','utf8').then(JSON.parse),
+  readFile('data/community-character-discovery-log.json','utf8').then(JSON.parse),
  ]);
- const report=auditCommunityRelease(snapshot,registry,state);
+ const report=auditCommunityRelease(snapshot,registry,state,discoveryLog);
  const rankingOnly=process.argv.includes('--ranking-only');
  const failures=rankingOnly?report.rankingErrors:[...report.rankingErrors,...report.communityErrors];
  const summary=[

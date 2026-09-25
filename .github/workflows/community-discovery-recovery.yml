@@ -1,0 +1,76 @@
+name: community-discovery-recovery
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Share the collector's queue so registry and discovery-state writes cannot race
+# with a PvP refresh. This workflow never edits or publishes PvP snapshots.
+concurrency:
+  group: refresh-pvp-data
+  cancel-in-progress: false
+
+jobs:
+  recover-discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out latest main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 50
+
+      - name: Set up Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: '22.13.0'
+
+      - name: Require a fresh complete sample before discovery writes
+        run: node scripts/community-refresh-health.mjs --max-age-minutes 45 --require-fresh-complete
+
+      - name: Retry official character and release verification
+        run: node scripts/update-community-characters.mjs
+
+      - name: Audit registry, promotion ledger, and PvP snapshot
+        run: node scripts/audit-community-release.mjs
+
+      - name: Commit only community discovery files
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          community_files=(config/community-characters.json data/community-character-discovery.json data/community-character-discovery-log.json)
+          git add "${community_files[@]}"
+          if git diff --cached --quiet; then
+            echo 'No verified community discovery change.'
+            exit 0
+          fi
+          git commit -m 'Recover verified community character discovery'
+          git pull --rebase origin main
+          node scripts/community-refresh-health.mjs --max-age-minutes 45 --require-fresh-complete
+          node scripts/update-community-characters.mjs
+          node scripts/audit-community-release.mjs
+          git add "${community_files[@]}"
+          if ! git diff --cached --quiet; then
+            git commit --amend --no-edit
+          fi
+          for attempt in 1 2 3; do
+            if git push origin HEAD:main; then
+              exit 0
+            fi
+            echo "Push attempt ${attempt} failed; rebasing and revalidating."
+            sleep $((attempt * 5))
+            git pull --rebase origin main
+            node scripts/community-refresh-health.mjs --max-age-minutes 45 --require-fresh-complete
+            node scripts/update-community-characters.mjs
+            node scripts/audit-community-release.mjs
+            git add "${community_files[@]}"
+            if ! git diff --cached --quiet; then
+              git commit --amend --no-edit
+            fi
+          done
+          echo 'Community discovery recovery could not be pushed after three attempts.' >&2
+          exit 1
