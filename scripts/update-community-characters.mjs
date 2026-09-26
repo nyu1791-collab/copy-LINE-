@@ -2,12 +2,14 @@ import {mkdir,readFile,rename,writeFile} from 'node:fs/promises';
 import {dirname,resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {createOfficialCharacterVerifier,probeCharacterImage,safeCharacterImageUrl} from './community-character-metadata.mjs';
+import {auditCommunityDiscoveryLog,normalizeCommunityDiscoveryLog,promotionLogEvent} from './community-discovery-log.mjs';
 
 const SNAPSHOT=resolve('public/pvp/data/character_usage.json');
 const HISTORY=resolve('public/pvp/data/character_usage_history.json');
 const REGISTRY=resolve('config/community-characters.json');
 const LEGACY_KNOWN=resolve('config/community-known-legacy-ids.json');
 const STATE=resolve('data/community-character-discovery.json');
+const DISCOVERY_LOG=resolve('data/community-character-discovery-log.json');
 const TARGET=200;
 const REQUIRED_CONSECUTIVE=3;
 // GitHub may skip scheduled slots; require three distinct full snapshots in
@@ -22,8 +24,8 @@ function safeImage(value,id){return safeCharacterImageUrl(value,id);}
 function currentRows(snapshot){if(!snapshot||snapshot.complete_target!==true||snapshot.target_players!==TARGET||snapshot.sampled_players!==TARGET||!Array.isArray(snapshot.characters))throw new Error('refusing incomplete PvP snapshot');const rows=snapshot.characters;if(rows.some(row=>!row||typeof row!=='object'||Array.isArray(row)||typeof row.unit_code!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(row.unit_code)))throw new Error('invalid character row in full PvP snapshot');if(new Set(rows.map(row=>row.unit_code)).size!==rows.length)throw new Error('duplicate character ID in full PvP snapshot');return rows;}
 function historyIds(history){const output=new Set();for(const snapshot of Array.isArray(history?.snapshots)?history.snapshots:[]){for(const row of Array.isArray(snapshot?.characters)?snapshot.characters:[]){if(row&&typeof row.unit_code==='string')output.add(row.unit_code);}}return output;}
 function knownLegacyIds(raw){return new Set((Array.isArray(raw?.ids)?raw.ids:[]).filter(id=>typeof id==='string'&&/^u\d+[a-z]?-[a-z0-9_-]+$/i.test(id)));}
-function normalizeRegistry(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schemaVersion!==1||!Array.isArray(raw.characters))throw new Error('invalid community topic registry');const seen=new Set();const clean=[];for(const row of raw.characters){if(!row||typeof row!=='object'||Array.isArray(row)||typeof row.id!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(row.id)||typeof row.name!=='string'||!row.name.trim()||[...row.name].length>80||typeof row.image!=='string'||!row.image.trim()||typeof row.releaseMonth!=='string'||!/^20\d{2}-(0[1-9]|1[0-2])$/.test(row.releaseMonth)||row.confirmed!==true)throw new Error('invalid community topic in registry');const key=`${row.releaseMonth}:${row.id}`;if(seen.has(key))throw new Error('duplicate community topic in registry');seen.add(key);clean.push({...row});}return {schemaVersion:1,characters:clean};}
-function normalizeDiscoveryState(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schemaVersion!==1||typeof raw.initialized!=='boolean'||!Array.isArray(raw.knownIds)||!raw.candidates||typeof raw.candidates!=='object'||Array.isArray(raw.candidates))throw new Error('invalid community discovery state');if(raw.catalogInitialized!==undefined&&typeof raw.catalogInitialized!=='boolean')throw new Error('invalid community discovery catalog state');if(raw.knownCatalogIds!==undefined&&!Array.isArray(raw.knownCatalogIds))throw new Error('invalid known Ranger catalog IDs');if(raw.lastSnapshotAt!=null&&(typeof raw.lastSnapshotAt!=='string'||!Number.isFinite(Date.parse(raw.lastSnapshotAt))))throw new Error('invalid community discovery snapshot timestamp');return raw;}
+export function normalizeRegistry(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schemaVersion!==1||!Array.isArray(raw.characters))throw new Error('invalid community topic registry');const seen=new Set();const clean=[];for(const row of raw.characters){if(!row||typeof row!=='object'||Array.isArray(row)||typeof row.id!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(row.id)||typeof row.name!=='string'||!row.name.trim()||[...row.name].length>80||typeof row.image!=='string'||!row.image.trim()||typeof row.releaseMonth!=='string'||!/^20\d{2}-(0[1-9]|1[0-2])$/.test(row.releaseMonth)||row.confirmed!==true)throw new Error('invalid community topic in registry');const key=`${row.releaseMonth}:${row.id}`;if(seen.has(key))throw new Error('duplicate community topic in registry');seen.add(key);clean.push({...row});}return {schemaVersion:1,characters:clean};}
+export function normalizeDiscoveryState(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schemaVersion!==1||typeof raw.initialized!=='boolean'||!Array.isArray(raw.knownIds)||!raw.candidates||typeof raw.candidates!=='object'||Array.isArray(raw.candidates))throw new Error('invalid community discovery state');if(raw.catalogInitialized!==undefined&&typeof raw.catalogInitialized!=='boolean')throw new Error('invalid community discovery catalog state');if(raw.knownCatalogIds!==undefined&&!Array.isArray(raw.knownCatalogIds))throw new Error('invalid known Ranger catalog IDs');if(raw.lastSnapshotAt!=null&&(typeof raw.lastSnapshotAt!=='string'||!Number.isFinite(Date.parse(raw.lastSnapshotAt))))throw new Error('invalid community discovery snapshot timestamp');return raw;}
 function validateOfficialMetadata(value,id){
  if(!value||typeof value!=='object'||Array.isArray(value)||value.id!==id||value.stage!=='e')return null;
  const name=candidateName({name:value.name,unit_code:id});
@@ -42,14 +44,16 @@ function validReleaseEvidence(value,id){
 
 export const probeImage=probeCharacterImage;
 
-export async function updateCommunityCharacters({snapshot,history,registry,state,legacyKnown,probe=probeImage,verifyMetadata,listCatalogIds,findReleaseEvidence}={}){
+export async function updateCommunityCharacters({snapshot,history,registry,state,discoveryLog,legacyKnown,probe=probeImage,verifyMetadata,listCatalogIds,findReleaseEvidence}={}){
  const verify=verifyMetadata??createOfficialCharacterVerifier();
  const findReleases=findReleaseEvidence??verify.findOfficialReleaseEvidence;
  const listOfficial=listCatalogIds??verify.listCatalogUnitIds;
- const currentSnapshot=snapshot??await readJson(SNAPSHOT,null);const oldHistory=history??await readJson(HISTORY,{snapshots:[]});const currentRegistry=normalizeRegistry(registry??await readJson(REGISTRY,{schemaVersion:1,characters:[]}));const legacy=knownLegacyIds(legacyKnown??await readJson(LEGACY_KNOWN,{ids:[]}));const currentState=normalizeDiscoveryState(state??await readJson(STATE,{schemaVersion:1,initialized:false,initializedAt:null,knownIds:[],candidates:{}}));
+ const currentSnapshot=snapshot??await readJson(SNAPSHOT,null);const oldHistory=history??await readJson(HISTORY,{snapshots:[]});const currentRegistry=normalizeRegistry(registry??await readJson(REGISTRY,null));const legacy=knownLegacyIds(legacyKnown??await readJson(LEGACY_KNOWN,{ids:[]}));const currentState=normalizeDiscoveryState(state??await readJson(STATE,null));const currentDiscoveryLog=normalizeCommunityDiscoveryLog(discoveryLog??await readJson(DISCOVERY_LOG,null));
+ const existingLedgerErrors=auditCommunityDiscoveryLog(currentRegistry,currentDiscoveryLog);if(existingLedgerErrors.length)throw new Error('community discovery ledger validation failed: '+existingLedgerErrors[0]);
  const rows=currentRows(currentSnapshot);const updatedAt=String(currentSnapshot.updated_at||'');if(!Number.isFinite(Date.parse(updatedAt)))throw new Error('invalid snapshot timestamp');const releaseMonth=monthJST(updatedAt);
  const rowMap=new Map(rows.map(row=>[row.unit_code,row]));const registeredIds=new Set(currentRegistry.characters.map(row=>row.id));
  const nextState={schemaVersion:1,initialized:currentState.initialized===true,initializedAt:currentState.initializedAt||null,lastSnapshotAt:updatedAt,catalogInitialized:currentState.catalogInitialized===true,knownCatalogIds:Array.isArray(currentState.knownCatalogIds)?[...new Set(currentState.knownCatalogIds.filter(id=>typeof id==='string'&&SAFE_ID.test(id)))]:[],catalogStatus:'not_configured',releaseNoticeStatus:'not_configured',knownIds:Array.isArray(currentState.knownIds)?[...new Set(currentState.knownIds.filter(x=>typeof x==='string'))]:[],candidates:currentState.candidates&&typeof currentState.candidates==='object'&&!Array.isArray(currentState.candidates)?structuredClone(currentState.candidates):{}};
+ const nextDiscoveryLog={schemaVersion:1,events:[...currentDiscoveryLog.events]};
  let officialIds=null;
  if(typeof listOfficial==='function'){
   try{
@@ -80,7 +84,7 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
  // If the historical catalog expands later, immediately discard stale
  // candidates for those IDs instead of allowing a previous streak to promote.
  for(const id of known)delete nextState.candidates[id];
- if(!nextState.initialized){for(const id of historyIds(oldHistory))known.add(id);for(const row of rows)known.add(row.unit_code);nextState.initialized=true;nextState.initializedAt=updatedAt;nextState.knownIds=[...known].sort();return {registry:currentRegistry,state:nextState,promoted:[],initialized:true};}
+ if(!nextState.initialized){for(const id of historyIds(oldHistory))known.add(id);for(const row of rows)known.add(row.unit_code);nextState.initialized=true;nextState.initializedAt=updatedAt;nextState.knownIds=[...known].sort();return {registry:currentRegistry,state:nextState,discoveryLog:nextDiscoveryLog,promoted:[],initialized:true};}
  const previousSnapshotAt=typeof currentState.lastSnapshotAt==='string'&&Number.isFinite(Date.parse(currentState.lastSnapshotAt))?currentState.lastSnapshotAt:null;
  if(previousSnapshotAt&&Date.parse(updatedAt)<Date.parse(previousSnapshotAt))throw new Error('refusing out-of-order community snapshot');
  const promoted=[];
@@ -119,7 +123,7 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
   nextState.candidates[id]=record;
   if(releaseMonth>='2026-10'&&eligible&&imageVerified&&releaseEvidence?.releaseMonth===releaseMonth&&consecutive>=REQUIRED_CONSECUTIVE){
    const topic={id,name:metadata.name,nameEn:metadata.nameEn,nameZh:metadata.nameZh,...(metadata.nameTh?{nameTh:metadata.nameTh}:{}),image,releaseMonth:releaseEvidence.releaseMonth,releaseEvidence,confirmed:true,source:'pvp-auto',metadataSource:metadata.source,unitNameCode:metadata.unitNameCode,evolutionStage:metadata.stage,verifiedGrade:metadata.grade,skillsVerified:true,skillCount:metadata.skillCount,skillsVerifiedAt:metadata.verifiedAt,discoveredFrom:record.discoveredFrom,observationCount:consecutive,firstObservedAt:firstSeenAt,confirmedAt:updatedAt,pvpRank:row?snapshotRank(row):null,adoptionRate:row?adoptionRate(row):null};
-   currentRegistry.characters.push(topic);registeredIds.add(id);known.add(id);promoted.push(topic);delete nextState.candidates[id];
+   currentRegistry.characters.push(topic);registeredIds.add(id);known.add(id);promoted.push(topic);nextDiscoveryLog.events.push(promotionLogEvent(topic));delete nextState.candidates[id];
   }
  }
  // Refresh ordering metadata only for the active month. Missing PvP data becomes
@@ -128,9 +132,9 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
  const topicOrder=(a,b)=>((b.adoptionRate??-1)-(a.adoptionRate??-1))||((a.pvpRank??Number.MAX_SAFE_INTEGER)-(b.pvpRank??Number.MAX_SAFE_INTEGER))||a.id.localeCompare(b.id);
  currentRegistry.characters.sort((a,b)=>a.releaseMonth.localeCompare(b.releaseMonth)||topicOrder(a,b));
  promoted.sort(topicOrder);
- nextState.knownIds=[...known].sort();return {registry:currentRegistry,state:nextState,promoted,initialized:false};
+ nextState.knownIds=[...known].sort();const ledgerErrors=auditCommunityDiscoveryLog(currentRegistry,nextDiscoveryLog);if(ledgerErrors.length)throw new Error('community discovery ledger validation failed: '+ledgerErrors[0]);return {registry:currentRegistry,state:nextState,discoveryLog:nextDiscoveryLog,promoted,initialized:false};
 }
 
-async function main(){const result=await updateCommunityCharacters();await atomicJson(REGISTRY,result.registry);await atomicJson(STATE,result.state);if(result.initialized)console.log('Initialized community character baseline; no automatic topics promoted on the first run.');else if(result.promoted.length)console.log(`Confirmed ${result.promoted.length} new community topic(s): ${result.promoted.map(x=>x.id).join(', ')}`);else console.log('Community character discovery checked; no newly confirmed topics.');}
+async function main(){const result=await updateCommunityCharacters();await atomicJson(REGISTRY,result.registry);await atomicJson(STATE,result.state);await atomicJson(DISCOVERY_LOG,result.discoveryLog);if(result.initialized)console.log('Initialized community character baseline; no automatic topics promoted on the first run.');else if(result.promoted.length)console.log(`Confirmed ${result.promoted.length} new community topic(s): ${result.promoted.map(x=>x.id).join(', ')}`);else console.log('Community character discovery checked; no newly confirmed topics.');}
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){main().catch(error=>{console.error(error instanceof Error?error.message:error);process.exitCode=1;});}
