@@ -51,10 +51,10 @@ jobs:
             public/pvp/data/character_usage.json \
             public/pvp/data/character_usage_history.json
           if [ "${{ steps.community_discovery.outcome }}" = "success" ] && [ "${{ steps.community_audit.outcome }}" = "success" ]; then
-            git add config/community-characters.json data/community-character-discovery.json
+            git add config/community-characters.json data/community-character-discovery.json data/community-character-discovery-log.json
           else
             echo "::warning::Community discovery or audit failed; keeping PvP snapshot publication independent."
-            git restore -- config/community-characters.json data/community-character-discovery.json
+            git restore -- config/community-characters.json data/community-character-discovery.json data/community-character-discovery-log.json
           fi
           if git diff --cached --quiet; then
             echo 'No PvP snapshot or community discovery change.'

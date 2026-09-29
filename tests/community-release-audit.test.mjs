@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {auditCommunityRelease} from '../scripts/audit-community-release.mjs';
+import {auditCommunityRelease as runAudit} from '../scripts/audit-community-release.mjs';
+import {promotionLogEvent} from '../scripts/community-discovery-log.mjs';
 
 const month='2026-10';
 function snapshot(){
@@ -10,9 +11,14 @@ function snapshot(){
  ]};
 }
 function topic(id,rank){
- return {id,releaseMonth:month,name:'キャラ',nameEn:'New character',nameZh:'新角',source:'pvp-auto',image:'https://rangers.lerico.net/res/'+id+'/'+id+'-thum.png',pvpRank:rank,verifiedGrade:8,releaseEvidence:{releaseMonth:month,noticeId:100028330,noticeTitle:'New Rangers are here!',noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice',publishedAt:'2026-10-01T00:00:00.000Z',catalogId:id,matchedName:'New character',grade:8,source:'notice2.line.me/LGRGS/ios/document/notice'},skillsVerified:true,skillCount:2,skillsVerifiedAt:'2026-10-19T00:00:00.000Z',observationCount:3};
+ return {id,releaseMonth:month,name:'キャラ',nameEn:'New character',nameZh:'新角',nameTh:'นักรบ',source:'pvp-auto',image:'https://rangers.lerico.net/res/'+id+'/'+id+'-thum.png',pvpRank:rank,verifiedGrade:8,releaseEvidence:{releaseMonth:month,noticeId:100028330,noticeTitle:'New Rangers are here!',noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice',publishedAt:'2026-10-01T00:00:00.000Z',catalogId:id,matchedName:'New character',grade:8,source:'notice2.line.me/LGRGS/ios/document/notice'},skillsVerified:true,skillCount:2,skillsVerifiedAt:'2026-10-19T00:00:00.000Z',observationCount:3,firstObservedAt:'2026-10-18T00:00:00.000Z',confirmedAt:'2026-10-19T00:00:00.000Z'};
 }
 const state={catalogInitialized:true,catalogStatus:'verified',candidates:{}};
+function auditCommunityRelease(snapshot,registry,state,log){
+ const topics=registry?.characters||[];
+ const discoveryLog=log??{schemaVersion:1,events:topics.filter(row=>row.source==='pvp-auto').map(promotionLogEvent)};
+ return runAudit(snapshot,registry,state,discoveryLog);
+}
 
 test('complete PvP counts and distinct verified boards pass the release audit',()=>{
  const report=auditCommunityRelease(snapshot(),{characters:[topic('u2000e-alpha',1),topic('u2001e-beta',2),topic('u2002e-gamma',null)]},state);
@@ -38,6 +44,17 @@ test('skill validation and duplicate topics fail the community gate while monthl
  assert.ok(report.communityErrors.some(message=>message.includes('skill')));
  assert.ok(report.communityErrors.some(message=>message.includes('duplicate')));
  assert.ok(report.warnings.some(message=>message.includes('Fewer than three')));
+});
+
+test('September is exempt from the October monthly topic target',()=>{
+ const september={...snapshot(),updated_at:'2026-09-25T03:00:00.000Z'};
+ const report=auditCommunityRelease(september,{characters:[]},state);
+ assert.ok(!report.warnings.some(message=>message.includes('Fewer than three')));
+});
+
+test('automatic topics fail audit when their append-only promotion event is missing',()=>{
+ const report=runAudit(snapshot(),{characters:[topic('u2000e-alpha',1)]},state,{schemaVersion:1,events:[]});
+ assert.ok(report.communityErrors.some(message=>message.includes('missing from the append-only discovery log')));
 });
 
 test('a mid-month catalog baseline warns that earlier releases cannot be reconstructed safely',()=>{
