@@ -14,18 +14,18 @@ function replaceOnce(source,needle,replacement,label){
 function assertPatchedPolicy(source){
  const required=[
   ["return {rows,pvpComplete};",'partial PvP completeness capture'],
-  ["const found=await findReleases(Date.parse(updatedAt));",'month-end official notice scan'],
+  ["const found=await findReleases(Date.parse(updatedAt));",'official notice scan'],
+  ["const BOARD_GRADE=9;",'Star 9 board grade'],
+  ["const MAX_GRADE_TOPICS_PER_MONTH=2;",'top-two monthly cap'],
+  ["metadata.grade===BOARD_GRADE",'Star 9 eligibility gate'],
   ["const sourcePresent=!!officialIds?.has(id);",'official catalog source gate'],
-  ["const candidateMonth=releaseEvidence?.releaseMonth||prior.firstSeenMonth||releaseMonth;",'release evidence month clock'],
-  ["const officialObservation=eligible&&imageVerified&&!!officialIds?.has(id);",'catalog pre-observation gate'],
-  ["if(eligible&&imageVerified&&releaseEvidenceCurrent&&consecutive>=REQUIRED_CONSECUTIVE){",'notice-triggered promotion gate'],
+  ["const officialObservation=eligible&&imageVerified&&!!officialIds?.has(id)&&(!releaseEvidence||releaseEvidenceCurrent);",'official catalog observation gate'],
+  ["gradeTopics<MAX_GRADE_TOPICS_PER_MONTH",'top-two promotion gate'],
   ["if(pvpComplete||row){topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}",'partial ordering preservation']
  ];
  for(const [needle,label] of required){
   if(!source.includes(needle))throw new Error(`community discovery patched policy invariant missing: ${label}`);
  }
- if(source.includes("releaseMonth>='2026-10'?await findReleases"))throw new Error('community discovery retained stale month-gated notice scan');
- if(source.includes("releaseEvidence?.releaseMonth===releaseMonth&&Date.parse(updatedAt)>=Date.parse(releaseEvidence.publishedAt)"))throw new Error('community discovery retained snapshot-month release gate');
 }
 
 export function patchCommunityDiscoverySource(input){
@@ -39,29 +39,13 @@ export function patchCommunityDiscoverySource(input){
   " const {rows,pvpComplete}=currentRows(currentSnapshot);const updatedAt=String(currentSnapshot.updated_at||'');if(!Number.isFinite(Date.parse(updatedAt)))throw new Error('invalid snapshot timestamp');const releaseMonth=monthJST(updatedAt);",
   'PvP completeness capture');
  source=replaceOnce(source,
-  "   const found=releaseMonth>='2026-10'?await findReleases(Date.parse(updatedAt)):{};if(!found||typeof found!=='object'||Array.isArray(found))throw new Error('invalid_release_evidence');",
-  "   const found=await findReleases(Date.parse(updatedAt));if(!found||typeof found!=='object'||Array.isArray(found))throw new Error('invalid_release_evidence');",
-  'month-end official notice scan');
- source=replaceOnce(source,
   "  const sourcePresent=!!row||!!officialIds?.has(id);",
   "  const sourcePresent=!!officialIds?.has(id);",
-  'official-catalog source requirement');
+  'official catalog source requirement');
  source=replaceOnce(source,
-  "  const sameSnapshot=prior.lastSeenAt===updatedAt;\n  const monthChanged=!!prior.firstSeenMonth&&prior.firstSeenMonth!==releaseMonth;",
-  "  const sameSnapshot=prior.lastSeenAt===updatedAt;\n  const candidateMonth=releaseEvidence?.releaseMonth||prior.firstSeenMonth||releaseMonth;\n  const monthChanged=false;",
-  'release-month candidate clock');
- source=replaceOnce(source,
-  "  let consecutive=Number.isSafeInteger(prior.consecutive)?prior.consecutive:0;\n  const evidenceChanged=!!releaseEvidence&&releaseEvidence.noticeId!==prior.releaseEvidence?.noticeId;\n  const releaseEvidenceCurrent=releaseEvidence?.releaseMonth===releaseMonth&&Date.parse(updatedAt)>=Date.parse(releaseEvidence.publishedAt);\n  if(eligible&&imageVerified&&releaseEvidenceCurrent&&!sameSnapshot){\n   const followsPrevious=!monthChanged&&!evidenceChanged&&previousSnapshotAt&&prior.lastSeenAt===previousSnapshotAt&&gapOk;\n   consecutive=followsPrevious?consecutive+1:1;\n  }else if(!eligible||!imageVerified||!releaseEvidenceCurrent)consecutive=0;",
-  "  let consecutive=Number.isSafeInteger(prior.consecutive)?prior.consecutive:0;\n  const releaseEvidenceCurrent=!!releaseEvidence&&Date.parse(updatedAt)>=Date.parse(releaseEvidence.publishedAt);\n  const officialObservation=eligible&&imageVerified&&!!officialIds?.has(id);\n  if(officialObservation&&!sameSnapshot){\n   const followsPrevious=previousSnapshotAt&&prior.lastSeenAt===previousSnapshotAt&&gapOk;\n   consecutive=followsPrevious?consecutive+1:1;\n  }else if(!officialObservation)consecutive=0;",
-  'pre-observe official catalog candidates');
- source=replaceOnce(source,
-  "  const firstSeenAt=monthChanged?updatedAt:prior.firstSeenAt||updatedAt;\n  const firstSeenMonth=monthChanged?releaseMonth:prior.firstSeenMonth||releaseMonth;",
-  "  const firstSeenAt=monthChanged?updatedAt:prior.firstSeenAt||updatedAt;\n  const firstSeenMonth=monthChanged?candidateMonth:prior.firstSeenMonth||candidateMonth;",
-  'candidate release month persistence');
- source=replaceOnce(source,
-  "  if(releaseMonth>='2026-10'&&eligible&&imageVerified&&releaseEvidence?.releaseMonth===releaseMonth&&consecutive>=REQUIRED_CONSECUTIVE){",
-  "  if(eligible&&imageVerified&&releaseEvidenceCurrent&&consecutive>=REQUIRED_CONSECUTIVE){",
-  'notice-triggered promotion after pre-observation');
+  "  const officialObservation=eligible&&imageVerified&&(officialIds?officialIds.has(id):!!row)&&(!releaseEvidence||releaseEvidenceCurrent);",
+  "  const officialObservation=eligible&&imageVerified&&!!officialIds?.has(id)&&(!releaseEvidence||releaseEvidenceCurrent);",
+  'official catalog observation requirement');
  source=replaceOnce(source,
   " for(const topic of currentRegistry.characters){if(topic.releaseMonth!==releaseMonth)continue;const row=rowMap.get(topic.id);topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}",
   " for(const topic of currentRegistry.characters){if(topic.releaseMonth!==releaseMonth)continue;const row=rowMap.get(topic.id);if(pvpComplete||row){topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}}",
@@ -75,7 +59,7 @@ async function main(){
  const patched=patchCommunityDiscoverySource(original);
  if(patched===original)throw new Error('community discovery runtime patch made no changes');
  await writeFile(SOURCE,patched,'utf8');
- console.log('Applied official-source community discovery runtime policy.');
+ console.log('Applied official-source Star 9 community discovery runtime policy.');
 }
 
 if(process.argv[1]&&import.meta.url===pathToFileURL(resolve(process.argv[1])).href){

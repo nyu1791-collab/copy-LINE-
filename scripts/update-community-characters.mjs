@@ -10,6 +10,8 @@ const LEGACY_KNOWN=resolve('config/community-known-legacy-ids.json');
 const STATE=resolve('data/community-character-discovery.json');
 const TARGET=200;
 const REQUIRED_CONSECUTIVE=3;
+const BOARD_GRADE=9;
+const MAX_GRADE_TOPICS_PER_MONTH=2;
 // GitHub may skip scheduled slots; require three distinct full snapshots in
 // sequence while allowing the scheduled collector to recover within a day.
 const MAX_GAP_MS=24*60*60*1000;
@@ -34,8 +36,8 @@ function validateOfficialMetadata(value,id){
  return {id,name,nameEn,nameZh,nameTh,unitNameCode:value.unitNameCode,stage:'e',grade:Number.isSafeInteger(value.grade)?value.grade:null,skillsVerified:true,skillCount:value.skillCount,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt:value.verifiedAt};
 }
 function candidateName(row){const value=typeof row.name==='string'?row.name.normalize('NFC').replace(/\s+/g,' ').trim():'';return value&&value!==row.unit_code&&[...value].length<=80?value:null;}
-function snapshotRank(row){return Number.isSafeInteger(row.rank)&&row.rank>0?row.rank:null;}
-function adoptionRate(row){return typeof row.adoption_rate==='number'&&Number.isFinite(row.adoption_rate)&&row.adoption_rate>=0&&row.adoption_rate<=100?row.adoption_rate:null;}
+function snapshotRank(row){return Number.isSafeInteger(row?.rank)&&row.rank>0?row.rank:null;}
+function adoptionRate(row){return typeof row?.adoption_rate==='number'&&Number.isFinite(row.adoption_rate)&&row.adoption_rate>=0&&row.adoption_rate<=100?row.adoption_rate:null;}
 function validReleaseEvidence(value,id){
  return !!value&&typeof value==='object'&&!Array.isArray(value)&&value.catalogId===id&&/^20\d{2}-(0[1-9]|1[0-2])$/.test(value.releaseMonth||'')&&Number.isSafeInteger(value.noticeId)&&value.noticeId>0&&typeof value.noticeTitle==='string'&&/\bnew rangers? are here!?(?=\W|$)/i.test(value.noticeTitle)&&value.noticeUrl==='https://notice2.line.me/LGRGS/ios/document/notice'&&typeof value.matchedName==='string'&&value.matchedName.trim().length>0&&[...value.matchedName].length<=240&&Number.isSafeInteger(value.grade)&&value.grade>0&&value.grade<=20&&value.source==='notice2.line.me/LGRGS/ios/document/notice'&&typeof value.publishedAt==='string'&&Number.isFinite(Date.parse(value.publishedAt));
 }
@@ -71,7 +73,7 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
  let releaseNotices={};
  if(typeof findReleases==='function'){
   try{
-   const found=releaseMonth>='2026-10'?await findReleases(Date.parse(updatedAt)):{};if(!found||typeof found!=='object'||Array.isArray(found))throw new Error('invalid_release_evidence');
+   const found=await findReleases(Date.parse(updatedAt));if(!found||typeof found!=='object'||Array.isArray(found))throw new Error('invalid_release_evidence');
    releaseNotices=Object.fromEntries(Object.entries(found).filter(([id,value])=>SAFE_ID.test(id)&&validReleaseEvidence(value,id)));
    nextState.releaseNoticeStatus='verified';
   }catch{nextState.releaseNoticeStatus='unavailable';}
@@ -84,7 +86,10 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
  const previousSnapshotAt=typeof currentState.lastSnapshotAt==='string'&&Number.isFinite(Date.parse(currentState.lastSnapshotAt))?currentState.lastSnapshotAt:null;
  if(previousSnapshotAt&&Date.parse(updatedAt)<Date.parse(previousSnapshotAt))throw new Error('refusing out-of-order community snapshot');
  const promoted=[];
- const candidateIds=new Set([...rowMap.keys(),...newlyCataloged,...Object.keys(nextState.candidates),...Object.keys(releaseNotices)]);
+ const candidateIds=[...new Set([...rowMap.keys(),...newlyCataloged,...Object.keys(nextState.candidates),...Object.keys(releaseNotices)])].sort((a,b)=>{
+  const rowA=rowMap.get(a),rowB=rowMap.get(b);
+  return ((adoptionRate(rowB)??-1)-(adoptionRate(rowA)??-1))||((snapshotRank(rowA)??Number.MAX_SAFE_INTEGER)-(snapshotRank(rowB)??Number.MAX_SAFE_INTEGER))||a.localeCompare(b,undefined,{numeric:true,sensitivity:'base'});
+ });
  for(const id of candidateIds){
   if(known.has(id)||registeredIds.has(id))continue;
   const row=rowMap.get(id);
@@ -97,35 +102,41 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
   const image=safeImage(row?.image||('https://rangers.lerico.net/res/'+id+'/'+id+'-thum.png'),id);
   const baseEligible=SAFE_ID.test(id)&&sourcePresent&&!!image;
   const sameSnapshot=prior.lastSeenAt===updatedAt;
-  const monthChanged=!!prior.firstSeenMonth&&prior.firstSeenMonth!==releaseMonth;
   const gapMs=prior.lastSeenAt&&Number.isFinite(Date.parse(prior.lastSeenAt))?Date.parse(updatedAt)-Date.parse(prior.lastSeenAt):null;const gapOk=typeof gapMs==='number'&&gapMs>=0&&gapMs<=MAX_GAP_MS;
   let metadata=baseEligible?validateOfficialMetadata(prior.metadata,id):null;
   if(baseEligible&&!metadata){try{metadata=validateOfficialMetadata(await verify(id),id);}catch{metadata=null;}}
+  if(metadata&&metadata.grade!==BOARD_GRADE){known.add(id);delete nextState.candidates[id];continue;}
   if(releaseEvidence&&(!metadata||releaseEvidence.grade!==metadata.grade||releaseEvidence.matchedName.normalize('NFC').replace(/\s+/g,' ').trim().toLocaleLowerCase('en')!==metadata.nameEn.normalize('NFC').replace(/\s+/g,' ').trim().toLocaleLowerCase('en')))releaseEvidence=null;
   const name=metadata?.name||(row?candidateName(row):null);
-  const eligible=baseEligible&&!!metadata&&!!name;
+  const eligible=baseEligible&&!!metadata&&metadata.grade===BOARD_GRADE&&!!name;
   let imageVerified=eligible&&prior.verifiedImageUrl===image;
   if(eligible&&!imageVerified){try{imageVerified=await probe(image);}catch{imageVerified=false;}}
   let consecutive=Number.isSafeInteger(prior.consecutive)?prior.consecutive:0;
-  const evidenceChanged=!!releaseEvidence&&releaseEvidence.noticeId!==prior.releaseEvidence?.noticeId;
-  const releaseEvidenceCurrent=releaseEvidence?.releaseMonth===releaseMonth&&Date.parse(updatedAt)>=Date.parse(releaseEvidence.publishedAt);
-  if(eligible&&imageVerified&&releaseEvidenceCurrent&&!sameSnapshot){
-   const followsPrevious=!monthChanged&&!evidenceChanged&&previousSnapshotAt&&prior.lastSeenAt===previousSnapshotAt&&gapOk;
+  const releaseEvidenceCurrent=!!releaseEvidence&&Date.parse(updatedAt)>=Date.parse(releaseEvidence.publishedAt);
+  const officialObservation=eligible&&imageVerified&&(officialIds?officialIds.has(id):!!row)&&(!releaseEvidence||releaseEvidenceCurrent);
+  if(officialObservation&&!sameSnapshot){
+   const followsPrevious=previousSnapshotAt&&prior.lastSeenAt===previousSnapshotAt&&gapOk;
    consecutive=followsPrevious?consecutive+1:1;
-  }else if(!eligible||!imageVerified||!releaseEvidenceCurrent)consecutive=0;
-  const firstSeenAt=monthChanged?updatedAt:prior.firstSeenAt||updatedAt;
-  const firstSeenMonth=monthChanged?releaseMonth:prior.firstSeenMonth||releaseMonth;
-  const record={id,name,image,metadata,metadataVerified:!!metadata,verifiedImageUrl:imageVerified?image:null,firstSeenAt,firstSeenMonth,lastSeenAt:updatedAt,consecutive,eligible,imageVerified,releaseEvidence,discoveredFrom:newlyCataloged.has(id)||prior.discoveredFrom==='catalog'?'catalog':releaseEvidence?'official-announcement':'pvp',pvpRank:row?snapshotRank(row):null,adoptionRate:row?adoptionRate(row):null};
+  }else if(!officialObservation)consecutive=0;
+  const candidateMonth=releaseEvidence?.releaseMonth||prior.firstSeenMonth||releaseMonth;
+  const firstSeenAt=prior.firstSeenAt||updatedAt;
+  const firstSeenMonth=prior.firstSeenMonth||candidateMonth;
+  const record={id,name,image,metadata,metadataVerified:!!metadata,verifiedImageUrl:imageVerified?image:null,firstSeenAt,firstSeenMonth,lastSeenAt:updatedAt,consecutive,eligible,imageVerified,releaseEvidence,discoveredFrom:'catalog',pvpRank:row?snapshotRank(row):null,adoptionRate:row?adoptionRate(row):null};
   nextState.candidates[id]=record;
-  if(releaseMonth>='2026-10'&&eligible&&imageVerified&&releaseEvidence?.releaseMonth===releaseMonth&&consecutive>=REQUIRED_CONSECUTIVE){
-   const topic={id,name:metadata.name,nameEn:metadata.nameEn,nameZh:metadata.nameZh,...(metadata.nameTh?{nameTh:metadata.nameTh}:{}),image,releaseMonth:releaseEvidence.releaseMonth,releaseEvidence,confirmed:true,source:'pvp-auto',metadataSource:metadata.source,unitNameCode:metadata.unitNameCode,evolutionStage:metadata.stage,verifiedGrade:metadata.grade,skillsVerified:true,skillCount:metadata.skillCount,skillsVerifiedAt:metadata.verifiedAt,discoveredFrom:record.discoveredFrom,observationCount:consecutive,firstObservedAt:firstSeenAt,confirmedAt:updatedAt,pvpRank:row?snapshotRank(row):null,adoptionRate:row?adoptionRate(row):null};
+  const gradeTopics=currentRegistry.characters.filter(topic=>topic.releaseMonth===candidateMonth&&topic.verifiedGrade===BOARD_GRADE).length;
+  const catalogBacked=!!officialIds?.has(id);
+  const releasePath=releaseEvidence?releaseEvidenceCurrent:catalogBacked;
+  if(candidateMonth>='2026-10'&&eligible&&imageVerified&&releasePath&&consecutive>=REQUIRED_CONSECUTIVE&&gradeTopics<MAX_GRADE_TOPICS_PER_MONTH){
+   const topic={id,name:metadata.name,nameEn:metadata.nameEn,nameZh:metadata.nameZh,...(metadata.nameTh?{nameTh:metadata.nameTh}:{}),image,releaseMonth:candidateMonth,...(releaseEvidence?{releaseEvidence}:{}),confirmed:true,source:releaseEvidence?'pvp-auto':'manual',...(!releaseEvidence?{automationSource:'catalog-top2'}:{}),metadataSource:metadata.source,unitNameCode:metadata.unitNameCode,evolutionStage:metadata.stage,verifiedGrade:metadata.grade,skillsVerified:true,skillCount:metadata.skillCount,skillsVerifiedAt:metadata.verifiedAt,discoveredFrom:'catalog',observationCount:consecutive,firstObservedAt:firstSeenAt,confirmedAt:updatedAt,pvpRank:row?snapshotRank(row):null,adoptionRate:row?adoptionRate(row):null};
    currentRegistry.characters.push(topic);registeredIds.add(id);known.add(id);promoted.push(topic);delete nextState.candidates[id];
+  }else if(candidateMonth>='2026-10'&&eligible&&imageVerified&&releasePath&&consecutive>=REQUIRED_CONSECUTIVE&&gradeTopics>=MAX_GRADE_TOPICS_PER_MONTH){
+   known.add(id);delete nextState.candidates[id];
   }
  }
  // Refresh ordering metadata only for the active month. Missing PvP data becomes
  // null so a confirmed character naturally moves behind characters with data.
  for(const topic of currentRegistry.characters){if(topic.releaseMonth!==releaseMonth)continue;const row=rowMap.get(topic.id);topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}
- const topicOrder=(a,b)=>((b.adoptionRate??-1)-(a.adoptionRate??-1))||((a.pvpRank??Number.MAX_SAFE_INTEGER)-(b.pvpRank??Number.MAX_SAFE_INTEGER))||a.id.localeCompare(b.id);
+ const topicOrder=(a,b)=>((b.adoptionRate??-1)-(a.adoptionRate??-1))||((a.pvpRank??Number.MAX_SAFE_INTEGER)-(b.pvpRank??Number.MAX_SAFE_INTEGER))||a.id.localeCompare(b.id,undefined,{numeric:true,sensitivity:'base'});
  currentRegistry.characters.sort((a,b)=>a.releaseMonth.localeCompare(b.releaseMonth)||topicOrder(a,b));
  promoted.sort(topicOrder);
  nextState.knownIds=[...known].sort();return {registry:currentRegistry,state:nextState,promoted,initialized:false};

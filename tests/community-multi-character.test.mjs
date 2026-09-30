@@ -26,10 +26,10 @@ function metadataFor(id){
  const row=rows.find(item=>item.unit_code===id);
  if(!row)return null;
  const tail=id.split('-').at(-1);
- return {id,name:row.name,nameEn:'New '+tail,nameZh:'新角 '+tail,nameTh:'ใหม่ '+tail,unitNameCode:'unit_'+tail,stage:'e',grade:8,skillsVerified:true,skillCount:2,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt:'2026-10-01T00:00:00.000Z'};
+ return {id,name:row.name,nameEn:'New '+tail,nameZh:'新角 '+tail,nameTh:'ใหม่ '+tail,unitNameCode:'unit_'+tail,stage:'e',grade:9,skillsVerified:true,skillCount:2,source:'rangers.lerico.net/api/getRangersBasics',verifiedAt:'2026-10-01T00:00:00.000Z'};
 }
 function releaseEvidenceFor(id,releaseMonth='2026-10'){
- return {releaseMonth,noticeId:100028330,noticeTitle:'New Rangers are here!',noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice',publishedAt:'2026-09-30T15:00:00.000Z',catalogId:id,matchedName:metadataFor(id)?.nameEn||'New character',grade:8,source:'notice2.line.me/LGRGS/ios/document/notice'};
+ return {releaseMonth,noticeId:100028330,noticeTitle:'New Rangers are here!',noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice',publishedAt:'2026-09-30T15:00:00.000Z',catalogId:id,matchedName:metadataFor(id)?.nameEn||'New character',grade:9,source:'notice2.line.me/LGRGS/ios/document/notice'};
 }
 const releaseEvidenceForRows=async candidateRows=>Object.fromEntries(candidateRows.map(row=>[row.unit_code,releaseEvidenceFor(row.unit_code)]));
 
@@ -44,14 +44,14 @@ async function threeConfirmedSnapshots({candidateRows=rows,legacyKnown=noLegacy,
  return result;
 }
 
-test('multiple new characters are confirmed together without replacing each other',async()=>{
+test('only the top two verified Star 9 characters are confirmed together',async()=>{
  const final=await threeConfirmedSnapshots();
- assert.deepEqual(final.promoted.map(topic=>topic.id),['u2001e-beta','u2000e-alpha','u2002e-gamma']);
- assert.deepEqual(final.registry.characters.map(topic=>topic.id),['u2001e-beta','u2000e-alpha','u2002e-gamma']);
- assert.equal(new Set(final.registry.characters.map(topic=>topic.id)).size,3);
+ assert.deepEqual(final.promoted.map(topic=>topic.id),['u2001e-beta','u2000e-alpha']);
+ assert.deepEqual(final.registry.characters.map(topic=>topic.id),['u2001e-beta','u2000e-alpha']);
+ assert.equal(new Set(final.registry.characters.map(topic=>topic.id)).size,2);
  assert.ok(final.registry.characters.every(topic=>topic.releaseMonth==='2026-10'&&topic.confirmed===true&&topic.nameEn&&topic.nameZh&&topic.nameTh));
- assert.ok(final.registry.characters.every(topic=>topic.skillsVerified===true&&topic.skillCount===2));
- assert.equal(final.registry.characters.at(-1).pvpRank,null,'confirmed character without PvP rank stays last');
+ assert.ok(final.registry.characters.every(topic=>topic.verifiedGrade===9&&topic.skillsVerified===true&&topic.skillCount===2));
+ assert.ok(final.state.knownIds.includes('u2002e-gamma'),'third eligible Star 9 candidate is closed after the top-two cap');
 });
 
 test('missed scheduled slots do not prevent three verified full observations',async()=>{
@@ -104,6 +104,13 @@ test('September stays closed to new automatic boards even when a matching notice
  assert.deepEqual(registry.characters,[]);
 });
 
+test('Star 8 entries are excluded from the yellow Star 9 board policy',async()=>{
+ const final=await threeConfirmedSnapshots({candidateRows:[rows[0]],verifyMetadata:async id=>({...metadataFor(id),grade:8})});
+ assert.deepEqual(final.promoted,[]);
+ assert.equal(final.registry.characters.length,0);
+ assert.ok(final.state.knownIds.includes(rows[0].unit_code));
+});
+
 test('historical character IDs cannot be promoted again when they reappear in PvP',async()=>{
  const legacyRow={unit_code:'u1630e-sally',name:'過去キャラ',image:'https://rangers.lerico.net/res/u1630e-sally/u1630e-sally-thum.png',rank:1,adoption_rate:50};
  const final=await threeConfirmedSnapshots({candidateRows:[legacyRow],legacyKnown:{ids:['u1630e-sally']}});
@@ -124,7 +131,7 @@ test('repeated complete snapshots do not publish a character without current-mon
  const final=await threeConfirmedSnapshots({candidateRows:[rows[0]],findReleaseEvidence:async()=>({})});
  assert.deepEqual(final.promoted,[]);
  assert.equal(final.registry.characters.length,0);
- assert.equal(final.state.candidates['u2000e-alpha'].consecutive,0);
+ assert.equal(final.state.candidates['u2000e-alpha'].consecutive,3);
  assert.equal(final.state.candidates['u2000e-alpha'].releaseEvidence,null);
 });
 
@@ -175,7 +182,7 @@ test('unverified character images never accumulate a promotion streak',async()=>
  assert.equal(final.state.candidates['u2000e-alpha'].consecutive,0);
 });
 
-test('three catalog releases get separate monthly topics before any of them ranks in PvP',async()=>{
+test('catalog releases are capped at two monthly Star 9 topics before any of them ranks in PvP',async()=>{
  let state={...initialState(),catalogInitialized:true,knownCatalogIds:['u1000e-old']};
  let registry={schemaVersion:1,characters:[]};
  const prior={unit_code:'u1000e-old',rank:1,adoption_rate:12};
@@ -184,8 +191,10 @@ test('three catalog releases get separate monthly topics before any of them rank
   final=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[prior]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',...rows.map(row=>row.unit_code)],findReleaseEvidence:()=>releaseEvidenceForRows(rows)});
   state=final.state;registry=final.registry;
  }
- assert.equal(final.promoted.length,3);
- assert.ok(final.promoted.every(topic=>topic.discoveredFrom==='catalog'&&topic.pvpRank===null&&topic.adoptionRate===null&&topic.skillsVerified));
+ assert.deepEqual(final.promoted.map(topic=>topic.id),['u2000e-alpha','u2001e-beta']);
+ assert.equal(final.promoted.length,2);
+ assert.ok(final.promoted.every(topic=>topic.discoveredFrom==='catalog'&&topic.pvpRank===null&&topic.adoptionRate===null&&topic.skillsVerified&&topic.verifiedGrade===9));
+ assert.ok(final.state.knownIds.includes('u2002e-gamma'));
  assert.equal(final.state.candidates['u1000e-old'],undefined);
 });
 
