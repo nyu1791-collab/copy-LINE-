@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import {readFile} from 'node:fs/promises';
 import {auditCommunityRelease} from '../scripts/audit-community-release.mjs';
 
 const month='2026-10';
@@ -21,14 +22,26 @@ test('complete PvP counts and distinct verified boards pass the release audit',(
  assert.equal(report.currentTopics,3);
  assert.equal(report.rankedTopics,2);
  assert.equal(report.skillVerifiedTopics,3);
+ assert.equal(report.completeSample,true);
 });
 
-test('false 200, duplicate ranked IDs and negative occurrences stop the ranking gate',()=>{
- const broken=snapshot();broken.sampled_players=199;broken.characters[1].unit_code=broken.characters[0].unit_code;broken.characters[0].occurrence_count=-1;
- const report=auditCommunityRelease(broken,{characters:[]},state);
- assert.ok(report.rankingErrors.some(message=>message.includes('200/200')));
+test('a structurally valid partial sample stays publishable while bad rows still fail',()=>{
+ const partial=snapshot();partial.sampled_players=199;partial.complete_target=false;partial.characters[1].unit_code=partial.characters[0].unit_code;partial.characters[0].occurrence_count=-1;
+ const report=auditCommunityRelease(partial,{characters:[]},state);
+ assert.ok(!report.rankingErrors.some(message=>message.includes('sample metadata')));
+ assert.ok(report.warnings.some(message=>message.includes('partial clean subset')));
  assert.ok(report.rankingErrors.some(message=>message.includes('duplicate')));
  assert.ok(report.rankingErrors.some(message=>message.includes('invalid PvP counts')));
+ assert.equal(report.completeSample,false);
+});
+
+test('zero samples and mismatched completeness remain invalid',()=>{
+ const zero=snapshot();zero.sampled_players=0;zero.complete_target=false;
+ const zeroReport=auditCommunityRelease(zero,{characters:[]},state);
+ assert.ok(zeroReport.rankingErrors.some(message=>message.includes('sample metadata')));
+ const mismatched=snapshot();mismatched.sampled_players=199;mismatched.complete_target=true;
+ const mismatchReport=auditCommunityRelease(mismatched,{characters:[]},state);
+ assert.ok(mismatchReport.rankingErrors.some(message=>message.includes('sample metadata')));
 });
 
 test('skill validation and duplicate topics fail the community gate while monthly volume is advisory',()=>{
@@ -63,4 +76,17 @@ test('archived automatic boards keep their skill and image verification',()=>{
  const archived={...topic('u2000e-archive',null),releaseMonth:'2026-09',skillsVerified:false};
  const report=auditCommunityRelease(snapshot(),{characters:[archived]},state);
  assert.ok(report.communityErrors.some(message=>message.includes('skill')));
+});
+
+test('refresh workflow applies the resilient runtime policy but restores source before commit',async()=>{
+ const workflow=await readFile('.github/workflows/refresh-pvp-data.yml','utf8');
+ const policy=await readFile('scripts/prepare-resilient-pvp-runtime.mjs','utf8');
+ assert.match(workflow,/Apply resilient partial collection policy/);
+ assert.match(workflow,/node scripts\/prepare-resilient-pvp-runtime\.mjs/);
+ assert.match(workflow,/Restore strict collector source after runner-local policy/);
+ assert.match(workflow,/git restore -- scripts\/collect-pvp\.mjs/);
+ assert.match(policy,/sampledPlayers=players\.length/);
+ assert.match(policy,/completeTarget&&historyHealthy\?snapshots:\[\]/);
+ assert.match(policy,/if\(completeTarget&&historyHealthy\)await atomicJson\(HISTORY/);
+ assert.match(policy,/output\.character_slots<1/);
 });
