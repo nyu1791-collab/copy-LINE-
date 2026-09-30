@@ -9,8 +9,8 @@ export const dynamic='force-dynamic';
 
 export async function PUT(request:Request){try{
  const h=await headers();assertSameOrigin(request,h);const sessionUser=await currentUser(h);const {user,setCookie}=sessionUser;if(!profileReady(user))throw new Error('profile_required');const reply=(data:unknown,status=200)=>json(data,status,setCookie);requireCommunityFeature(await loadCommunityFeatureFlags(database()),'videoUploadEnabled');
- // A 200 MiB video has 25 chunks.  Do not consume the general write budget for
- // every chunk; this dedicated, bounded allowance also covers normal retries.
+ // A maximum-size 12 MiB video has two chunks. Do not consume the general write
+ // budget for each chunk; this bounded allowance also covers normal retries.
  await enforceLimit(sessionLimitKey(sessionUser,'upload-part',user.id),uploadPartLimit,uploadPartWindowSeconds);
  const query=new URL(request.url).searchParams;const id=query.get('id')||'';const part=Number(query.get('part'));
  if(!/^[a-f0-9-]{36}$/.test(id)||!Number.isSafeInteger(part)||part<1)throw new Error('invalid_request');
