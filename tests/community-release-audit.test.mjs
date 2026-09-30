@@ -3,61 +3,70 @@ import test from 'node:test';
 import {readFile} from 'node:fs/promises';
 import {auditCommunityRelease} from '../scripts/audit-community-release.mjs';
 
-function snapshot({sampled=200,complete=sampled===200,characters=[]}={}){
- return {
-  target_players:200,
-  sampled_players:sampled,
-  complete_target:complete,
-  character_slots:Math.max(1,characters.reduce((sum,row)=>sum+(row.occurrence||0),0)),
-  unique_characters:characters.length||1,
-  updated_at:'2026-10-01T00:00:00.000Z',
-  characters,
- };
+const month='2026-10';
+function snapshot(){
+ return {updated_at:'2026-10-20T03:00:00.000Z',target_players:200,sampled_players:200,complete_target:true,character_slots:5,unique_characters:2,characters:[
+  {unit_code:'u2000e-alpha',rank:1,occurrence_count:2,player_count:2},
+  {unit_code:'u2001e-beta',rank:2,occurrence_count:3,player_count:2},
+ ]};
 }
-function topic(id='u2000e-alpha',rank=1){return {id,name:'Alpha',nameEn:'Alpha',nameZh:'Alpha',nameTh:'Alpha',image:`https://rangers.lerico.net/res/${id}/${id}-thum.png`,releaseMonth:'2026-10',confirmed:true,source:'pvp-auto',metadataSource:'rangers.lerico.net/api/getRangersBasics',unitNameCode:'alpha_nm',evolutionStage:'e',verifiedGrade:8,skillsVerified:true,skillCount:2,skillsVerifiedAt:'2026-10-01T00:00:00.000Z',observationCount:3,pvpRank:rank,adoptionRate:10};}
-const state={schemaVersion:1,initialized:true,initializedAt:'2026-09-01T00:00:00.000Z',lastSnapshotAt:'2026-10-01T00:00:00.000Z',knownIds:[],candidates:{}};
+function topic(id,rank){
+ return {id,releaseMonth:month,name:'キャラ',nameEn:'New character',nameZh:'新角',source:'pvp-auto',image:'https://rangers.lerico.net/res/'+id+'/'+id+'-thum.png',pvpRank:rank,verifiedGrade:8,releaseEvidence:{releaseMonth:month,noticeId:100028330,noticeTitle:'New Rangers are here!',noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice',publishedAt:'2026-10-01T00:00:00.000Z',catalogId:id,matchedName:'New character',grade:8,source:'notice2.line.me/LGRGS/ios/document/notice'},skillsVerified:true,skillCount:2,skillsVerifiedAt:'2026-10-19T00:00:00.000Z',observationCount:3};
+}
+const state={catalogInitialized:true,catalogStatus:'verified',candidates:{}};
 
 test('complete PvP counts and distinct verified boards pass the release audit',()=>{
- const data=snapshot({characters:[{unit_code:'u2000e-alpha',occurrence:1,player_count:1,adoption_rate:0.5,rank:1}]});
- const report=auditCommunityRelease(data,{characters:[topic()]},state);
- assert.equal(report.rankingErrors.length,0);
- assert.equal(report.communityErrors.length,0);
+ const report=auditCommunityRelease(snapshot(),{characters:[topic('u2000e-alpha',1),topic('u2001e-beta',2),topic('u2002e-gamma',null)]},state);
+ assert.deepEqual(report.rankingErrors,[]);
+ assert.deepEqual(report.communityErrors,[]);
+ assert.equal(report.currentTopics,3);
+ assert.equal(report.rankedTopics,2);
+ assert.equal(report.skillVerifiedTopics,3);
+ assert.equal(report.completeSample,true);
 });
 
 test('a structurally valid partial sample stays publishable while bad rows still fail',()=>{
- const partial=snapshot({sampled:199,characters:[{unit_code:'u2000e-alpha',occurrence:1,player_count:1,adoption_rate:100/199,rank:1}]});
- assert.equal(auditCommunityRelease(partial,{characters:[]},state,{rankingOnly:true}).rankingErrors.length,0);
- const bad=structuredClone(partial);bad.characters[0].player_count=200;
- assert.ok(auditCommunityRelease(bad,{characters:[]},state,{rankingOnly:true}).rankingErrors.length>0);
+ const partial=snapshot();partial.sampled_players=199;partial.complete_target=false;partial.characters[1].unit_code=partial.characters[0].unit_code;partial.characters[0].occurrence_count=-1;
+ const report=auditCommunityRelease(partial,{characters:[]},state);
+ assert.ok(!report.rankingErrors.some(message=>message.includes('sample metadata')));
+ assert.ok(report.warnings.some(message=>message.includes('partial clean subset')));
+ assert.ok(report.rankingErrors.some(message=>message.includes('duplicate')));
+ assert.ok(report.rankingErrors.some(message=>message.includes('invalid PvP counts')));
+ assert.equal(report.completeSample,false);
 });
 
 test('zero samples and mismatched completeness remain invalid',()=>{
- const zero=snapshot({sampled:1});zero.sampled_players=0;zero.complete_target=false;
- assert.ok(auditCommunityRelease(zero,{characters:[]},state,{rankingOnly:true}).rankingErrors.length>0);
- const mismatch=snapshot({sampled:199});mismatch.complete_target=true;
- assert.ok(auditCommunityRelease(mismatch,{characters:[]},state,{rankingOnly:true}).rankingErrors.length>0);
+ const zero=snapshot();zero.sampled_players=0;zero.complete_target=false;
+ const zeroReport=auditCommunityRelease(zero,{characters:[]},state);
+ assert.ok(zeroReport.rankingErrors.some(message=>message.includes('sample metadata')));
+ const mismatched=snapshot();mismatched.sampled_players=199;mismatched.complete_target=true;
+ const mismatchReport=auditCommunityRelease(mismatched,{characters:[]},state);
+ assert.ok(mismatchReport.rankingErrors.some(message=>message.includes('sample metadata')));
 });
 
 test('skill validation and duplicate topics fail the community gate while monthly volume is advisory',()=>{
- const broken={...topic(),skillsVerified:false};
- const duplicate={...topic()};
- const report=auditCommunityRelease(snapshot(),{characters:[broken,duplicate]},state);
- assert.ok(report.communityErrors.length>0);
+ const first=topic('u2000e-alpha',1);
+ const report=auditCommunityRelease(snapshot(),{characters:[{...first,skillsVerified:false},first]},state);
+ assert.equal(report.rankingErrors.length,0);
+ assert.ok(report.communityErrors.some(message=>message.includes('skill')));
+ assert.ok(report.communityErrors.some(message=>message.includes('duplicate')));
+ assert.ok(report.warnings.some(message=>message.includes('Fewer than three')));
 });
 
 test('a mid-month catalog baseline warns that earlier releases cannot be reconstructed safely',()=>{
- const report=auditCommunityRelease(snapshot(),{characters:[]},{...state,initializedAt:'2026-10-15T00:00:00.000Z'});
- assert.ok(Array.isArray(report.warnings));
+ const report=auditCommunityRelease(snapshot(),{characters:[topic('u2000e-alpha',1)]},{...state,initializedAt:'2026-10-16T00:00:00.000Z'});
+ assert.ok(report.warnings.some(message=>message.includes('2026-10-16')&&message.includes('prior catalog snapshot')));
 });
 
 test('a sixth verified character is reported and retained',()=>{
- const characters=Array.from({length:6},(_,i)=>topic(`u20${String(i).padStart(2,'0')}e-char${i}`,i+1));
- const report=auditCommunityRelease(snapshot(),{characters},state);
- assert.ok(report.warnings.some(message=>message.includes('6'))||report.communityErrors.length===0);
+ const topics=Array.from({length:6},(_,i)=>topic('u200'+i+'e-new',null));
+ const report=auditCommunityRelease(snapshot(),{characters:topics},state);
+ assert.equal(report.currentTopics,6);
+ assert.equal(report.communityErrors.length,0);
+ assert.ok(report.warnings.some(message=>message.includes('More than five')));
 });
 
 test('a metadata-eligible candidate with an unverified image remains visible in the release audit',()=>{
- const month='2026-10';
  const report=auditCommunityRelease(snapshot(),{characters:[]},{...state,candidates:{'u2000e-alpha':{id:'u2000e-alpha',firstSeenMonth:month,eligible:true,metadataVerified:true,imageVerified:false}}});
  assert.equal(report.pendingCandidates,1);
  assert.ok(report.warnings.some(message=>message.includes('official image validation')&&message.includes('u2000e-alpha')));
