@@ -11,6 +11,23 @@ function replaceOnce(source,needle,replacement,label){
  return source.slice(0,first)+replacement+source.slice(first+needle.length);
 }
 
+function assertPatchedPolicy(source){
+ const required=[
+  ["return {rows,pvpComplete};",'partial PvP completeness capture'],
+  ["const found=await findReleases(Date.parse(updatedAt));",'month-end official notice scan'],
+  ["const sourcePresent=!!officialIds?.has(id);",'official catalog source gate'],
+  ["const candidateMonth=releaseEvidence?.releaseMonth||prior.firstSeenMonth||releaseMonth;",'release evidence month clock'],
+  ["const officialObservation=eligible&&imageVerified&&!!officialIds?.has(id);",'catalog pre-observation gate'],
+  ["if(eligible&&imageVerified&&releaseEvidenceCurrent&&consecutive>=REQUIRED_CONSECUTIVE){",'notice-triggered promotion gate'],
+  ["if(pvpComplete||row){topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}",'partial ordering preservation']
+ ];
+ for(const [needle,label] of required){
+  if(!source.includes(needle))throw new Error(`community discovery patched policy invariant missing: ${label}`);
+ }
+ if(source.includes("releaseMonth>='2026-10'?await findReleases"))throw new Error('community discovery retained stale month-gated notice scan');
+ if(source.includes("releaseEvidence?.releaseMonth===releaseMonth&&Date.parse(updatedAt)>=Date.parse(releaseEvidence.publishedAt)"))throw new Error('community discovery retained snapshot-month release gate');
+}
+
 export function patchCommunityDiscoverySource(input){
  let source=String(input);
  source=replaceOnce(source,
@@ -49,6 +66,7 @@ export function patchCommunityDiscoverySource(input){
   " for(const topic of currentRegistry.characters){if(topic.releaseMonth!==releaseMonth)continue;const row=rowMap.get(topic.id);topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}",
   " for(const topic of currentRegistry.characters){if(topic.releaseMonth!==releaseMonth)continue;const row=rowMap.get(topic.id);if(pvpComplete||row){topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}}",
   'partial PvP ordering preservation');
+ assertPatchedPolicy(source);
  return source;
 }
 
