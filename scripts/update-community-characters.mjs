@@ -112,7 +112,8 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
   let imageVerified=eligible&&prior.verifiedImageUrl===image;
   if(eligible&&!imageVerified){try{imageVerified=await probe(image);}catch{imageVerified=false;}}
   let consecutive=Number.isSafeInteger(prior.consecutive)?prior.consecutive:0;
-  const officialObservation=eligible&&imageVerified&&(officialIds?officialIds.has(id):!!row);
+  const releaseEvidenceCurrent=!!releaseEvidence&&Date.parse(updatedAt)>=Date.parse(releaseEvidence.publishedAt);
+  const officialObservation=eligible&&imageVerified&&(officialIds?officialIds.has(id):!!row)&&(!releaseEvidence||releaseEvidenceCurrent);
   if(officialObservation&&!sameSnapshot){
    const followsPrevious=previousSnapshotAt&&prior.lastSeenAt===previousSnapshotAt&&gapOk;
    consecutive=followsPrevious?consecutive+1:1;
@@ -124,10 +125,11 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
   nextState.candidates[id]=record;
   const gradeTopics=currentRegistry.characters.filter(topic=>topic.releaseMonth===candidateMonth&&topic.verifiedGrade===BOARD_GRADE).length;
   const catalogBacked=!!officialIds?.has(id);
-  if(candidateMonth>='2026-10'&&eligible&&imageVerified&&consecutive>=REQUIRED_CONSECUTIVE&&(!!releaseEvidence||catalogBacked)&&gradeTopics<MAX_GRADE_TOPICS_PER_MONTH){
+  const releasePath=releaseEvidence?releaseEvidenceCurrent:catalogBacked;
+  if(candidateMonth>='2026-10'&&eligible&&imageVerified&&releasePath&&consecutive>=REQUIRED_CONSECUTIVE&&gradeTopics<MAX_GRADE_TOPICS_PER_MONTH){
    const topic={id,name:metadata.name,nameEn:metadata.nameEn,nameZh:metadata.nameZh,...(metadata.nameTh?{nameTh:metadata.nameTh}:{}),image,releaseMonth:candidateMonth,...(releaseEvidence?{releaseEvidence}:{}),confirmed:true,source:releaseEvidence?'pvp-auto':'manual',...(!releaseEvidence?{automationSource:'catalog-top2'}:{}),metadataSource:metadata.source,unitNameCode:metadata.unitNameCode,evolutionStage:metadata.stage,verifiedGrade:metadata.grade,skillsVerified:true,skillCount:metadata.skillCount,skillsVerifiedAt:metadata.verifiedAt,discoveredFrom:'catalog',observationCount:consecutive,firstObservedAt:firstSeenAt,confirmedAt:updatedAt,pvpRank:row?snapshotRank(row):null,adoptionRate:row?adoptionRate(row):null};
    currentRegistry.characters.push(topic);registeredIds.add(id);known.add(id);promoted.push(topic);delete nextState.candidates[id];
-  }else if(candidateMonth>='2026-10'&&eligible&&imageVerified&&consecutive>=REQUIRED_CONSECUTIVE&&gradeTopics>=MAX_GRADE_TOPICS_PER_MONTH){
+  }else if(candidateMonth>='2026-10'&&eligible&&imageVerified&&releasePath&&consecutive>=REQUIRED_CONSECUTIVE&&gradeTopics>=MAX_GRADE_TOPICS_PER_MONTH){
    known.add(id);delete nextState.candidates[id];
   }
  }
