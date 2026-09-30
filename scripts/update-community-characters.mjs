@@ -98,7 +98,7 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
   // An old catalog entry ranking for the first time is not a newly released
   // unit. New catalog IDs can receive a board before they appear in PvP.
   if(officialIds&&currentState.catalogInitialized===true&&!newlyCataloged.has(id)&&!nextState.candidates[id]&&!releaseEvidence)continue;
-  const sourcePresent=!!officialIds?.has(id);
+  const sourcePresent=!!row||!!officialIds?.has(id);
   const image=safeImage(row?.image||('https://rangers.lerico.net/res/'+id+'/'+id+'-thum.png'),id);
   const baseEligible=SAFE_ID.test(id)&&sourcePresent&&!!image;
   const sameSnapshot=prior.lastSeenAt===updatedAt;
@@ -112,7 +112,7 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
   let imageVerified=eligible&&prior.verifiedImageUrl===image;
   if(eligible&&!imageVerified){try{imageVerified=await probe(image);}catch{imageVerified=false;}}
   let consecutive=Number.isSafeInteger(prior.consecutive)?prior.consecutive:0;
-  const officialObservation=eligible&&imageVerified&&!!officialIds?.has(id);
+  const officialObservation=eligible&&imageVerified&&(officialIds?officialIds.has(id):!!row);
   if(officialObservation&&!sameSnapshot){
    const followsPrevious=previousSnapshotAt&&prior.lastSeenAt===previousSnapshotAt&&gapOk;
    consecutive=followsPrevious?consecutive+1:1;
@@ -123,10 +123,11 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
   const record={id,name,image,metadata,metadataVerified:!!metadata,verifiedImageUrl:imageVerified?image:null,firstSeenAt,firstSeenMonth,lastSeenAt:updatedAt,consecutive,eligible,imageVerified,releaseEvidence,discoveredFrom:'catalog',pvpRank:row?snapshotRank(row):null,adoptionRate:row?adoptionRate(row):null};
   nextState.candidates[id]=record;
   const gradeTopics=currentRegistry.characters.filter(topic=>topic.releaseMonth===candidateMonth&&topic.verifiedGrade===BOARD_GRADE).length;
-  if(eligible&&imageVerified&&consecutive>=REQUIRED_CONSECUTIVE&&gradeTopics<MAX_GRADE_TOPICS_PER_MONTH){
+  const catalogBacked=!!officialIds?.has(id);
+  if(candidateMonth>='2026-10'&&eligible&&imageVerified&&consecutive>=REQUIRED_CONSECUTIVE&&(!!releaseEvidence||catalogBacked)&&gradeTopics<MAX_GRADE_TOPICS_PER_MONTH){
    const topic={id,name:metadata.name,nameEn:metadata.nameEn,nameZh:metadata.nameZh,...(metadata.nameTh?{nameTh:metadata.nameTh}:{}),image,releaseMonth:candidateMonth,...(releaseEvidence?{releaseEvidence}:{}),confirmed:true,source:releaseEvidence?'pvp-auto':'manual',...(!releaseEvidence?{automationSource:'catalog-top2'}:{}),metadataSource:metadata.source,unitNameCode:metadata.unitNameCode,evolutionStage:metadata.stage,verifiedGrade:metadata.grade,skillsVerified:true,skillCount:metadata.skillCount,skillsVerifiedAt:metadata.verifiedAt,discoveredFrom:'catalog',observationCount:consecutive,firstObservedAt:firstSeenAt,confirmedAt:updatedAt,pvpRank:row?snapshotRank(row):null,adoptionRate:row?adoptionRate(row):null};
    currentRegistry.characters.push(topic);registeredIds.add(id);known.add(id);promoted.push(topic);delete nextState.candidates[id];
-  }else if(eligible&&imageVerified&&consecutive>=REQUIRED_CONSECUTIVE&&gradeTopics>=MAX_GRADE_TOPICS_PER_MONTH){
+  }else if(candidateMonth>='2026-10'&&eligible&&imageVerified&&consecutive>=REQUIRED_CONSECUTIVE&&gradeTopics>=MAX_GRADE_TOPICS_PER_MONTH){
    known.add(id);delete nextState.candidates[id];
   }
  }
