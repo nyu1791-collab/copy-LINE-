@@ -31,20 +31,20 @@ export function patchCommunityDiscoverySource(input){
   'official-catalog source requirement');
  source=replaceOnce(source,
   "  const sameSnapshot=prior.lastSeenAt===updatedAt;\n  const monthChanged=!!prior.firstSeenMonth&&prior.firstSeenMonth!==releaseMonth;",
-  "  const sameSnapshot=prior.lastSeenAt===updatedAt;\n  const candidateMonth=releaseEvidence?.releaseMonth||releaseMonth;\n  const monthChanged=!!prior.firstSeenMonth&&prior.firstSeenMonth!==candidateMonth;",
+  "  const sameSnapshot=prior.lastSeenAt===updatedAt;\n  const candidateMonth=releaseEvidence?.releaseMonth||prior.firstSeenMonth||releaseMonth;\n  const monthChanged=false;",
   'release-month candidate clock');
  source=replaceOnce(source,
-  "  const releaseEvidenceCurrent=releaseEvidence?.releaseMonth===releaseMonth&&Date.parse(updatedAt)>=Date.parse(releaseEvidence.publishedAt);",
-  "  const releaseEvidenceCurrent=!!releaseEvidence&&Date.parse(updatedAt)>=Date.parse(releaseEvidence.publishedAt);",
-  'published official evidence gate');
+  "  let consecutive=Number.isSafeInteger(prior.consecutive)?prior.consecutive:0;\n  const evidenceChanged=!!releaseEvidence&&releaseEvidence.noticeId!==prior.releaseEvidence?.noticeId;\n  const releaseEvidenceCurrent=releaseEvidence?.releaseMonth===releaseMonth&&Date.parse(updatedAt)>=Date.parse(releaseEvidence.publishedAt);\n  if(eligible&&imageVerified&&releaseEvidenceCurrent&&!sameSnapshot){\n   const followsPrevious=!monthChanged&&!evidenceChanged&&previousSnapshotAt&&prior.lastSeenAt===previousSnapshotAt&&gapOk;\n   consecutive=followsPrevious?consecutive+1:1;\n  }else if(!eligible||!imageVerified||!releaseEvidenceCurrent)consecutive=0;",
+  "  let consecutive=Number.isSafeInteger(prior.consecutive)?prior.consecutive:0;\n  const releaseEvidenceCurrent=!!releaseEvidence&&Date.parse(updatedAt)>=Date.parse(releaseEvidence.publishedAt);\n  const officialObservation=eligible&&imageVerified&&!!officialIds?.has(id);\n  if(officialObservation&&!sameSnapshot){\n   const followsPrevious=previousSnapshotAt&&prior.lastSeenAt===previousSnapshotAt&&gapOk;\n   consecutive=followsPrevious?consecutive+1:1;\n  }else if(!officialObservation)consecutive=0;",
+  'pre-observe official catalog candidates');
  source=replaceOnce(source,
   "  const firstSeenAt=monthChanged?updatedAt:prior.firstSeenAt||updatedAt;\n  const firstSeenMonth=monthChanged?releaseMonth:prior.firstSeenMonth||releaseMonth;",
   "  const firstSeenAt=monthChanged?updatedAt:prior.firstSeenAt||updatedAt;\n  const firstSeenMonth=monthChanged?candidateMonth:prior.firstSeenMonth||candidateMonth;",
   'candidate release month persistence');
  source=replaceOnce(source,
   "  if(releaseMonth>='2026-10'&&eligible&&imageVerified&&releaseEvidence?.releaseMonth===releaseMonth&&consecutive>=REQUIRED_CONSECUTIVE){",
-  "  if(eligible&&imageVerified&&releaseEvidence?.releaseMonth===firstSeenMonth&&consecutive>=REQUIRED_CONSECUTIVE){",
-  'month-boundary promotion');
+  "  if(eligible&&imageVerified&&releaseEvidenceCurrent&&consecutive>=REQUIRED_CONSECUTIVE){",
+  'notice-triggered promotion after pre-observation');
  source=replaceOnce(source,
   " for(const topic of currentRegistry.characters){if(topic.releaseMonth!==releaseMonth)continue;const row=rowMap.get(topic.id);topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}",
   " for(const topic of currentRegistry.characters){if(topic.releaseMonth!==releaseMonth)continue;const row=rowMap.get(topic.id);if(pvpComplete||row){topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}}",
