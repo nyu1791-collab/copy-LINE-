@@ -33,13 +33,12 @@ export function optionalTextInput(value: unknown, max: number) {
 // browser validation, API validation and regression tests cannot silently drift.
 export const maxImagesPerPost=10;
 export const maxVideosPerPost=5;
-// Large uploads are sent in R2 multipart chunks. Keeping each request at 8 MiB
-// avoids buffering a long phone video inside the Worker while allowing a practical
-// 200 MiB evaluation upload without making uploads unlimited.
-export const maxMediaBytes=200*1024*1024;
+// Keep new media uploads small enough for reliable mobile uploads and playback.
+// This limit does not affect videos already stored in R2.
+export const maxMediaBytes=12*1024*1024;
 export const mediaPartBytes=8*1024*1024;
 export const legacyMultipartMediaBytes=12*1024*1024;
-// A maximum-size video uses 25 parts. Each part can retry three times, with
+// A maximum-size video uses two parts. Each part can retry three times, with
 // room for an ordinary recovery retry while keeping a bounded per-user
 // upload allowance.
 export const mediaPartAttempts=3;
