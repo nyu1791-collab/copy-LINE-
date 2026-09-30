@@ -36,7 +36,7 @@ test('media route uses the larger explicit range window without enabling full-fi
 test('feed thumbnails do not request video bytes before the detail view',()=>{
  const thumbnail=readFileSync(new URL('../app/video-thumbnail.tsx',import.meta.url),'utf8');
  const community=readFileSync(new URL('../app/community.tsx',import.meta.url),'utf8');
- assert.doesNotMatch(thumbnail,/<video\\b|\\/api\\/media|IntersectionObserver|preload=/);
+ assert.doesNotMatch(thumbnail,/<video\b|\/api\/media|IntersectionObserver|preload=/);
  assert.match(thumbnail,/video-placeholder/);
- assert.match(community,/<VideoThumbnail name=\\{item\\.mediaName/);
+ assert.match(community,/<VideoThumbnail name=\{item\.mediaName/);
 });
