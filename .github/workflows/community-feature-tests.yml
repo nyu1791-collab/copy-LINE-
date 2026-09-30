@@ -34,6 +34,12 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm run install:ci
+      - name: Verify resilient PvP runtime patch
+        run: |
+          set -euo pipefail
+          node scripts/prepare-resilient-pvp-runtime.mjs
+          node --check scripts/collect-pvp.mjs
+          git restore -- scripts/collect-pvp.mjs
       - name: Build and run community regression suite
         run: npm test
       - name: Lint application and Worker code
