@@ -42,8 +42,6 @@ test("Workers runtime keeps the PvP shell free of the obsolete community entry a
     const topicIdentities=activityPayload.topics.map(topic=>({id:topic.id,character:topic.character,month:topic.month}));
     topicIdentities.sort((a,b)=>a.id.localeCompare(b.id));
     assert.deepEqual(topicIdentities,[
-      {id:'2026-09:u1626e-cony',character:'u1626e-cony',month:'2026-09'},
-      {id:'2026-09:u1628e-boss',character:'u1628e-boss',month:'2026-09'},
       {id:'2026-09:u1631e-sally',character:'u1631e-sally',month:'2026-09'},
       {id:'2026-09:u1633e-le',character:'u1633e-le',month:'2026-09'},
       {id:'2026-09:u1635e-su',character:'u1635e-su',month:'2026-09'},
