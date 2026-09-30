@@ -75,18 +75,11 @@ async function setLogicalReaction(table:'likes'|'helpful',post:VisiblePost,userI
 function error(e:unknown){const message=e instanceof Error?e.message:'';const codes=['signin_required','profile_required','invalid_text','invalid_media','text_only','rate_limited','not_found','forbidden','invalid_request','duplicate_post','translation_unavailable','feature_disabled','read_only','archive_readonly','anonymous_unavailable'];if(!codes.includes(message)){console.error('board_request_failed');return response({error:'unavailable'},503);}return response({error:message},message==='signin_required'?401:message==='forbidden'?403:message==='rate_limited'?429:message==='not_found'?404:['feature_disabled','read_only','anonymous_unavailable'].includes(message)?503:message==='archive_readonly'?409:400);}
 export async function GET(request:Request){try{
  const viewUntil=Date.now();const h=await headers();const u=new URL(request.url);const suppliedViewer=u.searchParams.get('viewer')||'';const verifiedReadViewer=suppliedViewer&&suppliedViewer.length<=256?await verifyPublicViewerToken(suppliedViewer):null;const session=await identity(h,suppliedViewer||undefined);const sub=session.sub;const readSubject=verifiedReadViewer||sub;const network=await abuseNetworkBucket(h);if(network)await limit('board-read:'+network,240,60);const db=database();const me=await promoteVerifiedOwner(sub,await ensureUser(sub,guestName(sub),session.displayName,!!session.displayName,!!session.owner));const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);const flags=await loadCommunityFeatureFlags(db);const meBadges=me?(await db.prepare('SELECT badge FROM user_badges WHERE user=? ORDER BY badge').bind(me.id).all()).results.map(row=>String(row.badge)):[];const publicMe=me?{...me,badges:meBadges}:null;
- // Reaction totals stay visible, but the people behind them are intentionally
- // private.  Keep the saved reactions for uniqueness and moderation without
- // exposing a name-list API that could be called outside the screen.
  if(u.searchParams.has('helpers')||u.searchParams.has('likers'))throw new Error('not_found');
  if(u.searchParams.has('replies')){
   let parentId=String(u.searchParams.get('replies')||'');const requestedParent=await visiblePost(parentId);const parentPost=await logicalVisiblePost(parentId);if(!requestedParent||!parentPost)throw new Error('not_found');parentId=parentPost.id;
-  // A root post can have one text-reply level. A video comment can have one
-  // extra text-reply level; replies themselves can never receive replies.
   if(parentPost.parent){const root=await visiblePost(parentPost.parent);if(!root||!isVideoPost(root)||root.parent)throw new Error('not_found');}
   const parentGroup=typeof parentPost.media_group==='string'?parentPost.media_group:'';const replyParents=parentGroup?(await db.prepare('SELECT id FROM posts WHERE board=? AND author=? AND parent IS ? AND media_group=? AND status=\'visible\'').bind(parentPost.board,parentPost.author,parentPost.parent,parentGroup).all()).results.map(row=>String(row.id)):[parentId];const replyMarks=replyParents.map(()=>'?').join(',');
-  // Replies are paginated, never globally capped. Fetch one extra row to prove
-  // whether another page exists while keeping each D1 read bounded.
   const replyAfterValue=u.searchParams.get('replyAfter');const replyAfter=readAfter(replyAfterValue,0);
   const rows=replyAfterValue
    ?(await db.prepare(`SELECT p.id,p.author,p.board,p.parent,p.body,p.video,p.media_type mediaType,p.media_name mediaName,p.media_size mediaSize,p.media_group mediaGroup,p.created,p.pinned,u.name,u.role,(SELECT COUNT(*) FROM likes l WHERE l.post=p.id) likes,(SELECT COUNT(*) FROM posts child WHERE child.parent=p.id AND child.status='visible') replies,EXISTS(SELECT 1 FROM likes l WHERE l.post=p.id AND l.user=?) liked FROM posts p JOIN users u ON u.id=p.author WHERE p.parent IN (${replyMarks}) AND p.status='visible' AND (p.created>? OR (p.created=? AND p.id>?)) ORDER BY p.created ASC,p.id ASC LIMIT 21`).bind(me?.id||'',...replyParents,replyAfter.created,replyAfter.created,replyAfter.id).all()).results
@@ -98,10 +91,6 @@ export async function GET(request:Request){try{
   if(!me||me.role==='user')throw new Error('forbidden');
   const hidden=(await db.prepare("SELECT p.id,p.body,p.video,p.status,u.name FROM posts p JOIN users u ON u.id=p.author WHERE p.status='hidden' ORDER BY p.created DESC LIMIT 100").all()).results;
   const reports=(await db.prepare("SELECT r.post id,COUNT(*) reports,MIN(r.created) created,p.body,u.name FROM post_reports r JOIN posts p ON p.id=r.post JOIN users u ON u.id=p.author WHERE p.status='visible' GROUP BY r.post,p.body,u.name ORDER BY reports DESC,created ASC LIMIT 100").all()).results;
-  // Only explicitly named users enter the Owner's permission work queue.
-  // `display_name_set` is authoritative for new rows. The name fallback keeps
-  // profiles created before that column was added visible without exposing the
-  // generated guest labels; it never grants a role or badge by itself.
   const users=me.role!=='user'?(await db.prepare("SELECT id,name,role FROM users WHERE display_name_set=1 OR role='owner' OR (name<>'匿名ユーザー' AND name<>'ゲスト' AND name NOT LIKE 'ゲスト-%') ORDER BY created DESC LIMIT 100").all()).results:[];
   const userIds=users.map(u=>String((u as {id:string}).id));
   const badgeRows=userIds.length?(await db.prepare(`SELECT user,badge FROM user_badges WHERE user IN (${userIds.map(()=>'?').join(',')}) ORDER BY badge`).bind(...userIds).all()).results:[];
@@ -110,9 +99,6 @@ export async function GET(request:Request){try{
   return reply({hidden,reports,users:usersWithBadges,flags});
  }
  const current=monthJST();const requested=u.searchParams.get('month')||current;if(!validMonth(requested)||requested>current)throw new Error('invalid_request');
- // A verified topic may have been published without anyone visiting the board
- // during its release month. Backfill it when that archived month is opened;
- // INSERT OR IGNORE never changes an existing board or its discussion.
  let boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;
  const confirmedTopics=confirmedCharactersForMonth(requested);
  if(confirmedTopics.length){
@@ -123,17 +109,17 @@ export async function GET(request:Request){try{
    boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;
   }
  }
- // The current evaluation exposes only explicitly confirmed topics. Archived
- // months remain read-only records and must never disappear merely because
- // their character is not in this month's current catalog. For the current
- // month, preserve the confirmed topic order (PvP rank/adoption-rate order).
+ // Preserve database-only historical boards, but when a character exists in the
+ // canonical registry show it only under its canonical release month. This
+ // hides an old misassigned month without deleting its D1 row, posts or votes.
+ const canonicalTopicIds=new Set(confirmedTopics.map(topic=>topic.id));
+ const registeredTopicIds=new Set(characters.map(topic=>topic.id));
+ boards=boards.filter(row=>canonicalTopicIds.has(String(row.character))||!registeredTopicIds.has(String(row.character)));
  if(requested===current){
   const boardByCharacter=new Map(boards.map(b=>[String(b.character),b]));
   boards=confirmedTopics.flatMap(c=>{const row=boardByCharacter.get(c.id);return row?[{...row,name:c.name,nameEn:c.nameEn||null,nameZh:c.nameZh||null,nameTh:c.nameTh||null,image:c.image}]:[];});
  }
  const monthRows=(await db.prepare('SELECT DISTINCT month FROM boards WHERE month<=? ORDER BY month DESC LIMIT 1200').bind(current).all<{month:string}>()).results;
- // Registry months must remain selectable even if their D1 board was never
- // initialized before JST month rollover. Also retain DB-only old archives.
  const availableMonths=[...new Set([current,...monthRows.map(row=>String(row.month)),...characters.map(topic=>topic.releaseMonth)].filter(value=>validMonth(value)&&value<=current))].sort((a,b)=>b.localeCompare(a));
  const board=u.searchParams.get('board')||String(boards[0]?.id||'');let parent=u.searchParams.get('video');const requestedGroup=u.searchParams.get('group');if(parent&&requestedGroup)throw new Error('invalid_request');
  if(board&&!boards.some(b=>b.id===board))throw new Error('not_found');
@@ -164,8 +150,6 @@ export async function GET(request:Request){try{
  const sortParam=u.searchParams.get('sort');const selectedSort=sortParam==='helpful'||sortParam==='likes'?sortParam:null;const sort=selectedSort==='helpful'?`${logicalHelpfulCount} DESC,p.created DESC,p.id DESC`:selectedSort==='likes'?`${logicalLikeCount} DESC,p.created DESC,p.id DESC`:'p.created DESC,p.id DESC';
  const cursor=selectedSort?null:readCursor(u.searchParams.get('cursor'));
  const offset=Math.max(0,Math.min(10000,Number(u.searchParams.get('offset'))||0));
- // Keep first paint small on phones. Replies load only after their count is
- // tapped, and the list itself is capped at 20 items per page.
  const result=board?cursor?await db.prepare(`SELECT p.id,p.author,p.board,p.parent,p.body,p.video,p.media_type mediaType,p.media_name mediaName,p.media_size mediaSize,p.media_group mediaGroup,p.created,p.pinned,u.name,u.role,(SELECT COUNT(*) FROM likes l WHERE l.post=p.id) likes,(SELECT COUNT(*) FROM posts r WHERE r.parent=p.id AND r.status='visible') replies,EXISTS(SELECT 1 FROM likes l WHERE l.post=p.id AND l.user=?) liked FROM posts p JOIN users u ON u.id=p.author WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} AND (p.pinned<? OR (p.pinned=? AND (p.created<? OR (p.created=? AND p.id<?)))) ORDER BY p.pinned DESC,p.created DESC,p.id DESC LIMIT 21`).bind(me?.id||'',board,parent,cursor.pinned,cursor.pinned,cursor.created,cursor.created,cursor.id).all():await db.prepare(`SELECT p.id,p.author,p.board,p.parent,p.body,p.video,p.media_type mediaType,p.media_name mediaName,p.media_size mediaSize,p.media_group mediaGroup,p.created,p.pinned,u.name,u.role,(SELECT COUNT(*) FROM likes l WHERE l.post=p.id) likes,(SELECT COUNT(*) FROM posts r WHERE r.parent=p.id AND r.status='visible') replies,EXISTS(SELECT 1 FROM likes l WHERE l.post=p.id AND l.user=?) liked FROM posts p JOIN users u ON u.id=p.author WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} ORDER BY p.pinned DESC,${sort} LIMIT 21 OFFSET ?`).bind(me?.id||'',board,parent,offset).all():{results:[]};
  const statsBase=board?((await db.prepare(`SELECT COALESCE(SUM(CASE WHEN p.video IS NOT NULL OR p.media_type LIKE 'video/%' THEN 1 ELSE 0 END),0) videos,COALESCE(SUM(CASE WHEN ${logicalPostAnchor} THEN 1 ELSE 0 END),0) comments,COALESCE(SUM(CASE WHEN p.created>=? AND ${logicalPostAnchor} THEN 1 ELSE 0 END),0) todayComments FROM posts p WHERE p.board=? AND p.status='visible' AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))`).bind(jstDayStart(),board).first<{videos:number;comments:number;todayComments:number}>())||{videos:0,comments:0,todayComments:0}):{videos:0,comments:0,todayComments:0};
  const latestRow=board?(await db.prepare(`SELECT p.id,p.created FROM posts p WHERE p.board=? AND p.parent IS ? AND p.status='visible' AND ${logicalPostAnchor} ORDER BY p.created DESC,p.id DESC LIMIT 1`).bind(board,parent).first<{id:string;created:number}>()):null;
@@ -187,16 +171,10 @@ export async function POST(request:Request){try{
  const suppliedViewer=b.action==='seen'?(requestUrl.searchParams.get('viewer')||''):'';const verifiedSeenViewer=suppliedViewer&&suppliedViewer.length<=256?await verifyPublicViewerToken(suppliedViewer):null;const session=await identity(h,b.action==='seen'?(suppliedViewer||undefined):undefined);const sub=session.sub;const seenSubject=verifiedSeenViewer||sub;const network=await abuseNetworkBucket(h);const freshAnonymous=session.anonymous===true&&session.newGuest===true;const sessionLimit=(prefix:string,id=sub)=>network&&freshAnonymous?`${prefix}-new:${network}`:`${prefix}:${id}`;const reply=(data:unknown,status=200)=>response(data,status,session.setCookie,session.setCookies||[]);await limit(sessionLimit('write'),30);const db=database();const now=Date.now();
  if(b.action==='profile'){
   const submittedName=textInput(b.name,30);await limit(sessionLimit('profile'),3);
-  // Only the opaque subject injected by the platform and matched against the
-  // server-side secret may bind the Owner role. Public request headers such as
-  // an email value are never used for privilege escalation.
   const ownerEnv=env as unknown as Record<string,string>;
   const ownerSubject=ownerEnv.BOARD_OWNER_SUBJECT;
   const ownerCandidate=session.owner===true||(!!ownerSubject&&sub===ownerSubject);
   const name=ownerCandidate?ownerDisplayName:submittedName;
-  // The owner secret may be added after the owner has already created a User
-  // row. Promote only that verified subject, and only while no other owner is
-  // present; a display name or client payload never changes a role.
   await db.prepare("INSERT INTO users(id,subject,name,display_name_set,role,created) VALUES(?,?,?,1,CASE WHEN ? AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner') THEN 'owner' ELSE 'user' END,?) ON CONFLICT(subject) DO UPDATE SET name=excluded.name,display_name_set=1,role=CASE WHEN ? AND users.role='user' AND NOT EXISTS(SELECT 1 FROM users WHERE role='owner' AND subject<>excluded.subject) THEN 'owner' ELSE users.role END").bind(crypto.randomUUID(),sub,name,ownerCandidate?1:0,now,ownerCandidate?1:0).run();return response({ok:true,me:await user(sub)},200,session.setCookie,[displayNameCookie(name)]);
  }
  if(b.action==='seen'){
@@ -231,9 +209,6 @@ export async function POST(request:Request){try{
   const existing=await db.prepare('SELECT id FROM posts WHERE author=? AND request=?').bind(me.id,requestId).first();if(existing)return reply({ok:true,id:existing.id});
   if(parent){
    validateReply(body,null);const p=await logicalVisiblePost(parent);if(!p||p.board!==board)throw new Error('text_only');parent=p.id;
-   // Direct replies are allowed.  A reply to a video comment is also allowed,
-   // but another level is rejected so the discussion cannot become an endless
-   // tree or accept media/URLs at any reply level.
    if(p.parent){const root=await visiblePost(p.parent);if(!root||!isVideoPost(root)||root.parent)throw new Error('text_only');}
   }
   await limit(sessionLimit('post',me.id),1,10);if(await db.prepare('SELECT id FROM posts WHERE author=? AND body=? AND created>?').bind(me.id,body,now-60000).first())throw new Error('duplicate_post');

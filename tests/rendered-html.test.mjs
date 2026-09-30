@@ -30,7 +30,8 @@ test("Workers runtime keeps the PvP shell free of the obsolete community entry a
     await db.batch(migrations.flatMap(migration=>migration.split(';').map(s=>s.replaceAll('--> statement-breakpoint','').trim()).filter(Boolean).map(s=>db.prepare(s))));
     const api=await mf.dispatchFetch("https://review.example/api/board");
     assert.equal(api.status,200);
-    const publicBoard=await api.json();assert.equal(publicBoard.me,null);const guestCookie=(api.headers.get('set-cookie')??'').match(/__Host-lr_guest=v1\.[^;]+/)?.[0]??'';assert.match(guestCookie,/^__Host-lr_guest=v1\./);
+    const publicBoard=await api.json();assert.equal(publicBoard.me,null);assert.equal(publicBoard.month,'2026-10');assert.deepEqual(publicBoard.boards.map(board=>board.character).sort(),['u1633e-le','u1635e-su']);const guestCookie=(api.headers.get('set-cookie')??'').match(/__Host-lr_guest=v1\.[^;]+/)?.[0]??'';assert.match(guestCookie,/^__Host-lr_guest=v1\./);
+    const septemberResponse=await mf.dispatchFetch("https://review.example/api/board?month=2026-09",{headers:{cookie:guestCookie}});assert.equal(septemberResponse.status,200);const september=await septemberResponse.json();assert.deepEqual(september.boards.map(board=>board.character),['u1631e-sally']);
     const publicActivity=await mf.dispatchFetch('https://review.example/api/activity');
     assert.equal(publicActivity.status,200);
     const activityPayload=await publicActivity.json();
@@ -42,12 +43,11 @@ test("Workers runtime keeps the PvP shell free of the obsolete community entry a
     const topicIdentities=activityPayload.topics.map(topic=>({id:topic.id,character:topic.character,month:topic.month}));
     topicIdentities.sort((a,b)=>a.id.localeCompare(b.id));
     assert.deepEqual(topicIdentities,[
-      {id:'2026-09:u1631e-sally',character:'u1631e-sally',month:'2026-09'},
-      {id:'2026-09:u1633e-le',character:'u1633e-le',month:'2026-09'},
-      {id:'2026-09:u1635e-su',character:'u1635e-su',month:'2026-09'},
+      {id:'2026-10:u1633e-le',character:'u1633e-le',month:'2026-10'},
+      {id:'2026-10:u1635e-su',character:'u1635e-su',month:'2026-10'},
     ]);
     const headers={cookie:guestCookie,host:'review.example',origin:'https://review.example','Content-Type':'application/json'};
-    const call=async(body)=>{const r=await mf.dispatchFetch('https://review.example/api/board'+(body?'':'?month=2026-09'),{method:body?'POST':'GET',headers,...(body?{body:JSON.stringify(body)}:{})});assert.equal(r.status,200);return r.json();};
+    const call=async(body)=>{const r=await mf.dispatchFetch('https://review.example/api/board'+(body?'':'?month=2026-10'),{method:body?'POST':'GET',headers,...(body?{body:JSON.stringify(body)}:{})});assert.equal(r.status,200);return r.json();};
     await call({action:'profile',name:'Local D1 test'});
     const before=await call();
     const anonymousSession=await mf.dispatchFetch('https://review.example/api/upload/session',{method:'POST',headers,body:JSON.stringify({board:before.board,body:'Anonymous upload',request:crypto.randomUUID(),name:'anonymous.mp4',type:'video/mp4',size:32})});assert.equal(anonymousSession.status,200,await anonymousSession.text());

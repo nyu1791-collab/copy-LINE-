@@ -6,7 +6,16 @@ export type Language = typeof languages[number];
 // comes exclusively from the server-verified subject and signed cookie.
 export const ownerDisplayName='LINEレンジャーは神ゲー';
 export function requestUUID(){const b=crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const s=Array.from(b,x=>x.toString(16).padStart(2,'0')).join('');return `${s.slice(0,8)}-${s.slice(8,12)}-${s.slice(12,16)}-${s.slice(16,20)}-${s.slice(20)}`;}
-export function monthJST(now = new Date()) { return new Date(now.getTime()+9*3600000).toISOString().slice(0,7); }
+export function calendarMonthJST(now = new Date()) { return new Date(now.getTime()+9*3600000).toISOString().slice(0,7); }
+// Community releases that are staged at the end of a month may already belong
+// to the next release month. Keep the newest verified registry month as the
+// standard board while retaining older months as selectable archives.
+export function monthJST(now = new Date()) {
+  const calendar=calendarMonthJST(now);
+  let latest=calendar;
+  for(const topic of characters){if(validMonth(topic.releaseMonth)&&topic.releaseMonth>latest)latest=topic.releaseMonth;}
+  return latest;
+}
 export function validMonth(value: unknown): value is string { return typeof value==='string' && /^20\d{2}-(0[1-9]|1[0-2])$/.test(value); }
 export function textInput(value: unknown, max: number) {
   if (typeof value!=='string') throw new Error('invalid_text');

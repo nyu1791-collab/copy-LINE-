@@ -19,7 +19,13 @@ const SAFE_ID=/^u\d+e-[a-z0-9_-]+$/i;
 
 export async function readJson(path,fallback){try{return JSON.parse(await readFile(path,'utf8'));}catch(error){if(error&&typeof error==='object'&&error.code==='ENOENT')return fallback;throw error;}}
 async function atomicJson(path,value){await mkdir(dirname(path),{recursive:true});const temp=`${path}.tmp`;await writeFile(temp,JSON.stringify(value,null,2)+'\n','utf8');await rename(temp,path);}
-function monthJST(value){const date=new Date(value);if(!Number.isFinite(date.getTime()))throw new Error('invalid snapshot date');const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit'}).formatToParts(date);const values=Object.fromEntries(parts.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));return `${values.year}-${values.month}`;}
+function calendarPartsJST(value){const date=new Date(value);if(!Number.isFinite(date.getTime()))throw new Error('invalid snapshot date');const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Tokyo',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date);const values=Object.fromEntries(parts.filter(x=>x.type!=='literal').map(x=>[x.type,x.value]));return {year:Number(values.year),month:Number(values.month),day:Number(values.day)};}
+function monthLabel(year,month){return `${year}-${String(month).padStart(2,'0')}`;}
+function nextMonthLabel(year,month){const next=new Date(Date.UTC(year,month,1));return monthLabel(next.getUTCFullYear(),next.getUTCMonth()+1);}
+// LINE Rangers commonly stages the next release on the final JST calendar day.
+// Treat a first observation on that last day as belonging to the next community
+// month, while exact official release evidence remains authoritative when present.
+export function communityReleaseMonthJST(value){const {year,month,day}=calendarPartsJST(value);const lastDay=new Date(Date.UTC(year,month,0)).getUTCDate();return day===lastDay?nextMonthLabel(year,month):monthLabel(year,month);}
 function safeImage(value,id){return safeCharacterImageUrl(value,id);}
 function currentRows(snapshot){if(!snapshot||snapshot.complete_target!==true||snapshot.target_players!==TARGET||snapshot.sampled_players!==TARGET||!Array.isArray(snapshot.characters))throw new Error('refusing incomplete PvP snapshot');const rows=snapshot.characters;if(rows.some(row=>!row||typeof row!=='object'||Array.isArray(row)||typeof row.unit_code!=='string'||!/^[A-Za-z0-9_-]{1,80}$/.test(row.unit_code)))throw new Error('invalid character row in full PvP snapshot');if(new Set(rows.map(row=>row.unit_code)).size!==rows.length)throw new Error('duplicate character ID in full PvP snapshot');return rows;}
 function historyIds(history){const output=new Set();for(const snapshot of Array.isArray(history?.snapshots)?history.snapshots:[]){for(const row of Array.isArray(snapshot?.characters)?snapshot.characters:[]){if(row&&typeof row.unit_code==='string')output.add(row.unit_code);}}return output;}
@@ -49,7 +55,7 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
  const findReleases=findReleaseEvidence??verify.findOfficialReleaseEvidence;
  const listOfficial=listCatalogIds??verify.listCatalogUnitIds;
  const currentSnapshot=snapshot??await readJson(SNAPSHOT,null);const oldHistory=history??await readJson(HISTORY,{snapshots:[]});const currentRegistry=normalizeRegistry(registry??await readJson(REGISTRY,{schemaVersion:1,characters:[]}));const legacy=knownLegacyIds(legacyKnown??await readJson(LEGACY_KNOWN,{ids:[]}));const currentState=normalizeDiscoveryState(state??await readJson(STATE,{schemaVersion:1,initialized:false,initializedAt:null,knownIds:[],candidates:{}}));
- const rows=currentRows(currentSnapshot);const updatedAt=String(currentSnapshot.updated_at||'');if(!Number.isFinite(Date.parse(updatedAt)))throw new Error('invalid snapshot timestamp');const releaseMonth=monthJST(updatedAt);
+ const rows=currentRows(currentSnapshot);const updatedAt=String(currentSnapshot.updated_at||'');if(!Number.isFinite(Date.parse(updatedAt)))throw new Error('invalid snapshot timestamp');const releaseMonth=communityReleaseMonthJST(updatedAt);
  const rowMap=new Map(rows.map(row=>[row.unit_code,row]));const registeredIds=new Set(currentRegistry.characters.map(row=>row.id));
  const nextState={schemaVersion:1,initialized:currentState.initialized===true,initializedAt:currentState.initializedAt||null,lastSnapshotAt:updatedAt,catalogInitialized:currentState.catalogInitialized===true,knownCatalogIds:Array.isArray(currentState.knownCatalogIds)?[...new Set(currentState.knownCatalogIds.filter(id=>typeof id==='string'&&SAFE_ID.test(id)))]:[],catalogStatus:'not_configured',releaseNoticeStatus:'not_configured',knownIds:Array.isArray(currentState.knownIds)?[...new Set(currentState.knownIds.filter(x=>typeof x==='string'))]:[],candidates:currentState.candidates&&typeof currentState.candidates==='object'&&!Array.isArray(currentState.candidates)?structuredClone(currentState.candidates):{}};
  let officialIds=null;
@@ -133,8 +139,8 @@ export async function updateCommunityCharacters({snapshot,history,registry,state
    known.add(id);delete nextState.candidates[id];
   }
  }
- // Refresh ordering metadata only for the active month. Missing PvP data becomes
- // null so a confirmed character naturally moves behind characters with data.
+ // Refresh ordering metadata only for the active release month. Missing PvP data
+ // becomes null so a confirmed character naturally moves behind characters with data.
  for(const topic of currentRegistry.characters){if(topic.releaseMonth!==releaseMonth)continue;const row=rowMap.get(topic.id);topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}
  const topicOrder=(a,b)=>((b.adoptionRate??-1)-(a.adoptionRate??-1))||((a.pvpRank??Number.MAX_SAFE_INTEGER)-(b.pvpRank??Number.MAX_SAFE_INTEGER))||a.id.localeCompare(b.id,undefined,{numeric:true,sensitivity:'base'});
  currentRegistry.characters.sort((a,b)=>a.releaseMonth.localeCompare(b.releaseMonth)||topicOrder(a,b));
