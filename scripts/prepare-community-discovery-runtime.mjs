@@ -18,7 +18,7 @@ function assertPatchedPolicy(source){
   ["const MAX_GRADE_TOPICS_PER_MONTH=2;",'top-two monthly cap'],
   ["metadata.grade===BOARD_GRADE",'Star 9 eligibility gate'],
   ["const sourcePresent=!!officialIds?.has(id);",'official catalog source gate'],
-  ["const officialObservation=eligible&&imageVerified&&!!officialIds?.has(id);",'official catalog observation gate'],
+  ["const officialObservation=eligible&&imageVerified&&!!officialIds?.has(id)&&(!releaseEvidence||releaseEvidenceCurrent);",'official catalog observation gate'],
   ["gradeTopics<MAX_GRADE_TOPICS_PER_MONTH",'top-two promotion gate'],
   ["if(pvpComplete||row){topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}",'partial ordering preservation']
  ];
@@ -42,8 +42,8 @@ export function patchCommunityDiscoverySource(input){
   "  const sourcePresent=!!officialIds?.has(id);",
   'official catalog source requirement');
  source=replaceOnce(source,
-  "  const officialObservation=eligible&&imageVerified&&(officialIds?officialIds.has(id):!!row);",
-  "  const officialObservation=eligible&&imageVerified&&!!officialIds?.has(id);",
+  "  const officialObservation=eligible&&imageVerified&&(officialIds?officialIds.has(id):!!row)&&(!releaseEvidence||releaseEvidenceCurrent);",
+  "  const officialObservation=eligible&&imageVerified&&!!officialIds?.has(id)&&(!releaseEvidence||releaseEvidenceCurrent);",
   'official catalog observation requirement');
  source=replaceOnce(source,
   " for(const topic of currentRegistry.characters){if(topic.releaseMonth!==releaseMonth)continue;const row=rowMap.get(topic.id);topic.pvpRank=row?snapshotRank(row):null;topic.adoptionRate=row?adoptionRate(row):null;}",
