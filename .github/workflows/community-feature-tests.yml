@@ -40,6 +40,15 @@ jobs:
           node scripts/prepare-resilient-pvp-runtime.mjs
           node --check scripts/collect-pvp.mjs
           git restore -- scripts/collect-pvp.mjs
+      - name: Verify official-source community discovery patch
+        run: |
+          set -euo pipefail
+          node scripts/prepare-community-discovery-runtime.mjs
+          node --check scripts/update-community-characters.mjs
+          grep -F "const sourcePresent=!!officialIds?.has(id);" scripts/update-community-characters.mjs
+          grep -F "const found=await findReleases(Date.parse(updatedAt));" scripts/update-community-characters.mjs
+          grep -F "return {rows,pvpComplete};" scripts/update-community-characters.mjs
+          git restore -- scripts/update-community-characters.mjs
       - name: Build and run community regression suite
         run: npm test
       - name: Lint application and Worker code

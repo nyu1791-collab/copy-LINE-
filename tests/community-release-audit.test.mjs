@@ -78,15 +78,21 @@ test('archived automatic boards keep their skill and image verification',()=>{
  assert.ok(report.communityErrors.some(message=>message.includes('skill')));
 });
 
-test('refresh workflow applies the resilient runtime policy but restores source before commit',async()=>{
+test('refresh workflow applies both runner-local policies and restores strict sources before commit',async()=>{
  const workflow=await readFile('.github/workflows/refresh-pvp-data.yml','utf8');
- const policy=await readFile('scripts/prepare-resilient-pvp-runtime.mjs','utf8');
+ const pvpPolicy=await readFile('scripts/prepare-resilient-pvp-runtime.mjs','utf8');
+ const communityPolicy=await readFile('scripts/prepare-community-discovery-runtime.mjs','utf8');
  assert.match(workflow,/Apply resilient partial collection policy/);
  assert.match(workflow,/node scripts\/prepare-resilient-pvp-runtime\.mjs/);
- assert.match(workflow,/Restore strict collector source after runner-local policy/);
- assert.match(workflow,/git restore -- scripts\/collect-pvp\.mjs/);
- assert.match(policy,/sampledPlayers=players\.length/);
- assert.match(policy,/completeTarget&&historyHealthy\?snapshots:\[\]/);
- assert.match(policy,/if\(completeTarget&&historyHealthy\)await atomicJson\(HISTORY/);
- assert.match(policy,/output\.character_slots<1/);
+ assert.match(workflow,/Apply official-source community discovery policy/);
+ assert.match(workflow,/node scripts\/prepare-community-discovery-runtime\.mjs/);
+ assert.match(workflow,/Restore strict sources after runner-local policies/);
+ assert.match(workflow,/git restore -- scripts\/collect-pvp\.mjs scripts\/update-community-characters\.mjs/);
+ assert.match(pvpPolicy,/sampledPlayers=players\.length/);
+ assert.match(pvpPolicy,/completeTarget&&historyHealthy\?snapshots:\[\]/);
+ assert.match(pvpPolicy,/if\(completeTarget&&historyHealthy\)await atomicJson\(HISTORY/);
+ assert.match(pvpPolicy,/output\.character_slots<1/);
+ assert.match(communityPolicy,/const sourcePresent=!!officialIds\?\.has\(id\);/);
+ assert.match(communityPolicy,/const found=await findReleases\(Date\.parse\(updatedAt\)\);/);
+ assert.match(communityPolicy,/return \{rows,pvpComplete\};/);
 });

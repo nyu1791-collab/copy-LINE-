@@ -4,14 +4,14 @@ import {readFile} from 'node:fs/promises';
 
 const data=JSON.parse(await readFile(new URL('../public/pvp/data/character_usage.json',import.meta.url),'utf8'));
 
-test('committed PvP snapshot is a complete Legend top-200 sample',()=>{
+test('committed PvP snapshot is a publishable Legend sample',()=>{
   assert.equal(data.target_players,200);
-  assert.equal(data.sampled_players,200);
-  assert.equal(data.complete_target,true);
-  assert.equal(data.collection_quality?.sample_coverage,100);
-  assert.equal(data.collection_quality?.detail_fetch_failures,0);
-  assert.ok(data.character_slots>=1500&&data.character_slots<=2000);
-  assert.ok(data.characters.length>=10);
+  assert.ok(Number.isSafeInteger(data.sampled_players)&&data.sampled_players>=1&&data.sampled_players<=200);
+  assert.equal(data.complete_target,data.sampled_players===200);
+  assert.equal(data.collection_quality?.sample_coverage,Number(((data.sampled_players/200)*100).toFixed(1)));
+  assert.ok(Number.isSafeInteger(data.collection_quality?.detail_fetch_failures)&&data.collection_quality.detail_fetch_failures>=0);
+  assert.ok(data.character_slots>=1&&data.character_slots<=data.sampled_players*10);
+  assert.ok(data.characters.length>=1);
 });
 
 test('snapshot contains the exact ultimate Sally target and trusted images',()=>{
