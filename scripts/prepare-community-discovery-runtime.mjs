@@ -14,6 +14,7 @@ function replaceOnce(source,needle,replacement,label){
 function assertPatchedPolicy(source){
  const required=[
   ["return {rows,pvpComplete};",'partial PvP completeness capture'],
+  ["const found=await findReleases(Date.parse(updatedAt));",'official notice scan'],
   ["const BOARD_GRADE=9;",'Star 9 board grade'],
   ["const MAX_GRADE_TOPICS_PER_MONTH=2;",'top-two monthly cap'],
   ["metadata.grade===BOARD_GRADE",'Star 9 eligibility gate'],
