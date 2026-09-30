@@ -9,6 +9,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/collect-pvp.mjs'
+      - 'scripts/prepare-resilient-pvp-runtime.mjs'
       - 'scripts/patch-pvp-metadata.mjs'
       - 'scripts/update-community-characters.mjs'
       - 'scripts/community-character-metadata.mjs'
@@ -29,11 +30,16 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: '22.13.0'
-      - name: Collect and validate Legend top 200
+      - name: Apply resilient partial collection policy
+        run: |
+          set -euo pipefail
+          node scripts/prepare-resilient-pvp-runtime.mjs
+          node --check scripts/collect-pvp.mjs
+      - name: Collect usable Legend ranking
         run: node scripts/collect-pvp.mjs
       - name: Apply trusted display metadata
         run: node scripts/patch-pvp-metadata.mjs
-      - name: Validate complete ranking and occurrence totals
+      - name: Validate publishable ranking and occurrence totals
         run: node scripts/audit-community-release.mjs --ranking-only
       - name: Discover multi-character community topics
         id: community_discovery
@@ -43,6 +49,9 @@ jobs:
         id: community_audit
         continue-on-error: true
         run: node scripts/audit-community-release.mjs
+      - name: Restore strict collector source after runner-local policy
+        if: always()
+        run: git restore -- scripts/collect-pvp.mjs
       - name: Commit only validated snapshot and discovery changes
         run: |
           git config user.name 'github-actions[bot]'
