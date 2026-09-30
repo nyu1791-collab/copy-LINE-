@@ -15,15 +15,21 @@ export function auditCommunityRelease(snapshot,registry,state){
  const rankingErrors=[],communityErrors=[],warnings=[];
  const at=Date.parse(snapshot?.updated_at);
  if(!Number.isFinite(at))rankingErrors.push('invalid snapshot timestamp');
- if(snapshot?.target_players!==200||snapshot?.sampled_players!==200||snapshot?.complete_target!==true)rankingErrors.push('PvP snapshot is not a validated 200/200 sample');
+ const target=snapshot?.target_players;
+ const sampled=snapshot?.sampled_players;
+ const sampledValid=Number.isSafeInteger(sampled)&&sampled>=1&&sampled<=200;
+ const expectedComplete=sampled===200;
+ if(target!==200||!sampledValid||snapshot?.complete_target!==expectedComplete)rankingErrors.push('PvP snapshot has invalid sample metadata');
+ else if(!expectedComplete)warnings.push('PvP snapshot is a partial clean subset: '+sampled+'/200; comparison history and new-character observation remain full-sample only');
  const rows=Array.isArray(snapshot?.characters)?snapshot.characters:null;
- if(!rows)rankingErrors.push('missing PvP character rankings');
+ if(!rows||rows.length<1)rankingErrors.push('missing PvP character rankings');
  const ranked=new Map();let slots=0;
  for(const row of rows||[]){
   const id=row?.unit_code;
   if(typeof id!=='string'||!ID.test(id)||ranked.has(id)){rankingErrors.push('duplicate or invalid ranked unit ID');continue;}
   ranked.set(id,row);
-  if(!Number.isSafeInteger(row.occurrence_count)||row.occurrence_count<1||!Number.isSafeInteger(row.player_count)||row.player_count<1||row.player_count>200||row.player_count>row.occurrence_count||!Number.isSafeInteger(row.rank)||row.rank<1){rankingErrors.push('invalid PvP counts or rank for '+id);continue;}
+  const playerLimit=sampledValid?sampled:200;
+  if(!Number.isSafeInteger(row.occurrence_count)||row.occurrence_count<1||!Number.isSafeInteger(row.player_count)||row.player_count<1||row.player_count>playerLimit||row.player_count>row.occurrence_count||!Number.isSafeInteger(row.rank)||row.rank<1){rankingErrors.push('invalid PvP counts or rank for '+id);continue;}
   slots+=row.occurrence_count;
  }
  if(rows&&slots!==snapshot.character_slots)rankingErrors.push('character occurrence total does not match character slots');
@@ -65,7 +71,7 @@ export function auditCommunityRelease(snapshot,registry,state){
   if(!candidate.releaseEvidence||candidate.releaseEvidence.catalogId!==candidate.id)warnings.push('New character is awaiting an exact official release-announcement/catalog match: '+candidate.id);
   else if(candidate.releaseEvidence.releaseMonth!==month)warnings.push('Verified first release announcement is outside the current month: '+candidate.id);
  }
- return {rankingErrors,communityErrors,warnings,month,rankedCharacters:ranked.size,currentTopics:current,rankedTopics,skillVerifiedTopics:skillVerified,pendingCandidates:pending.length};
+ return {rankingErrors,communityErrors,warnings,month,sampledPlayers:sampledValid?sampled:0,completeSample:expectedComplete&&sampledValid,rankedCharacters:ranked.size,currentTopics:current,rankedTopics,skillVerifiedTopics:skillVerified,pendingCandidates:pending.length};
 }
 
 async function main(){
@@ -80,6 +86,7 @@ async function main(){
  const summary=[
   '### Monthly character release audit',
   'JST month: '+report.month,
+  'PvP sample: '+report.sampledPlayers+'/200'+(report.completeSample?' complete':' partial'),
   'PvP ranked characters: '+report.rankedCharacters,
   'Separate character boards: '+report.currentTopics,
   'Boards with a current PvP rank: '+report.rankedTopics,
