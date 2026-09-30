@@ -10,6 +10,7 @@ on:
     paths:
       - 'scripts/collect-pvp.mjs'
       - 'scripts/prepare-resilient-pvp-runtime.mjs'
+      - 'scripts/prepare-community-discovery-runtime.mjs'
       - 'scripts/patch-pvp-metadata.mjs'
       - 'scripts/update-community-characters.mjs'
       - 'scripts/community-character-metadata.mjs'
@@ -41,6 +42,11 @@ jobs:
         run: node scripts/patch-pvp-metadata.mjs
       - name: Validate publishable ranking and occurrence totals
         run: node scripts/audit-community-release.mjs --ranking-only
+      - name: Apply official-source community discovery policy
+        run: |
+          set -euo pipefail
+          node scripts/prepare-community-discovery-runtime.mjs
+          node --check scripts/update-community-characters.mjs
       - name: Discover multi-character community topics
         id: community_discovery
         continue-on-error: true
@@ -49,9 +55,9 @@ jobs:
         id: community_audit
         continue-on-error: true
         run: node scripts/audit-community-release.mjs
-      - name: Restore strict collector source after runner-local policy
+      - name: Restore strict sources after runner-local policies
         if: always()
-        run: git restore -- scripts/collect-pvp.mjs
+        run: git restore -- scripts/collect-pvp.mjs scripts/update-community-characters.mjs
       - name: Commit only validated snapshot and discovery changes
         run: |
           git config user.name 'github-actions[bot]'
