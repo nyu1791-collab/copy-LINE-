@@ -35,8 +35,8 @@
       "discoveredFrom": "catalog",
       "firstObservedAt": "2026-09-30T05:11:31.057Z",
       "confirmedAt": "2026-09-30T06:42:00.000Z",
-      "pvpRank": 20,
-      "adoptionRate": 5.5
+      "pvpRank": 19,
+      "adoptionRate": 6.5
     },
     {
       "id": "u1633e-le",
@@ -59,7 +59,7 @@
       "firstObservedAt": "2026-09-30T05:11:31.057Z",
       "confirmedAt": "2026-09-30T06:42:00.000Z",
       "pvpRank": 22,
-      "adoptionRate": 4.5
+      "adoptionRate": 5.5
     }
   ]
 }
