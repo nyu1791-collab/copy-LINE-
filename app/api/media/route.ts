@@ -1,15 +1,15 @@
 import { bucket,database } from '@/db/raw';
 import {boundedMediaRange,mediaRange} from '@/lib/media-range';
-import {videoInitialRangeBytes} from '@/lib/rules';
+import {maxMediaBytes,videoInitialRangeBytes} from '@/lib/rules';
 import {abuseNetworkBucket} from '@/lib/anonymous-session';
 import {enforceLimit} from '@/lib/upload-session';
 export const dynamic='force-dynamic';
 type Media={media_key:string;media_type:string;media_size:number};
-// Explicit browser byte ranges may be larger than the conservative first
-// response. Two initial windows (8 MiB today) are enough to keep playback
-// buffered without making a normal 12 MiB upload download almost in full on
-// the first open-ended browser range request.
-const videoRequestedRangeBytes=videoInitialRangeBytes*2;
+// Keep metadata/no-range startup bounded, but when the browser explicitly
+// asks for a playback range allow the full maximum board-video size. The body
+// still streams from R2 immediately, so a 12 MiB clip can play from one Worker
+// request instead of stalling on a second D1/R2 round trip.
+const videoRequestedRangeBytes=maxMediaBytes;
 export async function HEAD(request:Request){try{
  const network=await abuseNetworkBucket(request.headers);if(network)await enforceLimit('media-read:'+network,600,60);
  const id=new URL(request.url).searchParams.get('id')||'';if(!/^[a-f0-9-]{36}$/.test(id))return new Response(null,{status:404,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
