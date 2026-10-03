@@ -41,6 +41,7 @@ workflowは毎時17分に更新し、ブラウザは同一originの追跡済みs
 - Owner / Moderator / Userはサーバー側で判定し、表示名からRoleを付与しない。
 - Secrets、Token、Cookie signing secret、Owner認証情報、DB/Storage credentialをCommitしない。
 - noindex / nofollow / noarchive / nosnippetを維持する。
+- `docs/PERFORMANCE-GUARDRAILS.md` を掲示板UI・動画・月次運用の恒久契約として扱う。名前だけ表示、スマホ入口カード、遅延実動画サムネイル、5 MiB multipart、過去データ非破壊などを明示的な仕様変更なしに後退させない。
 
 ## Build / Test
 
