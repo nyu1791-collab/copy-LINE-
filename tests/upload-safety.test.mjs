@@ -44,8 +44,8 @@ test('upload request identifiers, filenames and part boundaries are bounded',()=
   assert.equal(upload.expectedPartSize(1,rules.mediaPartBytes),rules.mediaPartBytes);
   assert.equal(upload.expectedPartSize(1,rules.mediaPartBytes+1),rules.mediaPartBytes);
   assert.equal(upload.expectedPartSize(2,rules.mediaPartBytes+1),1);
-  assert.equal(upload.expectedPartSize(2,rules.maxMediaBytes),4*1024*1024);
-  for(const part of [0,-1,2.5,3])assert.throws(()=>upload.expectedPartSize(part,rules.maxMediaBytes),/invalid_media/);
+  assert.equal(upload.expectedPartSize(3,rules.maxMediaBytes),2*1024*1024);
+  for(const part of [0,-1,2.5,4])assert.throws(()=>upload.expectedPartSize(part,rules.maxMediaBytes),/invalid_media/);
 });
 
 test('stream monitor rejects short and oversized chunks and preserves the media prefix',async()=>{
