@@ -6,9 +6,18 @@ import {enforceLimit} from '@/lib/upload-session';
 export const dynamic='force-dynamic';
 type Media={media_key:string;media_type:string;media_size:number};
 // Explicit browser byte ranges may be larger than the conservative first
-// response. Four initial windows (16 MiB today) substantially reduce round
-// trips without ever allowing one request to stream a full 200 MiB video.
-const videoRequestedRangeBytes=videoInitialRangeBytes*4;
+// response. Two initial windows (8 MiB today) are enough to keep playback
+// buffered without making a normal 12 MiB upload download almost in full on
+// the first open-ended browser range request.
+const videoRequestedRangeBytes=videoInitialRangeBytes*2;
+export async function HEAD(request:Request){try{
+ const network=await abuseNetworkBucket(request.headers);if(network)await enforceLimit('media-read:'+network,600,60);
+ const id=new URL(request.url).searchParams.get('id')||'';if(!/^[a-f0-9-]{36}$/.test(id))return new Response(null,{status:404,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+ const media=await database().prepare("SELECT p.media_key,p.media_type,p.media_size FROM posts p WHERE p.id=? AND p.status='visible' AND p.media_key IS NOT NULL AND (p.parent IS NULL OR EXISTS(SELECT 1 FROM posts parent WHERE parent.id=p.parent AND parent.status='visible'))").bind(id).first<Media>();if(!media)return new Response(null,{status:404,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});
+ const cacheControl=media.media_type.startsWith('video/')?'private, max-age=600, stale-while-revalidate=120':'private, max-age=300, stale-while-revalidate=60';
+ return new Response(null,{status:200,headers:{'Content-Type':media.media_type,'Content-Length':String(media.media_size),'Content-Disposition':'inline','Accept-Ranges':'bytes','Cache-Control':cacheControl,'Cross-Origin-Resource-Policy':'same-origin','X-Content-Type-Options':'nosniff'}});
+ }catch(e){if(e instanceof Error&&e.message==='rate_limited')return new Response(null,{status:429,headers:{'Cache-Control':'no-store','Retry-After':'60','X-Content-Type-Options':'nosniff'}});console.error('media_head_failed');return new Response(null,{status:503,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}}
+
 export async function GET(request:Request){try{
  const network=await abuseNetworkBucket(request.headers);if(network)await enforceLimit('media-read:'+network,600,60);
  const id=new URL(request.url).searchParams.get('id')||'';if(!/^[a-f0-9-]{36}$/.test(id))return Response.json({error:'not_found'},{status:404});
