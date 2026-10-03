@@ -50,7 +50,7 @@ export const uploadPartWindowSeconds=10*60;
 // A direct video request without a Range header must never turn into a full
 // 200 MB response. The player can request later ranges as it buffers/seeks.
 export const videoInitialRangeBytes=4*1024*1024;
-export function mediaPartCount(size:number){return Math.ceil(size/mediaPartBytes);}
+export function mediaPartCount(size:number,partBytes=mediaPartBytes){return Math.ceil(size/partBytes);}
 const mediaExtensions:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov'};
 export function mediaExtension(type:string){return mediaExtensions[type]||null;}
 export function isVideoMedia(type:string|null|undefined){return !!type&&type.startsWith('video/');}
