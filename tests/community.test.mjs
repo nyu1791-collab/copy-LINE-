@@ -145,8 +145,8 @@ function setup(activeRules=rules){
  };
  return {sql,call,activityCall,publicActivityCall,anonymous,deletedObjects,clearLimits(){sql.exec('DELETE FROM limits');}};
 }
-test('JST month boundaries and leap/year transitions',()=>{
- assert.equal(rules.monthJST(new Date('2026-09-30T14:59:59Z')),'2026-09');assert.equal(rules.monthJST(new Date('2026-09-30T15:00:00Z')),'2026-10');assert.equal(rules.monthJST(new Date('2026-12-31T15:00:00Z')),'2027-01');assert.equal(rules.monthJST(new Date('2028-02-29T15:00:00Z')),'2028-03');assert.equal(rules.validMonth('2026-13'),false);
+test('JST calendar boundaries and verified release-month promotion stay deterministic',()=>{
+ assert.equal(rules.calendarMonthJST(new Date('2026-09-30T14:59:59Z')),'2026-09');assert.equal(rules.calendarMonthJST(new Date('2026-09-30T15:00:00Z')),'2026-10');assert.equal(rules.calendarMonthJST(new Date('2026-12-31T15:00:00Z')),'2027-01');assert.equal(rules.calendarMonthJST(new Date('2028-02-29T15:00:00Z')),'2028-03');assert.equal(rules.monthJST(new Date('2026-09-30T14:59:59Z')),'2026-10');assert.equal(rules.validMonth('2026-13'),false);
 });
 test('three monthly character boards keep posts, votes and comments in separate scopes',async()=>{
  const month=rules.monthJST();
@@ -272,8 +272,8 @@ test('archived month boards remain visible even when not in the current confirme
  const blockedVote=await call({action:'vote',board:'2026-08:archived-character',poll:'strength',choice:0},'archive-reader','','archive@example.invalid');assert.equal(blockedVote.status,409);assert.equal(blockedVote.data.error,'archive_readonly');
  const archivedPost=crypto.randomUUID();sql.prepare("INSERT INTO posts(id,board,author,parent,body,status,pinned,created,request) VALUES(?,?,?,NULL,?,'visible',0,?,?)").run(archivedPost,'2026-08:archived-character',result.data.me.id,'Archived existing post',Date.now(),crypto.randomUUID());
  for(const action of [{action:'like',post:archivedPost,liked:true},{action:'helpful',post:archivedPost,selected:true},{action:'post',board:'2026-08:archived-character',parent:archivedPost,body:'Archived reply',request:crypto.randomUUID()}]){const blocked=await call(action,'archive-reader','','archive@example.invalid');assert.equal(blocked.status,409);assert.equal(blocked.data.error,'archive_readonly');}
- sql.prepare('INSERT INTO boards(id,month,character,name,image) VALUES(?,?,?,?,?)').run('2026-09:unconfirmed-character','2026-09','unconfirmed-character','Unconfirmed Ranger','https://example.invalid/unconfirmed.png');
- const unconfirmedVote=await call({action:'vote',board:'2026-09:unconfirmed-character',poll:'strength',choice:0},'archive-reader','','archive@example.invalid');assert.equal(unconfirmedVote.status,404);assert.equal(unconfirmedVote.data.error,'not_found');
+ const activeMonth=rules.monthJST();const unconfirmedBoard=`${activeMonth}:unconfirmed-character`;sql.prepare('INSERT INTO boards(id,month,character,name,image) VALUES(?,?,?,?,?)').run(unconfirmedBoard,activeMonth,'unconfirmed-character','Unconfirmed Ranger','https://example.invalid/unconfirmed.png');
+ const unconfirmedVote=await call({action:'vote',board:unconfirmedBoard,poll:'strength',choice:0},'archive-reader','','archive@example.invalid');assert.equal(unconfirmedVote.status,404);assert.equal(unconfirmedVote.data.error,'not_found');
 });
 test('poll upsert keeps a single vote per user on the selected evolution board',async()=>{
  const {call}=setup();await call({action:'profile',name:'Tester'});const data=(await call()).data;assert.ok(data.boards.length>=1);const id=data.boards[0].id;
