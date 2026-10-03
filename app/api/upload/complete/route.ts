@@ -18,14 +18,21 @@ export async function POST(request:Request){try{
  const count=mediaPartCount(session.media_size,session.part_size);const rows=(await db.prepare('SELECT part_number,etag,size FROM upload_parts WHERE session=? ORDER BY part_number').bind(id).all()).results as {part_number:number;etag:string;size:number}[];
  if(rows.length!==count||rows.some((row,index)=>row.part_number!==index+1||row.size!==expectedPartSize(row.part_number,session.media_size,session.part_size)))throw new Error('upload_incomplete');
  const multipart=bucket().resumeMultipartUpload(session.media_key,session.upload_id);
- // A lost response can leave R2 complete while the D1 finalization was still
- // pending. HEAD makes completion safe to retry without completing twice.
- const stored=await bucket().head(session.media_key);if(!stored){try{await multipart.complete(rows.map(row=>({partNumber:row.part_number,etag:row.etag})));}catch(e){
-  // Another retry may have completed the same R2 upload between HEAD and
-  // complete. Accept that race only when the object is now present; transient
-  // failures without an object remain errors and leave the session retryable.
-  if(!await bucket().head(session.media_key))throw e;
- }}
+ // Fast path: complete immediately. A normal successful upload no longer pays
+ // an extra R2 HEAD round trip. If a prior response was lost and the multipart
+ // upload was already completed, recover idempotently by confirming the object
+ // only after complete throws.
+ try{await multipart.complete(rows.map(row=>({partNumber:row.part_number,etag:row.etag})));}catch(e){
+  // Concurrent retries can reach complete before the first request has made
+  // the completed object observable. Keep this recovery path bounded and only
+  // pay it after an exceptional duplicate/lost-response completion.
+  let recovered=false;
+  for(let attempt=0;attempt<5;attempt++){
+   if(await bucket().head(session.media_key)){recovered=true;break;}
+   if(attempt<4)await new Promise(resolve=>setTimeout(resolve,25*(attempt+1)));
+  }
+  if(!recovered)throw e;
+ }
  const latestTopic=await db.prepare('SELECT character,month FROM boards WHERE id=?').bind(session.board).first<{character:string;month:string}>();if(!latestTopic||latestTopic.month!==monthJST()||!isConfirmedCharacterForMonth(latestTopic.character,latestTopic.month)){try{await bucket().delete(session.media_key);}catch{}await db.prepare("UPDATE upload_sessions SET status='failed',updated=? WHERE id=? AND status='uploading'").bind(Date.now(),id).run();throw new Error(latestTopic?'archive_readonly':'not_found');}
  const postId=crypto.randomUUID();const now=Date.now();
  try{await db.batch([

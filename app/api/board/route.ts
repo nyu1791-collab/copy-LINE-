@@ -5,7 +5,7 @@ import { enrichPosts,logicalPostAnchorSql as logicalPostAnchor } from '@/lib/com
 import {abuseNetworkBucket,displayNameCookie,guestCookieForSubject,guestName,sessionFromHeaders,type AnonymousSession,verifyPublicViewerToken} from '@/lib/anonymous-session';
 import {loadCommunityFeatureFlags,requireCommunityFeature} from '@/lib/community-flags';
 import {isCommunityFeatureName} from '@/lib/community-features';
-import { characters,confirmedCharactersForMonth,isConfirmedCharacterForMonth,isVideoMedia,monthJST,validMonth,textInput,validateReply,mayModerate,contributionBadges,ownerDisplayName,type Role } from '@/lib/rules';
+import { characters,communityCharacterDisplayName,confirmedCharactersForMonth,isConfirmedCharacterForMonth,isVideoMedia,monthJST,validMonth,textInput,validateReply,mayModerate,contributionBadges,ownerDisplayName,type Role } from '@/lib/rules';
 export const dynamic='force-dynamic';
 type User={id:string;name:string;display_name_set:number;role:Role;badges?:string[]};
 type BoardStats={videos:number;comments:number;todayComments:number;unread:number;latestCreated:number;latestId:string|null};
@@ -105,7 +105,7 @@ export async function GET(request:Request){try{
   const existingCharacters=new Set(boards.map(b=>String(b.character)));
   const missingTopics=confirmedTopics.filter(c=>!existingCharacters.has(c.id));
   if(missingTopics.length){
-   await db.batch(missingTopics.map(c=>db.prepare('INSERT OR IGNORE INTO boards(id,month,character,name,name_en,image) VALUES(?,?,?,?,?,?)').bind(`${requested}:${c.id}`,requested,c.id,c.name,c.nameEn||null,c.image)));
+   await db.batch(missingTopics.map(c=>db.prepare('INSERT OR IGNORE INTO boards(id,month,character,name,name_en,image) VALUES(?,?,?,?,?,?)').bind(`${requested}:${c.id}`,requested,c.id,communityCharacterDisplayName(c,'ja'),c.nameEn||null,c.image)));
    boards=(await db.prepare('SELECT * FROM boards WHERE month=? ORDER BY character DESC').bind(requested).all()).results;
   }
  }
@@ -115,10 +115,10 @@ export async function GET(request:Request){try{
  const canonicalTopicIds=new Set(confirmedTopics.map(topic=>topic.id));
  const registeredTopicIds=new Set(characters.map(topic=>topic.id));
  boards=boards.filter(row=>canonicalTopicIds.has(String(row.character))||!registeredTopicIds.has(String(row.character)));
- if(requested===current){
-  const boardByCharacter=new Map(boards.map(b=>[String(b.character),b]));
-  boards=confirmedTopics.flatMap(c=>{const row=boardByCharacter.get(c.id);return row?[{...row,name:c.name,nameEn:c.nameEn||null,nameZh:c.nameZh||null,nameTh:c.nameTh||null,image:c.image}]:[];});
- }
+ const boardByCharacter=new Map(boards.map(b=>[String(b.character),b]));
+ const canonicalBoards=confirmedTopics.flatMap(c=>{const row=boardByCharacter.get(c.id);return row?[{...row,name:communityCharacterDisplayName(c,'ja'),nameEn:c.nameEn||null,nameZh:c.nameZh||null,nameTh:c.nameTh||null,image:c.image}]:[];});
+ if(requested===current)boards=canonicalBoards;
+ else{const canonicalByCharacter=new Map(canonicalBoards.map(row=>[String(row.character),row]));boards=boards.map(row=>canonicalByCharacter.get(String(row.character))||row);}
  const monthRows=(await db.prepare('SELECT DISTINCT month FROM boards WHERE month<=? ORDER BY month DESC LIMIT 1200').bind(current).all<{month:string}>()).results;
  const availableMonths=[...new Set([current,...monthRows.map(row=>String(row.month)),...characters.map(topic=>topic.releaseMonth)].filter(value=>validMonth(value)&&value<=current))].sort((a,b)=>b.localeCompare(a));
  const board=u.searchParams.get('board')||String(boards[0]?.id||'');let parent=u.searchParams.get('video');const requestedGroup=u.searchParams.get('group');if(parent&&requestedGroup)throw new Error('invalid_request');

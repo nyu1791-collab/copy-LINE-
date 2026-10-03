@@ -36,11 +36,12 @@ export const maxVideosPerPost=5;
 // Keep new media uploads small enough for reliable mobile uploads and playback.
 // This limit does not affect videos already stored in R2.
 export const maxMediaBytes=12*1024*1024;
-export const mediaPartBytes=6*1024*1024;
+export const mediaPartBytes=5*1024*1024;
 export const mediaUploadConcurrency=3;
 export const legacyMultipartMediaBytes=12*1024*1024;
-// A maximum-size video uses three R2-safe parts. Upload up to three parts in
-// parallel so mobile connections spend less time waiting on per-request latency.
+// A maximum-size video uses three R2-safe parts (5 MiB + 5 MiB + remainder).
+// R2 multipart requires non-final parts to be at least 5 MiB. Upload all three
+// in parallel so mobile connections use the existing three upload workers.
 // Each part can retry three times, with
 // room for an ordinary recovery retry while keeping a bounded per-user
 // upload allowance.
@@ -104,6 +105,17 @@ export type CharacterTopic={
  adoptionRate?:number|null;
  releaseEvidence?:{releaseMonth:string;noticeId:number;noticeTitle:string;noticeUrl:string;publishedAt:string;catalogId:string;matchedName:string;grade:number;source:string};
 };
+
+// Community cards intentionally show the character's plain Japanese name rather
+// than an epithet/title. Official full names stay in the canonical registry for
+// identity and release verification; this presentation rule automatically
+// applies to every future monthly topic without manual per-month CSS/UI edits.
+export function communityCharacterDisplayName(topic:Pick<CharacterTopic,'name'|'nameEn'|'nameZh'|'nameTh'>,lang:Language='ja'){
+ const full=lang==='ja'?topic.name:lang==='zh'?(topic.nameZh?.trim()||topic.nameEn?.trim()||topic.name):lang==='th'?(topic.nameTh?.trim()||topic.nameEn?.trim()||topic.name):(topic.nameEn?.trim()||topic.name);
+ if(lang!=='ja')return full;
+ const parts=full.normalize('NFC').trim().split(/\s+/u).filter(Boolean);
+ return parts[parts.length-1]||full;
+}
 
 function isSafeTopic(value:unknown):value is CharacterTopic{
  if(!value||typeof value!=='object'||Array.isArray(value))return false;
