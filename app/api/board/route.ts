@@ -116,7 +116,9 @@ export async function GET(request:Request){try{
  const registeredTopicIds=new Set(characters.map(topic=>topic.id));
  boards=boards.filter(row=>canonicalTopicIds.has(String(row.character))||!registeredTopicIds.has(String(row.character)));
  const boardByCharacter=new Map(boards.map(b=>[String(b.character),b]));
- boards=confirmedTopics.flatMap(c=>{const row=boardByCharacter.get(c.id);return row?[{...row,name:communityCharacterDisplayName(c,'ja'),nameEn:c.nameEn||null,nameZh:c.nameZh||null,nameTh:c.nameTh||null,image:c.image}]:[];});
+ const canonicalBoards=confirmedTopics.flatMap(c=>{const row=boardByCharacter.get(c.id);return row?[{...row,name:communityCharacterDisplayName(c,'ja'),nameEn:c.nameEn||null,nameZh:c.nameZh||null,nameTh:c.nameTh||null,image:c.image}]:[];});
+ if(requested===current)boards=canonicalBoards;
+ else{const canonicalByCharacter=new Map(canonicalBoards.map(row=>[String(row.character),row]));boards=boards.map(row=>canonicalByCharacter.get(String(row.character))||row);}
  const monthRows=(await db.prepare('SELECT DISTINCT month FROM boards WHERE month<=? ORDER BY month DESC LIMIT 1200').bind(current).all<{month:string}>()).results;
  const availableMonths=[...new Set([current,...monthRows.map(row=>String(row.month)),...characters.map(topic=>topic.releaseMonth)].filter(value=>validMonth(value)&&value<=current))].sort((a,b)=>b.localeCompare(a));
  const board=u.searchParams.get('board')||String(boards[0]?.id||'');let parent=u.searchParams.get('video');const requestedGroup=u.searchParams.get('group');if(parent&&requestedGroup)throw new Error('invalid_request');
