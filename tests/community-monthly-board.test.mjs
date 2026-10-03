@@ -38,6 +38,12 @@ test('automatic board topics require official metadata, a verified observation s
  assert.match(rules,/return rateB-rateA\|\|ar-br/);
 });
 
+test('every monthly board response uses the permanent plain Japanese character name rule',()=>{
+ const api=readFileSync(new URL('../app/api/board/route.ts',import.meta.url),'utf8');
+ assert.match(api,/communityCharacterDisplayName\(c,'ja'\)/);
+ assert.doesNotMatch(api,/requested===current\).*name:c\.name/s);
+});
+
 test('board API lists retained months and keeps archived boards read-only',()=>{
  const api=readFileSync(new URL('../app/api/board/route.ts',import.meta.url),'utf8');
  assert.match(api,/SELECT DISTINCT month FROM boards WHERE month<=\?/);
