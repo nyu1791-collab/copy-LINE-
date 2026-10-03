@@ -41,7 +41,8 @@ test('automatic board topics require official metadata, a verified observation s
 test('every monthly board response uses the permanent plain Japanese character name rule',()=>{
  const api=readFileSync(new URL('../app/api/board/route.ts',import.meta.url),'utf8');
  assert.match(api,/communityCharacterDisplayName\(c,'ja'\)/);
- assert.doesNotMatch(api,/requested===current\).*name:c\.name/s);
+ assert.match(api,/if\(requested===current\)boards=canonicalBoards/);
+ assert.match(api,/boards=boards\.map\(row=>canonicalByCharacter\.get\(String\(row\.character\)\)\|\|row\)/);
 });
 
 test('board API lists retained months and keeps archived boards read-only',()=>{
