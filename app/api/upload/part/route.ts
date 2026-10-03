@@ -18,7 +18,7 @@ export async function PUT(request:Request){try{
  const db=database();const session=await db.prepare('SELECT * FROM upload_sessions WHERE id=? AND user=?').bind(id,user.id).first<UploadSession>();if(!session)throw new Error('not_found');
  if(session.status==='completed')return reply({ok:true,status:'completed',part});if(session.status!=='uploading')throw new Error('upload_busy');
  if(uploadSessionExpired(session)){await db.prepare("UPDATE upload_sessions SET status='failed',updated=? WHERE id=? AND status='uploading'").bind(Date.now(),id).run();throw new Error('upload_expired');}
- const expected=expectedPartSize(part,session.media_size);const declared=Number(request.headers.get('content-length')||0);if(declared&&declared!==expected)throw new Error('invalid_media');
+ const expected=expectedPartSize(part,session.media_size,session.part_size);const declared=Number(request.headers.get('content-length')||0);if(declared&&declared!==expected)throw new Error('invalid_media');
  const existing=await db.prepare('SELECT part_number,size FROM upload_parts WHERE session=? AND part_number=?').bind(id,part).first<{part_number:number;size:number}>();if(existing){if(existing.size!==expected)throw new Error('invalid_media');return reply({ok:true,part,size:existing.size,already:true});}
  if(!request.body)throw new Error('invalid_media');
  const monitored=captureAndCount(request.body,expected,16);const fixed=new FixedLengthStream(expected);const upload=bucket().resumeMultipartUpload(session.media_key,session.upload_id);
