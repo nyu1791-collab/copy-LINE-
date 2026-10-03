@@ -19,7 +19,7 @@ export default function VideoThumbnail({id,name,lang}:Props){
  const [failed,setFailed]=useState(false);
  useEffect(()=>{
   const node=shell.current;if(!node)return;
-  if(typeof IntersectionObserver==='undefined'){setActive(true);return;}
+  if(typeof IntersectionObserver==='undefined')return;
   const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)){setActive(true);observer.disconnect();}},{rootMargin:'160px 0px'});
   observer.observe(node);return()=>observer.disconnect();
  },[]);
