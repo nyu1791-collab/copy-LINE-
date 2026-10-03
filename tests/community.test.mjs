@@ -178,7 +178,7 @@ test('three monthly character boards keep posts, votes and comments in separate 
 });
 test('media types are explicitly allowlisted and video type is preserved',()=>{
  assert.equal(rules.mediaExtension('image/jpeg'),'jpg');assert.equal(rules.mediaExtension('video/mp4'),'mp4');assert.equal(rules.mediaExtension('image/svg+xml'),null);assert.equal(rules.isVideoMedia('video/quicktime'),true);assert.equal(rules.isVideoMedia('image/png'),false);
- assert.equal(rules.maxMediaBytes,12*1024*1024);assert.equal(rules.mediaPartBytes,8*1024*1024);assert.equal(rules.mediaPartCount(8*1024*1024),1);assert.equal(rules.mediaPartCount(8*1024*1024+1),2);assert.equal(rules.mediaPartCount(rules.maxMediaBytes),2);assert.ok(rules.mediaPartCount(rules.maxMediaBytes)*rules.mediaPartAttempts<=rules.uploadPartLimit);assert.equal(rules.uploadPartWindowSeconds,10*60);
+ assert.equal(rules.maxMediaBytes,12*1024*1024);assert.equal(rules.mediaPartBytes,5*1024*1024);assert.equal(rules.mediaUploadConcurrency,3);assert.equal(rules.mediaPartCount(5*1024*1024),1);assert.equal(rules.mediaPartCount(5*1024*1024+1),2);assert.equal(rules.mediaPartCount(rules.maxMediaBytes),3);assert.ok(rules.mediaPartCount(rules.maxMediaBytes)*rules.mediaPartAttempts<=rules.uploadPartLimit);assert.equal(rules.uploadPartWindowSeconds,10*60);
 });
 test('video replies reject URLs, media, embeds; plain text remains valid',()=>{
  for(const text of ['https://example.com','www.example.com','<img src=x>','[x](video)','youtu.be/abcdefghijk','watch.example.xyz/path'])assert.throws(()=>rules.validateReply(text,null));assert.throws(()=>rules.validateReply('Hello','https://youtu.be/abcdefghijk'));assert.doesNotThrow(()=>rules.validateReply('とても参考になりました。',null));
@@ -488,7 +488,7 @@ test('media images open one selected item in an accessible lightbox',()=>{
  assert.match(communitySource,/role="dialog" aria-modal="true"/);
  assert.match(communitySource,/event\.key==='Escape'/);
  assert.match(communityCss,/\.media-lightbox-image/);
- assert.match(communityCss,/\.media-image-button:focus-visible/);
+ assert.match(communityCss,/\.media-image-button:focus-visible/);assert.match(communityCss,/\.media-image-grid\.media-count-1 \.media-image\{[^}]*object-fit:contain/);assert.match(communitySource,/Math\.min\(mediaUploadConcurrency,missing\.length\)/);
 });
 
 test('media groups render as one mixed post and open a shared comparison page',()=>{
