@@ -95,6 +95,6 @@
 
 /* Keep a single attached image readable without letting a tall phone screenshot
    dominate the thread. Multi-image mosaics keep their compact square layout. */
-.media-image-grid.media-count-1 .media-image-button{width:min(100%,560px);justify-self:center;background:#071322}
-.media-image-grid.media-count-1 .media-image{display:block;width:auto;height:auto;max-width:100%;max-height:min(48dvh,380px);aspect-ratio:auto;object-fit:contain;margin:0 auto}
-@media(max-width:600px){.media-image-grid.media-count-1 .media-image{max-height:min(44dvh,320px)}}
+.media-image-grid.media-count-1 .media-image-button{width:min(100%,440px);justify-self:center;background:#071322}
+.media-image-grid.media-count-1 .media-image{display:block;width:auto;height:auto;max-width:100%;max-height:min(38dvh,300px);aspect-ratio:auto;object-fit:contain;margin:0 auto}
+@media(max-width:600px){.media-image-grid.media-count-1 .media-image-button{width:min(100%,360px)}.media-image-grid.media-count-1 .media-image{max-height:min(32dvh,240px)}}
