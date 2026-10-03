@@ -9,7 +9,7 @@ export const dynamic='force-dynamic';
 
 export async function PUT(request:Request){try{
  const h=await headers();assertSameOrigin(request,h);const sessionUser=await currentUser(h);const {user,setCookie}=sessionUser;if(!profileReady(user))throw new Error('profile_required');const reply=(data:unknown,status=200)=>json(data,status,setCookie);requireCommunityFeature(await loadCommunityFeatureFlags(database()),'videoUploadEnabled');
- // A maximum-size 12 MiB video now has two balanced chunks. Do not consume the general write
+ // A maximum-size 12 MiB video now has three smaller parallel chunks. Do not consume the general write
  // budget for each chunk; this bounded allowance also covers normal retries.
  await enforceLimit(sessionLimitKey(sessionUser,'upload-part',user.id),uploadPartLimit,uploadPartWindowSeconds);
  const query=new URL(request.url).searchParams;const id=query.get('id')||'';const part=Number(query.get('part'));
