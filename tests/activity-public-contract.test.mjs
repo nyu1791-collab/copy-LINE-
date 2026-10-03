@@ -23,7 +23,8 @@ test('public activity feed returns only teaser data while preserving likes-first
 });
 
 
-test('monthly public topics include every available localized character name',()=>{
+test('monthly public topics use the permanent plain Japanese name rule and include every localized character name',()=>{
+ assert.match(route,/communityCharacterDisplayName\(character,'ja'\)/);
  assert.ok(route.includes("nameEn:character.nameEn??null"));
  assert.ok(route.includes("nameZh:character.nameZh??null"));
  assert.ok(route.includes("nameTh:character.nameTh??null"));
