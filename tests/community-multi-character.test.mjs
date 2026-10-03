@@ -245,7 +245,9 @@ test('board API backfills later confirmed topics and preserves PvP topic order',
  const source=readFileSync(new URL('../app/api/board/route.ts',import.meta.url),'utf8');
  assert.match(source,/const missingTopics=confirmedTopics\.filter\(c=>!existingCharacters\.has\(c\.id\)\)/);
  assert.match(source,/db\.batch\(missingTopics\.map\(/);
- assert.match(source,/boards=confirmedTopics\.flatMap\(/);
+ assert.match(source,/const canonicalBoards=confirmedTopics\.flatMap\(/);
+ assert.match(source,/if\(requested===current\)boards=canonicalBoards/);
+ assert.match(source,/canonicalByCharacter\.get\(String\(row\.character\)\)\|\|row/);
  assert.doesNotMatch(source,/requested===current&&!boards\.length&&confirmedTopics\.length/);
 });
 
