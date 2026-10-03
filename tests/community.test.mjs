@@ -72,7 +72,7 @@ test('interaction UI uses local updates, resumable uploads, and does not reload 
  assert.doesNotMatch(communitySource,/window\.location\.reload|await\s+reload\s*\(/);
  for(const feature of ['toggleLike','toggleHelpful','chooseVote','rollbackLocalPost','resumeForReselectedFile'])assert.match(communitySource,new RegExp(feature));
  assert.doesNotMatch(communitySource,/const \[loading,/);assert.match(communitySource,/initialLoading/);assert.doesNotMatch(communitySource,/translationVersions/);
- assert.match(videoPlayerSource,/preload="metadata"/);assert.doesNotMatch(videoPlayerSource,/preload="auto"/);assert.match(videoPlayerSource,/onLoadedData/);assert.match(videoPlayerSource,/onError={reportFailure}/);
+ assert.match(videoPlayerSource,/preload="none"/);assert.doesNotMatch(videoPlayerSource,/preload="auto"|preload="metadata"/);assert.doesNotMatch(videoPlayerSource,/onLoadedData|currentTime=0/);assert.match(videoPlayerSource,/onError={reportFailure}/);
  assert.match(lazyImageSource,/IntersectionObserver/);
 });
 test('new-character switching requires an explicitly confirmed month and identity',()=>{
@@ -179,7 +179,7 @@ test('three monthly character boards keep posts, votes and comments in separate 
 });
 test('media types are explicitly allowlisted and video type is preserved',()=>{
  assert.equal(rules.mediaExtension('image/jpeg'),'jpg');assert.equal(rules.mediaExtension('video/mp4'),'mp4');assert.equal(rules.mediaExtension('image/svg+xml'),null);assert.equal(rules.isVideoMedia('video/quicktime'),true);assert.equal(rules.isVideoMedia('image/png'),false);
- assert.equal(rules.maxMediaBytes,12*1024*1024);assert.equal(rules.mediaPartBytes,5*1024*1024);assert.equal(rules.mediaUploadConcurrency,3);assert.equal(rules.mediaPartCount(5*1024*1024),1);assert.equal(rules.mediaPartCount(5*1024*1024+1),2);assert.equal(rules.mediaPartCount(rules.maxMediaBytes),3);assert.ok(rules.mediaPartCount(rules.maxMediaBytes)*rules.mediaPartAttempts<=rules.uploadPartLimit);assert.equal(rules.uploadPartWindowSeconds,10*60);
+ assert.equal(rules.maxMediaBytes,12*1024*1024);assert.equal(rules.mediaPartBytes,6*1024*1024);assert.equal(rules.mediaUploadConcurrency,3);assert.equal(rules.mediaPartCount(6*1024*1024),1);assert.equal(rules.mediaPartCount(6*1024*1024+1),2);assert.equal(rules.mediaPartCount(rules.maxMediaBytes),2);assert.ok(rules.mediaPartCount(rules.maxMediaBytes)*rules.mediaPartAttempts<=rules.uploadPartLimit);assert.equal(rules.uploadPartWindowSeconds,10*60);
 });
 test('video replies reject URLs, media, embeds; plain text remains valid',()=>{
  for(const text of ['https://example.com','www.example.com','<img src=x>','[x](video)','youtu.be/abcdefghijk','watch.example.xyz/path'])assert.throws(()=>rules.validateReply(text,null));assert.throws(()=>rules.validateReply('Hello','https://youtu.be/abcdefghijk'));assert.doesNotThrow(()=>rules.validateReply('とても参考になりました。',null));
