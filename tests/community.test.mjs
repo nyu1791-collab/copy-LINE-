@@ -6,7 +6,8 @@ import {AsyncLocalStorage} from 'node:async_hooks';
 import ts from 'typescript';
 const root=new URL('../',import.meta.url);
 function compile(path,require){const source=readFileSync(new URL(path,root),'utf8');const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const exports={};new Function('exports','require',code)(exports,require);return exports;}
-const rules=compile('lib/rules.ts',()=>{});
+const communityRegistry=JSON.parse(readFileSync(new URL('../config/community-characters.json',import.meta.url),'utf8'));
+const rules=compile('lib/rules.ts',id=>{if(id==='@/config/community-characters.json')return communityRegistry;throw new Error('Unexpected rules import '+id);});
 const rangerInfo=compile('lib/ranger-info.ts',()=>{});
 const boardCharacterSource=compile('lib/board-character-source-details.ts',()=>({}));
 const rangerRouteSource=readFileSync(new URL('app/api/ranger-info/route.ts',root),'utf8');
