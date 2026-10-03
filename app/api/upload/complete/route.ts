@@ -15,8 +15,8 @@ export async function POST(request:Request){try{
  if(uploadSessionExpired(session)){await db.prepare("UPDATE upload_sessions SET status='failed',updated=? WHERE id=? AND status='uploading'").bind(Date.now(),id).run();throw new Error('upload_expired');}
  const existingPost=await db.prepare('SELECT id FROM posts WHERE author=? AND request=?').bind(user.id,session.request).first<{id:string}>();if(existingPost){await db.prepare("UPDATE upload_sessions SET status='completed',post=?,updated=? WHERE id=?").bind(existingPost.id,Date.now(),id).run();return reply({ok:true,status:'completed',id:existingPost.id});}
  const topic=await db.prepare('SELECT character,month FROM boards WHERE id=?').bind(session.board).first<{character:string;month:string}>();if(!topic)throw new Error('not_found');if(topic.month!==monthJST())throw new Error('archive_readonly');if(!isConfirmedCharacterForMonth(topic.character,topic.month))throw new Error('not_found');
- const count=mediaPartCount(session.media_size);const rows=(await db.prepare('SELECT part_number,etag,size FROM upload_parts WHERE session=? ORDER BY part_number').bind(id).all()).results as {part_number:number;etag:string;size:number}[];
- if(rows.length!==count||rows.some((row,index)=>row.part_number!==index+1||row.size!==expectedPartSize(row.part_number,session.media_size)))throw new Error('upload_incomplete');
+ const count=mediaPartCount(session.media_size,session.part_size);const rows=(await db.prepare('SELECT part_number,etag,size FROM upload_parts WHERE session=? ORDER BY part_number').bind(id).all()).results as {part_number:number;etag:string;size:number}[];
+ if(rows.length!==count||rows.some((row,index)=>row.part_number!==index+1||row.size!==expectedPartSize(row.part_number,session.media_size,session.part_size)))throw new Error('upload_incomplete');
  const multipart=bucket().resumeMultipartUpload(session.media_key,session.upload_id);
  // A lost response can leave R2 complete while the D1 finalization was still
  // pending. HEAD makes completion safe to retry without completing twice.
