@@ -24,10 +24,10 @@ test('video delivery keeps the first response small but permits larger bounded b
  assert.deepEqual(boundedMediaRange('bytes=-1024',size,4*MiB,8*MiB),{start:size-1024,end:size-1});
 });
 
-test('media route uses the larger explicit range window without enabling full-file video responses',()=>{
+test('media route keeps startup bounded but permits one full allowed explicit playback range',()=>{
  const route=readFileSync(new URL('app/api/media/route.ts',root),'utf8');
  assert.match(route,/boundedMediaRange\(rangeHeader,media\.media_size,videoInitialRangeBytes,videoRequestedRangeBytes\)/);
- assert.match(route,/videoRequestedRangeBytes=videoInitialRangeBytes\*2/);
+ assert.match(route,/videoRequestedRangeBytes=maxMediaBytes/);
  assert.match(route,/export async function HEAD\(request:Request\)/);
  assert.match(route,/'Content-Length':String\(media\.media_size\)/);
  assert.match(route,/Accept-Ranges':'bytes/);

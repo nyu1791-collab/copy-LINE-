@@ -20,9 +20,8 @@ export default function VideoPlayer({id,youtube,lang}:Props){
  }
  if(youtube)return <iframe src={'https://www.youtube-nocookie.com/embed/'+youtube} title="YouTube video" allow="encrypted-media; picture-in-picture; fullscreen" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen/>;
  if(failed)return <div className="video-unavailable" role="alert"><Video size={24}/><p>{t.videoUnavailable}</p><Button variant="outline" onClick={()=>{setFailed(false);setAttempt(current=>current+1);}}><RotateCcw size={15}/>{t.retryVideo}</Button></div>;
- // Detail view has only one video. `metadata` lets the browser request the
- // small header/frame ranges it needs; playback and seeking then request only
- // the ranges around the current position. Never ask the browser to eagerly
- // buffer a 200 MB object before the viewer presses play.
- return <video key={id+':'+attempt} src={'/api/media?id='+encodeURIComponent(id)} controls playsInline preload="metadata" onLoadedMetadata={event=>{event.currentTarget.currentTime=0;}} onLoadedData={event=>{event.currentTarget.pause();}} onError={reportFailure}/>;
+ // Group detail pages can contain several videos. `none` prevents every
+ // player from starting its own range request before the viewer chooses one.
+ // Once play is pressed, the media route streams the requested range directly.
+ return <video key={id+':'+attempt} src={'/api/media?id='+encodeURIComponent(id)} controls playsInline preload="none" onError={reportFailure}/>;
 }

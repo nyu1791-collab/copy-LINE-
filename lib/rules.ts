@@ -36,7 +36,7 @@ export const maxVideosPerPost=5;
 // Keep new media uploads small enough for reliable mobile uploads and playback.
 // This limit does not affect videos already stored in R2.
 export const maxMediaBytes=12*1024*1024;
-export const mediaPartBytes=5*1024*1024;
+export const mediaPartBytes=6*1024*1024;
 export const mediaUploadConcurrency=3;
 export const legacyMultipartMediaBytes=12*1024*1024;
 // A maximum-size video uses three R2-safe parts. Upload up to three parts in
