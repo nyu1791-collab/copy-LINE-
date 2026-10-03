@@ -44,8 +44,10 @@ test('upload request identifiers, filenames and part boundaries are bounded',()=
   assert.equal(upload.expectedPartSize(1,rules.mediaPartBytes),rules.mediaPartBytes);
   assert.equal(upload.expectedPartSize(1,rules.mediaPartBytes+1),rules.mediaPartBytes);
   assert.equal(upload.expectedPartSize(2,rules.mediaPartBytes+1),1);
-  assert.equal(upload.expectedPartSize(2,rules.maxMediaBytes),4*1024*1024);
-  for(const part of [0,-1,2.5,3])assert.throws(()=>upload.expectedPartSize(part,rules.maxMediaBytes),/invalid_media/);
+  assert.equal(upload.expectedPartSize(3,rules.maxMediaBytes),2*1024*1024);
+  assert.equal(upload.expectedPartSize(2,rules.maxMediaBytes,8*1024*1024),4*1024*1024);
+  assert.equal(rules.mediaPartCount(rules.maxMediaBytes,8*1024*1024),2);
+  for(const part of [0,-1,2.5,4])assert.throws(()=>upload.expectedPartSize(part,rules.maxMediaBytes),/invalid_media/);
 });
 
 test('stream monitor rejects short and oversized chunks and preserves the media prefix',async()=>{
@@ -82,7 +84,9 @@ test('resumable upload routes keep same-origin, expiry, size and completion gate
   assert.match(sessionSource,/createMultipartUpload/);
   assert.match(sessionSource,/resumeMultipartUpload\(row\.media_key,row\.upload_id\)\.abort\(\)/);
   assert.match(workerSource,/SELECT 1 FROM posts WHERE media_key=\?/);assert.match(workerSource,/BUCKET\.delete\(row\.media_key\)/);
-  assert.match(partSource,/expectedPartSize\(part,session\.media_size\)/);
+  assert.match(partSource,/expectedPartSize\(part,session\.media_size,session\.part_size\)/);
+  assert.match(sessionSource,/mediaPartCount\(existing\.media_size,existing\.part_size\)/);
+  assert.match(completeSource,/mediaPartCount\(session\.media_size,session\.part_size\)/);
   assert.match(partSource,/captureAndCount\(request\.body,expected,16\)/);
   assert.match(partSource,/headerMatches\(session\.media_type,monitored\.getPrefix\(\)\)/);
   assert.match(partSource,/await upload\.abort\(\)/);

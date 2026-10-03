@@ -61,9 +61,10 @@ export function safeMediaName(value:unknown){
 export function requestId(value:unknown){
  const id=String(value||'');if(!/^[a-f0-9-]{36}$/.test(id))throw new Error('invalid_request');return id;
 }
-export function expectedPartSize(part:number,total:number){
- const count=mediaPartCount(total);if(!Number.isSafeInteger(part)||part<1||part>count)throw new Error('invalid_media');
- return part<count?mediaPartBytes:total-mediaPartBytes*(count-1);
+export function expectedPartSize(part:number,total:number,partBytes=mediaPartBytes){
+ if(!Number.isSafeInteger(partBytes)||partBytes<=0)throw new Error('invalid_media');
+ const count=mediaPartCount(total,partBytes);if(!Number.isSafeInteger(part)||part<1||part>count)throw new Error('invalid_media');
+ return part<count?partBytes:total-partBytes*(count-1);
 }
 export function captureAndCount(input:ReadableStream<Uint8Array>,expected:number,captureBytes=16){
  let size=0;let prefix=new Uint8Array(0);

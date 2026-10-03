@@ -17,17 +17,19 @@ const MiB=1024*1024;
 
 test('video delivery keeps the first response small but permits larger bounded browser ranges',()=>{
  const size=200*MiB;
- assert.deepEqual(boundedMediaRange(null,size,4*MiB,16*MiB),{start:0,end:4*MiB-1});
- assert.deepEqual(boundedMediaRange('bytes=0-',size,4*MiB,16*MiB),{start:0,end:16*MiB-1});
- assert.deepEqual(boundedMediaRange(`bytes=${32*MiB}-${64*MiB-1}`,size,4*MiB,16*MiB),{start:32*MiB,end:48*MiB-1});
- assert.deepEqual(boundedMediaRange(`bytes=${196*MiB}-`,size,4*MiB,16*MiB),{start:196*MiB,end:200*MiB-1});
- assert.deepEqual(boundedMediaRange('bytes=-1024',size,4*MiB,16*MiB),{start:size-1024,end:size-1});
+ assert.deepEqual(boundedMediaRange(null,size,4*MiB,8*MiB),{start:0,end:4*MiB-1});
+ assert.deepEqual(boundedMediaRange('bytes=0-',size,4*MiB,8*MiB),{start:0,end:8*MiB-1});
+ assert.deepEqual(boundedMediaRange(`bytes=${32*MiB}-${64*MiB-1}`,size,4*MiB,8*MiB),{start:32*MiB,end:40*MiB-1});
+ assert.deepEqual(boundedMediaRange(`bytes=${196*MiB}-`,size,4*MiB,8*MiB),{start:196*MiB,end:200*MiB-1});
+ assert.deepEqual(boundedMediaRange('bytes=-1024',size,4*MiB,8*MiB),{start:size-1024,end:size-1});
 });
 
 test('media route uses the larger explicit range window without enabling full-file video responses',()=>{
  const route=readFileSync(new URL('app/api/media/route.ts',root),'utf8');
  assert.match(route,/boundedMediaRange\(rangeHeader,media\.media_size,videoInitialRangeBytes,videoRequestedRangeBytes\)/);
- assert.match(route,/videoRequestedRangeBytes=videoInitialRangeBytes\*4/);
+ assert.match(route,/videoRequestedRangeBytes=videoInitialRangeBytes\*2/);
+ assert.match(route,/export async function HEAD\(request:Request\)/);
+ assert.match(route,/'Content-Length':String\(media\.media_size\)/);
  assert.match(route,/Accept-Ranges':'bytes/);
  assert.match(route,/Content-Range/);
  assert.doesNotMatch(route,/range\.end-range\.start\+1>videoInitialRangeBytes/);

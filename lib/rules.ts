@@ -36,9 +36,12 @@ export const maxVideosPerPost=5;
 // Keep new media uploads small enough for reliable mobile uploads and playback.
 // This limit does not affect videos already stored in R2.
 export const maxMediaBytes=12*1024*1024;
-export const mediaPartBytes=8*1024*1024;
+export const mediaPartBytes=5*1024*1024;
+export const mediaUploadConcurrency=3;
 export const legacyMultipartMediaBytes=12*1024*1024;
-// A maximum-size video uses two parts. Each part can retry three times, with
+// A maximum-size video uses three R2-safe parts. Upload up to three parts in
+// parallel so mobile connections spend less time waiting on per-request latency.
+// Each part can retry three times, with
 // room for an ordinary recovery retry while keeping a bounded per-user
 // upload allowance.
 export const mediaPartAttempts=3;
@@ -47,7 +50,7 @@ export const uploadPartWindowSeconds=10*60;
 // A direct video request without a Range header must never turn into a full
 // 200 MB response. The player can request later ranges as it buffers/seeks.
 export const videoInitialRangeBytes=4*1024*1024;
-export function mediaPartCount(size:number){return Math.ceil(size/mediaPartBytes);}
+export function mediaPartCount(size:number,partBytes=mediaPartBytes){return Math.ceil(size/partBytes);}
 const mediaExtensions:Record<string,string>={'image/jpeg':'jpg','image/png':'png','image/webp':'webp','image/gif':'gif','video/mp4':'mp4','video/webm':'webm','video/quicktime':'mov'};
 export function mediaExtension(type:string){return mediaExtensions[type]||null;}
 export function isVideoMedia(type:string|null|undefined){return !!type&&type.startsWith('video/');}

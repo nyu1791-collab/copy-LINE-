@@ -6,7 +6,8 @@ import {AsyncLocalStorage} from 'node:async_hooks';
 import ts from 'typescript';
 const root=new URL('../',import.meta.url);
 function compile(path,require){const source=readFileSync(new URL(path,root),'utf8');const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const exports={};new Function('exports','require',code)(exports,require);return exports;}
-const rules=compile('lib/rules.ts',()=>{});
+const communityRegistry=JSON.parse(readFileSync(new URL('../config/community-characters.json',import.meta.url),'utf8'));
+const rules=compile('lib/rules.ts',id=>{if(id==='@/config/community-characters.json')return communityRegistry;throw new Error('Unexpected rules import '+id);});
 const rangerInfo=compile('lib/ranger-info.ts',()=>{});
 const boardCharacterSource=compile('lib/board-character-source-details.ts',()=>({}));
 const rangerRouteSource=readFileSync(new URL('app/api/ranger-info/route.ts',root),'utf8');
@@ -144,8 +145,8 @@ function setup(activeRules=rules){
  };
  return {sql,call,activityCall,publicActivityCall,anonymous,deletedObjects,clearLimits(){sql.exec('DELETE FROM limits');}};
 }
-test('JST month boundaries and leap/year transitions',()=>{
- assert.equal(rules.monthJST(new Date('2026-09-30T14:59:59Z')),'2026-09');assert.equal(rules.monthJST(new Date('2026-09-30T15:00:00Z')),'2026-10');assert.equal(rules.monthJST(new Date('2026-12-31T15:00:00Z')),'2027-01');assert.equal(rules.monthJST(new Date('2028-02-29T15:00:00Z')),'2028-03');assert.equal(rules.validMonth('2026-13'),false);
+test('JST calendar boundaries and verified release-month promotion stay deterministic',()=>{
+ assert.equal(rules.calendarMonthJST(new Date('2026-09-30T14:59:59Z')),'2026-09');assert.equal(rules.calendarMonthJST(new Date('2026-09-30T15:00:00Z')),'2026-10');assert.equal(rules.calendarMonthJST(new Date('2026-12-31T15:00:00Z')),'2027-01');assert.equal(rules.calendarMonthJST(new Date('2028-02-29T15:00:00Z')),'2028-03');assert.equal(rules.monthJST(new Date('2026-09-30T14:59:59Z')),'2026-10');assert.equal(rules.validMonth('2026-13'),false);
 });
 test('three monthly character boards keep posts, votes and comments in separate scopes',async()=>{
  const month=rules.monthJST();
@@ -178,7 +179,7 @@ test('three monthly character boards keep posts, votes and comments in separate 
 });
 test('media types are explicitly allowlisted and video type is preserved',()=>{
  assert.equal(rules.mediaExtension('image/jpeg'),'jpg');assert.equal(rules.mediaExtension('video/mp4'),'mp4');assert.equal(rules.mediaExtension('image/svg+xml'),null);assert.equal(rules.isVideoMedia('video/quicktime'),true);assert.equal(rules.isVideoMedia('image/png'),false);
- assert.equal(rules.maxMediaBytes,12*1024*1024);assert.equal(rules.mediaPartBytes,8*1024*1024);assert.equal(rules.mediaPartCount(8*1024*1024),1);assert.equal(rules.mediaPartCount(8*1024*1024+1),2);assert.equal(rules.mediaPartCount(rules.maxMediaBytes),2);assert.ok(rules.mediaPartCount(rules.maxMediaBytes)*rules.mediaPartAttempts<=rules.uploadPartLimit);assert.equal(rules.uploadPartWindowSeconds,10*60);
+ assert.equal(rules.maxMediaBytes,12*1024*1024);assert.equal(rules.mediaPartBytes,5*1024*1024);assert.equal(rules.mediaUploadConcurrency,3);assert.equal(rules.mediaPartCount(5*1024*1024),1);assert.equal(rules.mediaPartCount(5*1024*1024+1),2);assert.equal(rules.mediaPartCount(rules.maxMediaBytes),3);assert.ok(rules.mediaPartCount(rules.maxMediaBytes)*rules.mediaPartAttempts<=rules.uploadPartLimit);assert.equal(rules.uploadPartWindowSeconds,10*60);
 });
 test('video replies reject URLs, media, embeds; plain text remains valid',()=>{
  for(const text of ['https://example.com','www.example.com','<img src=x>','[x](video)','youtu.be/abcdefghijk','watch.example.xyz/path'])assert.throws(()=>rules.validateReply(text,null));assert.throws(()=>rules.validateReply('Hello','https://youtu.be/abcdefghijk'));assert.doesNotThrow(()=>rules.validateReply('とても参考になりました。',null));
@@ -271,8 +272,8 @@ test('archived month boards remain visible even when not in the current confirme
  const blockedVote=await call({action:'vote',board:'2026-08:archived-character',poll:'strength',choice:0},'archive-reader','','archive@example.invalid');assert.equal(blockedVote.status,409);assert.equal(blockedVote.data.error,'archive_readonly');
  const archivedPost=crypto.randomUUID();sql.prepare("INSERT INTO posts(id,board,author,parent,body,status,pinned,created,request) VALUES(?,?,?,NULL,?,'visible',0,?,?)").run(archivedPost,'2026-08:archived-character',result.data.me.id,'Archived existing post',Date.now(),crypto.randomUUID());
  for(const action of [{action:'like',post:archivedPost,liked:true},{action:'helpful',post:archivedPost,selected:true},{action:'post',board:'2026-08:archived-character',parent:archivedPost,body:'Archived reply',request:crypto.randomUUID()}]){const blocked=await call(action,'archive-reader','','archive@example.invalid');assert.equal(blocked.status,409);assert.equal(blocked.data.error,'archive_readonly');}
- sql.prepare('INSERT INTO boards(id,month,character,name,image) VALUES(?,?,?,?,?)').run('2026-09:unconfirmed-character','2026-09','unconfirmed-character','Unconfirmed Ranger','https://example.invalid/unconfirmed.png');
- const unconfirmedVote=await call({action:'vote',board:'2026-09:unconfirmed-character',poll:'strength',choice:0},'archive-reader','','archive@example.invalid');assert.equal(unconfirmedVote.status,404);assert.equal(unconfirmedVote.data.error,'not_found');
+ const activeMonth=rules.monthJST();const unconfirmedBoard=`${activeMonth}:unconfirmed-character`;sql.prepare('INSERT INTO boards(id,month,character,name,image) VALUES(?,?,?,?,?)').run(unconfirmedBoard,activeMonth,'unconfirmed-character','Unconfirmed Ranger','https://example.invalid/unconfirmed.png');
+ const unconfirmedVote=await call({action:'vote',board:unconfirmedBoard,poll:'strength',choice:0},'archive-reader','','archive@example.invalid');assert.equal(unconfirmedVote.status,404);assert.equal(unconfirmedVote.data.error,'not_found');
 });
 test('poll upsert keeps a single vote per user on the selected evolution board',async()=>{
  const {call}=setup();await call({action:'profile',name:'Tester'});const data=(await call()).data;assert.ok(data.boards.length>=1);const id=data.boards[0].id;
@@ -488,7 +489,7 @@ test('media images open one selected item in an accessible lightbox',()=>{
  assert.match(communitySource,/role="dialog" aria-modal="true"/);
  assert.match(communitySource,/event\.key==='Escape'/);
  assert.match(communityCss,/\.media-lightbox-image/);
- assert.match(communityCss,/\.media-image-button:focus-visible/);
+ assert.match(communityCss,/\.media-image-button:focus-visible/);assert.match(communityCss,/\.media-image-grid\.media-count-1 \.media-image\{[^}]*object-fit:contain/);assert.match(communitySource,/Math\.min\(mediaUploadConcurrency,missing\.length\)/);
 });
 
 test('media groups render as one mixed post and open a shared comparison page',()=>{
