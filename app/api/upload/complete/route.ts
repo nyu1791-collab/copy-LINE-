@@ -23,7 +23,15 @@ export async function POST(request:Request){try{
  // upload was already completed, recover idempotently by confirming the object
  // only after complete throws.
  try{await multipart.complete(rows.map(row=>({partNumber:row.part_number,etag:row.etag})));}catch(e){
-  if(!await bucket().head(session.media_key))throw e;
+  // Concurrent retries can reach complete before the first request has made
+  // the completed object observable. Keep this recovery path bounded and only
+  // pay it after an exceptional duplicate/lost-response completion.
+  let recovered=false;
+  for(let attempt=0;attempt<5;attempt++){
+   if(await bucket().head(session.media_key)){recovered=true;break;}
+   if(attempt<4)await new Promise(resolve=>setTimeout(resolve,25*(attempt+1)));
+  }
+  if(!recovered)throw e;
  }
  const latestTopic=await db.prepare('SELECT character,month FROM boards WHERE id=?').bind(session.board).first<{character:string;month:string}>();if(!latestTopic||latestTopic.month!==monthJST()||!isConfirmedCharacterForMonth(latestTopic.character,latestTopic.month)){try{await bucket().delete(session.media_key);}catch{}await db.prepare("UPDATE upload_sessions SET status='failed',updated=? WHERE id=? AND status='uploading'").bind(Date.now(),id).run();throw new Error(latestTopic?'archive_readonly':'not_found');}
  const postId=crypto.randomUUID();const now=Date.now();
