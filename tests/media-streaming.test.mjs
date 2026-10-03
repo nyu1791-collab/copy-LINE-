@@ -35,10 +35,17 @@ test('media route keeps startup bounded but permits one full allowed explicit pl
  assert.doesNotMatch(route,/range\.end-range\.start\+1>videoInitialRangeBytes/);
 });
 
-test('feed thumbnails do not request video bytes before the detail view',()=>{
+test('feed thumbnails warm a real frame only near the viewport',()=>{
  const thumbnail=readFileSync(new URL('../app/video-thumbnail.tsx',import.meta.url),'utf8');
  const community=readFileSync(new URL('../app/community.tsx',import.meta.url),'utf8');
- assert.doesNotMatch(thumbnail,/<video\b|\/api\/media|IntersectionObserver|preload=/);
+ assert.match(thumbnail,/IntersectionObserver/);
+ assert.match(thumbnail,/rootMargin:'160px 0px'/);
+ assert.match(thumbnail,/<video/);
+ assert.match(thumbnail,/\/api\/media\?id=/);
+ assert.match(thumbnail,/preload="metadata"/);
+ assert.match(thumbnail,/onLoadedMetadata=\{warmFirstFrame\}/);
+ assert.match(thumbnail,/onLoadedData=\{\(\)=>setReady\(true\)\}/);
+ assert.doesNotMatch(thumbnail,/autoPlay|controls/);
  assert.match(thumbnail,/video-placeholder/);
- assert.match(community,/<VideoThumbnail name=\{item\.mediaName/);
+ assert.match(community,/<VideoThumbnail id=\{item\.id\} name=\{item\.mediaName/);
 });
