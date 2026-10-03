@@ -44,10 +44,11 @@ test('upload request identifiers, filenames and part boundaries are bounded',()=
   assert.equal(upload.expectedPartSize(1,rules.mediaPartBytes),rules.mediaPartBytes);
   assert.equal(upload.expectedPartSize(1,rules.mediaPartBytes+1),rules.mediaPartBytes);
   assert.equal(upload.expectedPartSize(2,rules.mediaPartBytes+1),1);
-  assert.equal(upload.expectedPartSize(2,rules.maxMediaBytes),6*1024*1024);
+  assert.equal(upload.expectedPartSize(2,rules.maxMediaBytes),4*1024*1024);
+  assert.equal(upload.expectedPartSize(3,rules.maxMediaBytes),4*1024*1024);
   assert.equal(upload.expectedPartSize(2,rules.maxMediaBytes,8*1024*1024),4*1024*1024);
   assert.equal(rules.mediaPartCount(rules.maxMediaBytes,8*1024*1024),2);
-  for(const part of [0,-1,2.5,3])assert.throws(()=>upload.expectedPartSize(part,rules.maxMediaBytes),/invalid_media/);
+  for(const part of [0,-1,2.5,4])assert.throws(()=>upload.expectedPartSize(part,rules.maxMediaBytes),/invalid_media/);
 });
 
 test('stream monitor rejects short and oversized chunks and preserves the media prefix',async()=>{
@@ -103,10 +104,11 @@ test('resumable upload routes keep same-origin, expiry, size and completion gate
 test('upload completion rechecks current JST board after long-running R2 work',()=>{
  const existing=completeSource.indexOf("SELECT id FROM posts WHERE author=? AND request=?");
  const firstBoard=completeSource.indexOf("SELECT character,month FROM boards WHERE id=?");
+ const complete=completeSource.indexOf('await multipart.complete');
  const head=completeSource.indexOf("bucket().head");
  const secondBoard=completeSource.indexOf("SELECT character,month FROM boards WHERE id=?",firstBoard+1);
  const insert=completeSource.indexOf("INSERT INTO posts");
- assert.ok(existing>=0&&firstBoard>existing&&head>firstBoard&&secondBoard>head&&insert>secondBoard);
+ assert.ok(existing>=0&&firstBoard>existing&&complete>firstBoard&&head>complete&&secondBoard>head&&insert>secondBoard);
  assert.match(completeSource,/latestTopic\.month!==monthJST\(\)/);
  assert.match(completeSource,/isConfirmedCharacterForMonth\(latestTopic\.character,latestTopic\.month\)/);
  const legacyChecks=[...legacySource.matchAll(/SELECT character,month FROM boards WHERE id=\?/g)].map(match=>match.index??-1);
