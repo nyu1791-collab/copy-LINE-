@@ -18,5 +18,5 @@ test('automatic promotion requires both official notice evidence and catalog mem
  assert.match(patched,/const releasePath=releaseEvidenceCurrent&&catalogBacked;/);
  assert.doesNotMatch(patched,/const releasePath=releaseEvidence\?releaseEvidenceCurrent:catalogBacked;/);
  assert.match(patched,/candidateMonth>='2026-10'&&eligible&&imageVerified&&releasePath&&consecutive>=REQUIRED_CONSECUTIVE/);
- assert.match(patched,/gradeTopics<MAX_GRADE_TOPICS_PER_MONTH/);
+ assert.match(patched,/selected&&gradeTopics<monthlyLimit/);
 });

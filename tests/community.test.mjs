@@ -1,3 +1,4 @@
+import * as releasePolicy from '../lib/community-release-policy.mjs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {readFileSync} from 'node:fs';
@@ -7,7 +8,7 @@ import ts from 'typescript';
 const root=new URL('../',import.meta.url);
 function compile(path,require){const source=readFileSync(new URL(path,root),'utf8');const code=ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText;const exports={};new Function('exports','require',code)(exports,require);return exports;}
 const communityRegistry=JSON.parse(readFileSync(new URL('../config/community-characters.json',import.meta.url),'utf8'));
-const rules=compile('lib/rules.ts',id=>{if(id==='@/config/community-characters.json')return communityRegistry;throw new Error('Unexpected rules import '+id);});
+const rules=compile('lib/rules.ts',id=>{if(id==='./community-release-policy.mjs')return releasePolicy;if(id==='@/config/community-characters.json')return communityRegistry;throw new Error('Unexpected rules import '+id);});
 const rangerInfo=compile('lib/ranger-info.ts',()=>{});
 const boardCharacterSource=compile('lib/board-character-source-details.ts',()=>({}));
 const rangerRouteSource=readFileSync(new URL('app/api/ranger-info/route.ts',root),'utf8');

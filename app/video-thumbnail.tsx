@@ -30,7 +30,7 @@ export default function VideoThumbnail({id,name,lang}:Props){
   try{if(target>0&&Math.abs(video.currentTime-target)>.01)video.currentTime=target;}catch{}
  }
  return <span ref={shell} className={'video-thumbnail-shell'+(ready?' is-ready':'')}>
-  {active&&!failed&&<video ref={media} className="video-thumbnail-media" src={'/api/media?id='+encodeURIComponent(id)} muted playsInline preload="metadata" tabIndex={-1} aria-hidden="true" disablePictureInPicture onLoadedMetadata={warmFirstFrame} onLoadedData={()=>setReady(true)} onSeeked={()=>setReady(true)} onError={()=>setFailed(true)}/>}
+  {active&&!failed&&<video crossOrigin="anonymous" ref={media} className="video-thumbnail-media" src={apiUrl('/api/media?id='+encodeURIComponent(id))} muted playsInline preload="metadata" tabIndex={-1} aria-hidden="true" disablePictureInPicture onLoadedMetadata={warmFirstFrame} onLoadedData={()=>setReady(true)} onSeeked={()=>setReady(true)} onError={()=>setFailed(true)}/>}
   <span className="video-placeholder" aria-label={`${name} · ${t.playVideo}`}><Video size={34}/><span>{name}</span><small>{t.playVideo}</small></span>
  </span>;
 }

@@ -2,6 +2,7 @@
 /* eslint-disable @next/next/no-img-element -- These access-checked media URLs
    are intentionally assigned only once their card is near the viewport. */
 import {useEffect,useRef,useState} from 'react';
+import {usesPagesApi} from '@/lib/community-client';
 
 type Props={src:string;alt:string;className?:string;width?:number;height?:number;fallbackSrc?:string};
 
@@ -14,5 +15,5 @@ export default function LazyImage({src,alt,className,width,height,fallbackSrc}:P
   if(!('IntersectionObserver' in window)){const frame=requestAnimationFrame(()=>setVisible(true));return()=>cancelAnimationFrame(frame);}
   const observer=new IntersectionObserver(entries=>{if(entries.some(entry=>entry.isIntersecting)){setVisible(true);observer.disconnect();}},{rootMargin:'600px 0px'});observer.observe(node);return()=>observer.disconnect();
  },[]);
- return <img ref={ref} className={className} src={visible?currentSrc:undefined} alt={alt} width={width} height={height} loading="lazy" decoding="async" onError={()=>{if(fallbackSrc&&currentSrc!==fallbackSrc)setUseFallback(true);}}/>;
+ return <img ref={ref} className={className} src={visible?currentSrc:undefined} crossOrigin={usesPagesApi()&&currentSrc.includes('/api/media?')?'anonymous':undefined} alt={alt} width={width} height={height} loading="lazy" decoding="async" onError={()=>{if(fallbackSrc&&currentSrc!==fallbackSrc)setUseFallback(true);}}/>;
 }

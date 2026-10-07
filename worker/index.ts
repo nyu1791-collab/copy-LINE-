@@ -1,5 +1,6 @@
 /** Cloudflare Worker entry point for the vinext-starter template. */
 import handler from "vinext/server/app-router-entry";
+import {preparePagesRequest, pagesCorsResponse, issuePagesViewer} from './pages-api.mjs';
 
 interface Env {
   ASSETS: Fetcher;
@@ -21,6 +22,7 @@ const DAY_MS=24*60*60*1000;
 
 function mutationBudget(request:Request,path:string):MutationBudget|null{
   const method=request.method.toUpperCase();
+  if(path==="/api/session"&&method==="GET")return {max:30,seconds:600};
   if(path==="/api/board"&&method==="POST")return {max:120,seconds:600};
   if(path==="/api/owner"&&method==="POST")return {max:30,seconds:600};
   if(path==="/api/translate"&&method==="POST")return {max:60,seconds:600};
@@ -97,16 +99,33 @@ const worker = {
     if (url.pathname === "/_vinext/image") {
       return secureResponse(new Response("image_optimization_disabled", { status: 404 }));
     }
+    let bridge;
+    try {
+      bridge = await preparePagesRequest(request, env.BOARD_ANON_COOKIE_SECRET);
+    } catch {
+      return secureResponse(pagesCorsResponse(Response.json({error:'unavailable'}, {status:503, headers:{'Cache-Control':'no-store'}})));
+    }
+    if (bridge.response) return secureResponse(bridge.response);
+    const finish = (response:Response) => secureResponse(bridge.cors ? pagesCorsResponse(response) : response);
     try{
       if(!(await allowMutation(request,env,url.pathname))){
-        return secureResponse(Response.json({error:"rate_limited"},{status:429,headers:{"Cache-Control":"no-store","Retry-After":"60"}}));
+        return finish(Response.json({error:"rate_limited"},{status:429,headers:{"Cache-Control":"no-store","Retry-After":"60"}}));
       }
     }catch{
       // The edge limiter is defense in depth. A D1 limiter fault must not take
       // down PvP or bypass the route's own signed-session authorization rules.
       console.error("edge_rate_limit_unavailable");
+      if (bridge.bootstrap) return finish(Response.json({error:'unavailable'}, {status:503, headers:{'Cache-Control':'no-store'}}));
     }
-    return secureResponse(await handler.fetch(request, env, ctx));
+    if (bridge.bootstrap) {
+      try {
+        const viewerToken = await issuePagesViewer(env.BOARD_ANON_COOKIE_SECRET);
+        return finish(Response.json({viewerToken}, {headers:{'Cache-Control':'no-store'}}));
+      } catch {
+        return finish(Response.json({error:'unavailable'}, {status:503, headers:{'Cache-Control':'no-store'}}));
+      }
+    }
+    return finish(await handler.fetch(bridge.request, env, ctx));
   },
   scheduled(event:ScheduledControllerLike,env:Env,ctx:ExecutionContext){
     ctx.waitUntil(housekeeping(env,Number.isFinite(event.scheduledTime)?event.scheduledTime:Date.now()).catch(()=>console.error("housekeeping_failed")));
