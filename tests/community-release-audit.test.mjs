@@ -16,12 +16,12 @@ function topic(id,rank){
 const state={catalogInitialized:true,catalogStatus:'verified',candidates:{}};
 
 test('complete PvP counts and distinct verified boards pass the release audit',()=>{
- const report=auditCommunityRelease(snapshot(),{characters:[topic('u2000e-alpha',1),topic('u2001e-beta',2),topic('u2002e-gamma',null)]},state);
+ const report=auditCommunityRelease(snapshot(),{characters:[topic('u2001e-beta',2),topic('u2000e-alpha',1)]},state);
  assert.deepEqual(report.rankingErrors,[]);
  assert.deepEqual(report.communityErrors,[]);
- assert.equal(report.currentTopics,3);
+ assert.equal(report.currentTopics,2);
  assert.equal(report.rankedTopics,2);
- assert.equal(report.skillVerifiedTopics,3);
+ assert.equal(report.skillVerifiedTopics,2);
  assert.equal(report.completeSample,true);
 });
 
@@ -50,7 +50,7 @@ test('skill validation and duplicate topics fail the community gate while monthl
  assert.equal(report.rankingErrors.length,0);
  assert.ok(report.communityErrors.some(message=>message.includes('skill')));
  assert.ok(report.communityErrors.some(message=>message.includes('duplicate')));
- assert.ok(report.warnings.some(message=>message.includes('Fewer than three')));
+ assert.ok(report.warnings.some(message=>message.includes('Expected 2')));
 });
 
 test('a mid-month catalog baseline warns that earlier releases cannot be reconstructed safely',()=>{
@@ -58,12 +58,12 @@ test('a mid-month catalog baseline warns that earlier releases cannot be reconst
  assert.ok(report.warnings.some(message=>message.includes('2026-10-16')&&message.includes('prior catalog snapshot')));
 });
 
-test('a sixth verified character is reported and retained',()=>{
+test('excess monthly topics block publication without deleting the registry',()=>{
  const topics=Array.from({length:6},(_,i)=>topic('u200'+i+'e-new',null));
  const report=auditCommunityRelease(snapshot(),{characters:topics},state);
  assert.equal(report.currentTopics,6);
- assert.equal(report.communityErrors.length,0);
- assert.ok(report.warnings.some(message=>message.includes('More than five')));
+ assert.ok(report.communityErrors.some(message=>message.includes('Monthly board count exceeds 2')));
+ assert.equal(topics.length,6);
 });
 
 test('a metadata-eligible candidate with an unverified image remains visible in the release audit',()=>{
@@ -93,6 +93,6 @@ test('refresh workflow applies both runner-local policies and restores strict so
  assert.match(pvpPolicy,/if\(completeTarget&&historyHealthy\)await atomicJson\(HISTORY/);
  assert.match(pvpPolicy,/output\.character_slots<1/);
  assert.match(communityPolicy,/const sourcePresent=!!officialIds\?\.has\(id\);/);
- assert.match(communityPolicy,/const found=await findReleases\(Date\.parse\(updatedAt\)\);/);
+ assert.match(communityPolicy,/monthlyBoardLimit\(candidateMonth\)/);
  assert.match(communityPolicy,/return \{rows,pvpComplete\};/);
 });

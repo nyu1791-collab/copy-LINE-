@@ -1,3 +1,4 @@
+import {monthlyBoardLimit,byAdditionOrder} from '../lib/community-release-policy.mjs';
 import {readFile,appendFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
 import {pathToFileURL} from 'node:url';
@@ -20,7 +21,7 @@ export function auditCommunityRelease(snapshot,registry,state){
  const sampledValid=Number.isSafeInteger(sampled)&&sampled>=1&&sampled<=200;
  const expectedComplete=sampled===200;
  if(target!==200||!sampledValid||snapshot?.complete_target!==expectedComplete)rankingErrors.push('PvP snapshot has invalid sample metadata');
- else if(!expectedComplete)warnings.push('PvP snapshot is a partial clean subset: '+sampled+'/200; comparison history and new-character observation remain full-sample only');
+ else if(!expectedComplete)warnings.push('PvP snapshot is a partial clean subset: '+sampled+'/200; comparison history remains full-sample only; new-character verification uses the official catalog and release notice');
  const rows=Array.isArray(snapshot?.characters)?snapshot.characters:null;
  if(!rows||rows.length<1)rankingErrors.push('missing PvP character rankings');
  const ranked=new Map();let slots=0;
@@ -58,14 +59,19 @@ export function auditCommunityRelease(snapshot,registry,state){
    if(row&&topic.pvpRank!==row.rank)warnings.push('topic PvP rank has not refreshed for '+id);
   }
  }
- if(current>5)warnings.push('More than five confirmed topics in '+month+'; keep every verified character and review the release feed');
- if(day>=10&&current<3)warnings.push('Fewer than three confirmed topics in '+month+'; inspect the catalog and discovery candidates');
+ const expectedTopics=month==='unknown'?0:monthlyBoardLimit(month);
+ if(current>expectedTopics)communityErrors.push('Monthly board count exceeds '+expectedTopics+' in '+month);
+ if(day>=3&&current<expectedTopics)warnings.push('Expected '+expectedTopics+' monthly board(s) in '+month+'; official release verification is still pending');
+ const currentRows=topics.filter(topic=>topic.releaseMonth===month);
+ const expectedOrder=[...currentRows].sort(byAdditionOrder).map(topic=>topic.id);
+ if(currentRows.some((topic,index)=>topic.id!==expectedOrder[index]))communityErrors.push('Monthly boards are not in source addition order');
  if(state?.catalogStatus==='unavailable')warnings.push('Official Ranger catalog was temporarily unavailable; retry discovery on the next full sample');
  if(state?.releaseNoticeStatus==='unavailable')warnings.push('Official new-character announcement feed was unavailable; new monthly topics remain fail-closed');
  if(state?.catalogInitialized===true&&typeof state.initializedAt==='string'&&Number.isFinite(Date.parse(state.initializedAt))){const baseline=monthParts(state.initializedAt);if(baseline.month===month&&baseline.day>1)warnings.push('Official catalog discovery baseline began on '+month+'-'+String(baseline.day).padStart(2,'0')+'; characters added earlier this month cannot be distinguished from older catalog entries without a prior catalog snapshot');}
  if(state?.catalogInitialized!==true)warnings.push('Official catalog baseline has not been established');
  const pending=Object.values(state?.candidates&&typeof state.candidates==='object'?state.candidates:{}).filter(candidate=>candidate&&typeof candidate==='object'&&candidate.firstSeenMonth===month);
  for(const candidate of pending){
+  if(candidate.selectionStatus==='outside_monthly_limit')continue;
   if(candidate.eligible!==true)warnings.push('New character is awaiting official metadata validation: '+candidate.id);
   if(candidate.imageVerified!==true)warnings.push('New character is awaiting official image validation: '+candidate.id);
   if(!candidate.releaseEvidence||candidate.releaseEvidence.catalogId!==candidate.id)warnings.push('New character is awaiting an exact official release-announcement/catalog match: '+candidate.id);

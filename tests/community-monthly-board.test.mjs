@@ -35,7 +35,7 @@ test('automatic board topics require official metadata, a verified observation s
  assert.match(rules,/topic\.metadataSource!=='rangers\.lerico\.net\/api\/getRangersBasics'/);
  assert.match(rules,/Number\(topic\.observationCount\)<3/);
  assert.match(rules,/expectedImage='https:\/\/rangers\.lerico\.net\/res\/'\+topic\.id/);
- assert.match(rules,/return rateB-rateA\|\|ar-br/);
+ assert.match(rules,/sort\(byAdditionOrder\)/);
 });
 
 test('every monthly board response uses the permanent plain Japanese character name rule',()=>{

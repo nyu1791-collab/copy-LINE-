@@ -1,4 +1,5 @@
 'use client';
+import {communityFetch as fetch} from '@/lib/community-client';
 /* eslint-disable @next/next/no-img-element -- Trusted Ranger skill icons use lazy native image loading. */
 import {useEffect,useState} from 'react';
 import type {Language} from '@/lib/rules';

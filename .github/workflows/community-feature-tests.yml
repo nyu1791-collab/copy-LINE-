@@ -5,6 +5,9 @@ on:
     branches: [main]
     paths:
       - 'app/**'
+      - 'worker/**'
+      - 'pages-board/**'
+      - 'vite.pages.config.mjs'
       - 'config/community-characters.json'
       - 'lib/**'
       - 'scripts/**'
@@ -51,5 +54,10 @@ jobs:
           git restore -- scripts/update-community-characters.mjs
       - name: Build and run community regression suite
         run: npm test
+      - name: Build and verify the GitHub Pages board
+        run: |
+          set -euo pipefail
+          npx vite build --config vite.pages.config.mjs
+          node scripts/validate-pages-board.mjs dist-pages/boards
       - name: Lint application and Worker code
         run: npm run lint

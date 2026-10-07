@@ -1,4 +1,5 @@
 'use client';
+import {communityFetch as fetch} from '@/lib/community-client';
 
 import {Component,type ReactNode} from 'react';
 import {RotateCcw,Video} from 'lucide-react';

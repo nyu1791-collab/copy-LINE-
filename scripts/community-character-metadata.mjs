@@ -1,4 +1,5 @@
 const ORIGIN='https://rangers.lerico.net';
+import {byAdditionOrder} from '../lib/community-release-policy.mjs';
 const LANGUAGES=['ja','en','zh','th'];
 const SAFE_ID=/^u\d+e-[a-z0-9_-]+$/i;
 const SAFE_CODE=/^[A-Za-z0-9_-]{1,120}$/;
@@ -154,7 +155,7 @@ export async function scanOfficialRangerReleaseNotices(catalogEntries,{fetchImpl
    const matches=catalogEntries.filter(entry=>entry&&Number(entry.grade)===ranger.grade&&typeof entry.nameEn==='string'&&entry.nameEn.normalize('NFC').replace(/\s+/g,' ').trim().toLocaleLowerCase('en')===ranger.nameEn.toLocaleLowerCase('en'));
    const unique=[...new Map(matches.filter(entry=>typeof entry.id==='string'&&SAFE_ID.test(entry.id)).map(entry=>[entry.id,entry])).values()];
    if(unique.length!==1)continue;
-   const [entry]=unique;const evidence={releaseMonth:month,noticeId:document.id,noticeTitle:document.title,noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice',publishedAt:new Date(detail.registered??document.registered).toISOString(),catalogId:entry.id,matchedName:ranger.nameEn,grade:ranger.grade,source:'notice2.line.me/LGRGS/ios/document/notice'};
+   const [entry]=unique;const evidence={releaseMonth:month,windowStartAt:new Date(startTime).toISOString(),windowEndAt:new Date(endTime).toISOString(),noticeId:document.id,noticeTitle:document.title,noticeUrl:'https://notice2.line.me/LGRGS/ios/document/notice',publishedAt:new Date(detail.registered??document.registered).toISOString(),catalogId:entry.id,matchedName:ranger.nameEn,grade:ranger.grade,source:'notice2.line.me/LGRGS/ios/document/notice'};
    const prior=byId.get(entry.id);if(!prior||Date.parse(evidence.publishedAt)<Date.parse(prior.publishedAt))byId.set(entry.id,evidence);
   }
  }
@@ -223,7 +224,7 @@ export function createOfficialCharacterVerifier(fetchImpl=fetch){
  verify.listCatalogUnitIds=async()=>{
   const {basics}=await catalogs();
   if(!Array.isArray(basics))throw new Error('invalid_ranger_catalog');
-  return [...new Set(basics.map(row=>row?.unitCode).filter(id=>typeof id==='string'&&SAFE_ID.test(id)))].sort();
+  return [...new Set(basics.map(row=>row?.unitCode).filter(id=>typeof id==='string'&&SAFE_ID.test(id)))].sort(byAdditionOrder);
  };
  verify.findOfficialReleaseEvidence=async(now=Date.now())=>{
   const source=await catalogs();const entries=[];

@@ -1,3 +1,4 @@
+import {byAdditionOrder} from './community-release-policy.mjs';
 import * as communityCharacterRegistryModule from '@/config/community-characters.json';
 
 export const languages = ['ja','en','zh','th'] as const;
@@ -166,13 +167,7 @@ export const characters:readonly CharacterTopic[]=Object.freeze(safeRows.filter(
 }).map(topic=>Object.freeze({...topic})));
 
 export function confirmedCharactersForMonth(month:string){
- return characters.filter(character=>character.confirmed&&character.releaseMonth===month).sort((a,b)=>{
-  const rateA=typeof a.adoptionRate==='number'?a.adoptionRate:-1;
-  const rateB=typeof b.adoptionRate==='number'?b.adoptionRate:-1;
-  const ar=Number.isSafeInteger(a.pvpRank)?Number(a.pvpRank):Number.MAX_SAFE_INTEGER;
-  const br=Number.isSafeInteger(b.pvpRank)?Number(b.pvpRank):Number.MAX_SAFE_INTEGER;
-  return rateB-rateA||ar-br||a.id.localeCompare(b.id);
- });
+ return characters.filter(character=>character.confirmed&&character.releaseMonth===month).sort(byAdditionOrder);
 }
 export function isKnownCharacter(id:string){return characters.some(character=>character.id===id);}
 export function isConfirmedCharacterForMonth(id:string,month:string){return confirmedCharactersForMonth(month).some(character=>character.id===id);}

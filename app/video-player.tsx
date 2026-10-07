@@ -1,4 +1,5 @@
 'use client';
+import {communityFetch as fetch, apiUrl} from '@/lib/community-client';
 
 import {useState} from 'react';
 import {RotateCcw,Video} from 'lucide-react';
@@ -23,5 +24,5 @@ export default function VideoPlayer({id,youtube,lang,preloadMetadata=false}:Prop
  // Warm only the first detail video. Single-video posts become responsive
  // before the viewer taps play, while grouped posts still avoid preloading all
  // remaining clips and competing for mobile bandwidth.
- return <video key={id+':'+attempt} src={'/api/media?id='+encodeURIComponent(id)} controls playsInline preload={preloadMetadata?'metadata':'none'} onError={reportFailure}/>;
+ return <video crossOrigin="anonymous" key={id+':'+attempt} src={apiUrl('/api/media?id='+encodeURIComponent(id))} controls playsInline preload={preloadMetadata?'metadata':'none'} onError={reportFailure}/>;
 }

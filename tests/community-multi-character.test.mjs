@@ -21,6 +21,7 @@ const rows=[
  {unit_code:'u2002e-gamma',name:'新キャラ Gamma',image:'https://rangers.lerico.net/res/u2002e-gamma/u2002e-gamma-thum.png',rank:null,adoption_rate:null},
 ];
 const noLegacy={ids:[]};
+const listAllCatalog=async()=>rows.map(row=>row.unit_code);
 function initialState(){return {schemaVersion:1,initialized:true,initializedAt:'2026-09-30T14:00:00.000Z',lastSnapshotAt:'2026-09-30T14:00:00.000Z',knownIds:['u1000e-old'],candidates:{}};}
 function metadataFor(id){
  const row=rows.find(item=>item.unit_code===id);
@@ -38,7 +39,7 @@ async function threeConfirmedSnapshots({candidateRows=rows,legacyKnown=noLegacy,
  let state=initialState();
  let result;
  for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-01T01:00:00+09:00','2026-10-01T02:00:00+09:00']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,candidateRows),history:{snapshots:[]},registry,state,legacyKnown,probe,verifyMetadata,findReleaseEvidence});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,candidateRows),history:{snapshots:[]},registry,state,legacyKnown,probe,verifyMetadata,listCatalogIds:listAllCatalog,findReleaseEvidence});
   registry=result.registry;state=result.state;
  }
  return result;
@@ -46,18 +47,18 @@ async function threeConfirmedSnapshots({candidateRows=rows,legacyKnown=noLegacy,
 
 test('only the top two verified Star 9 characters are confirmed together',async()=>{
  const final=await threeConfirmedSnapshots();
- assert.deepEqual(final.promoted.map(topic=>topic.id),['u2001e-beta','u2000e-alpha']);
- assert.deepEqual(final.registry.characters.map(topic=>topic.id),['u2001e-beta','u2000e-alpha']);
+ assert.deepEqual(final.promoted.map(topic=>topic.id),['u2002e-gamma','u2001e-beta']);
+ assert.deepEqual(final.registry.characters.map(topic=>topic.id),['u2002e-gamma','u2001e-beta']);
  assert.equal(new Set(final.registry.characters.map(topic=>topic.id)).size,2);
  assert.ok(final.registry.characters.every(topic=>topic.releaseMonth==='2026-10'&&topic.confirmed===true&&topic.nameEn&&topic.nameZh&&topic.nameTh));
  assert.ok(final.registry.characters.every(topic=>topic.verifiedGrade===9&&topic.skillsVerified===true&&topic.skillCount===2));
- assert.ok(final.state.knownIds.includes('u2002e-gamma'),'third eligible Star 9 candidate is closed after the top-two cap');
+ assert.equal(final.state.candidates['u2000e-alpha'].selectionStatus,'outside_monthly_limit');
 });
 
 test('missed scheduled slots do not prevent three verified full observations',async()=>{
  let registry={schemaVersion:1,characters:[]},state=initialState(),result;
  for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-01T08:00:00+09:00','2026-10-01T16:00:00+09:00']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]]),listCatalogIds:listAllCatalog});
   registry=result.registry;state=result.state;
  }
  assert.deepEqual(result.promoted.map(topic=>topic.id),[rows[0].unit_code]);
@@ -67,7 +68,7 @@ test('missed scheduled slots do not prevent three verified full observations',as
 test('a gap beyond one day resets the streak and duplicate snapshots cannot extend it',async()=>{
  let registry={schemaVersion:1,characters:[]},state=initialState(),result;
  for(const updatedAt of ['2026-10-01T00:00:00+09:00','2026-10-02T01:00:00+09:00','2026-10-02T01:00:00+09:00','2026-10-02T02:00:00+09:00']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]]),listCatalogIds:listAllCatalog});
   registry=result.registry;state=result.state;
  }
  assert.deepEqual(result.promoted,[]);
@@ -97,7 +98,7 @@ test('September stays closed to new automatic boards even when a matching notice
  let registry={schemaVersion:1,characters:[]},state={...initialState(),lastSnapshotAt:'2026-09-20T00:00:00.000Z'},result;
  const evidence={...releaseEvidenceFor(rows[0].unit_code,'2026-09'),publishedAt:'2026-09-01T00:00:00.000Z'};
  for(const updatedAt of ['2026-09-20T01:00:00.000Z','2026-09-20T02:00:00.000Z','2026-09-20T03:00:00.000Z']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:async()=>({[rows[0].unit_code]:evidence})});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:async()=>({[rows[0].unit_code]:evidence,listCatalogIds:listAllCatalog})});
   registry=result.registry;state=result.state;
  }
  assert.deepEqual(result.promoted,[]);
@@ -120,11 +121,15 @@ test('historical character IDs cannot be promoted again when they reappear in Pv
  assert.ok(final.state.knownIds.includes('u1630e-sally'));
 });
 
-test('automatic topic promotion fails closed on partial PvP samples',async()=>{
- await assert.rejects(()=>updateCommunityCharacters({
-  snapshot:snapshot('2026-10-01T00:00:00+09:00',rows,{sampled:199}),
-  history:{snapshots:[]},registry:{schemaVersion:1,characters:[]},state:initialState(),legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,
- }),/refusing incomplete PvP snapshot/);
+test('a 199-player snapshot can verify new boards from official sources',async()=>{
+ let registry={schemaVersion:1,characters:[]},state=initialState(),result;
+ for(const at of ['2026-10-01T00:00:00+09:00','2026-10-01T01:00:00+09:00','2026-10-01T02:00:00+09:00']){
+  result=await updateCommunityCharacters({snapshot:snapshot(at,[rows[0]],{complete:false,sampled:199}),
+   history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,
+   listCatalogIds:listAllCatalog,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
+  registry=result.registry;state=result.state;
+ }
+ assert.deepEqual(result.promoted.map(topic=>topic.id),[rows[0].unit_code]);
 });
 
 test('repeated complete snapshots do not publish a character without current-month official release evidence',async()=>{
@@ -153,14 +158,14 @@ test('a candidate crossing JST month end starts its verified release streak on t
  let state={...initialState(),lastSnapshotAt:'2026-09-30T12:00:00.000Z'};
  let result;
  for(const updatedAt of ['2026-09-30T13:00:00.000Z','2026-09-30T14:00:00.000Z','2026-09-30T15:00:00.000Z']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]]),listCatalogIds:listAllCatalog});
   registry=result.registry;state=result.state;
  }
  assert.deepEqual(result.promoted,[]);
  assert.equal(state.candidates['u2000e-alpha'].firstSeenMonth,'2026-10');
  assert.equal(state.candidates['u2000e-alpha'].consecutive,1);
  for(const updatedAt of ['2026-09-30T16:00:00.000Z','2026-09-30T17:00:00.000Z']){
-  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]])});
+  result=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,findReleaseEvidence:()=>releaseEvidenceForRows([rows[0]]),listCatalogIds:listAllCatalog});
   registry=result.registry;state=result.state;
  }
  assert.equal(result.promoted[0].releaseMonth,'2026-10');
@@ -169,9 +174,9 @@ test('a candidate crossing JST month end starts its verified release streak on t
 
 test('out-of-order snapshots cannot extend a new-character streak',async()=>{
  let registry={schemaVersion:1,characters:[]};let state=initialState();
- const first=await updateCommunityCharacters({snapshot:snapshot('2026-10-01T00:00:00+09:00',[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
- const second=await updateCommunityCharacters({snapshot:snapshot('2026-10-01T01:00:00+09:00',[rows[0]]),history:{snapshots:[]},registry:first.registry,state:first.state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor});
- await assert.rejects(()=>updateCommunityCharacters({snapshot:snapshot('2026-10-01T00:30:00+09:00',[rows[0]]),history:{snapshots:[]},registry:second.registry,state:second.state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor}),/out-of-order community snapshot/);
+ const first=await updateCommunityCharacters({snapshot:snapshot('2026-10-01T00:00:00+09:00',[rows[0]]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:listAllCatalog});
+ const second=await updateCommunityCharacters({snapshot:snapshot('2026-10-01T01:00:00+09:00',[rows[0]]),history:{snapshots:[]},registry:first.registry,state:first.state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:listAllCatalog});
+ await assert.rejects(()=>updateCommunityCharacters({snapshot:snapshot('2026-10-01T00:30:00+09:00',[rows[0]]),history:{snapshots:[]},registry:second.registry,state:second.state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:listAllCatalog}),/out-of-order community snapshot/);
 });
 
 test('unverified character images never accumulate a promotion streak',async()=>{
@@ -191,10 +196,10 @@ test('catalog releases are capped at two monthly Star 9 topics before any of the
   final=await updateCommunityCharacters({snapshot:snapshot(updatedAt,[prior]),history:{snapshots:[]},registry,state,legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:async()=>['u1000e-old',...rows.map(row=>row.unit_code)],findReleaseEvidence:()=>releaseEvidenceForRows(rows)});
   state=final.state;registry=final.registry;
  }
- assert.deepEqual(final.promoted.map(topic=>topic.id),['u2000e-alpha','u2001e-beta']);
+ assert.deepEqual(final.promoted.map(topic=>topic.id),['u2002e-gamma','u2001e-beta']);
  assert.equal(final.promoted.length,2);
  assert.ok(final.promoted.every(topic=>topic.discoveredFrom==='catalog'&&topic.pvpRank===null&&topic.adoptionRate===null&&topic.skillsVerified&&topic.verifiedGrade===9));
- assert.ok(final.state.knownIds.includes('u2002e-gamma'));
+ assert.equal(final.state.candidates['u2000e-alpha'].selectionStatus,'outside_monthly_limit');
  assert.equal(final.state.candidates['u1000e-old'],undefined);
 });
 
@@ -253,6 +258,6 @@ test('board API backfills later confirmed topics and preserves PvP topic order',
 
 test('corrupt discovery JSON is not silently treated as an empty state, while a missing first-run file can use defaults',async()=>{const dir=mkdtempSync(join(tmpdir(),'community-discovery-'));const path=join(dir,'state.json');try{assert.deepEqual(await readJson(path,{initialized:false}),{initialized:false});writeFileSync(path,'{broken','utf8');await assert.rejects(()=>readJson(path,{initialized:false}),SyntaxError);}finally{rmSync(dir,{recursive:true,force:true});}});
 
-test('invalid or duplicate registry topics stop discovery instead of being silently removed',async()=>{const common={snapshot:snapshot('2026-10-01T00:00:00+09:00',rows),history:{snapshots:[]},state:initialState(),legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor};await assert.rejects(()=>updateCommunityCharacters({...common,registry:{schemaVersion:1,characters:[{id:'u2000e-alpha',name:'',image:'https://rangers.lerico.net/res/u2000e-alpha/u2000e-alpha-thum.png',releaseMonth:'2026-10',confirmed:true}]}}),/invalid community topic in registry/);await assert.rejects(()=>updateCommunityCharacters({...common,registry:{schemaVersion:1,characters:[{id:'u2000e-alpha',name:'A',image:'https://rangers.lerico.net/res/u2000e-alpha/u2000e-alpha-thum.png',releaseMonth:'2026-10',confirmed:true},{id:'u2000e-alpha',name:'B',image:'https://rangers.lerico.net/res/u2000e-alpha/u2000e-alpha-thum.png',releaseMonth:'2026-10',confirmed:true}]}}),/duplicate community topic in registry/);});
+test('invalid or duplicate registry topics stop discovery instead of being silently removed',async()=>{const common={snapshot:snapshot('2026-10-01T00:00:00+09:00',rows),history:{snapshots:[]},state:initialState(),legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor};await assert.rejects(()=>updateCommunityCharacters({...common,registry:{schemaVersion:1,characters:[{id:'u2000e-alpha',name:'',image:'https://rangers.lerico.net/res/u2000e-alpha/u2000e-alpha-thum.png',releaseMonth:'2026-10',confirmed:true}]},listCatalogIds:listAllCatalog}),/invalid community topic in registry/);await assert.rejects(()=>updateCommunityCharacters({...common,registry:{schemaVersion:1,characters:[{id:'u2000e-alpha',name:'A',image:'https://rangers.lerico.net/res/u2000e-alpha/u2000e-alpha-thum.png',releaseMonth:'2026-10',confirmed:true},{id:'u2000e-alpha',name:'B',image:'https://rangers.lerico.net/res/u2000e-alpha/u2000e-alpha-thum.png',releaseMonth:'2026-10',confirmed:true}]},listCatalogIds:listAllCatalog}),/duplicate community topic in registry/);});
 
-test('duplicate or malformed IDs in a complete snapshot do not create discovery candidates',async()=>{await assert.rejects(()=>updateCommunityCharacters({snapshot:snapshot('2026-10-01T00:00:00+09:00',[rows[0],rows[0]]),history:{snapshots:[]},registry:{schemaVersion:1,characters:[]},state:initialState(),legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor}),/duplicate character ID/);});
+test('duplicate or malformed IDs in a complete snapshot do not create discovery candidates',async()=>{await assert.rejects(()=>updateCommunityCharacters({snapshot:snapshot('2026-10-01T00:00:00+09:00',[rows[0],rows[0]]),history:{snapshots:[]},registry:{schemaVersion:1,characters:[]},state:initialState(),legacyKnown:noLegacy,probe:async()=>true,verifyMetadata:metadataFor,listCatalogIds:listAllCatalog}),/duplicate character ID/);});
