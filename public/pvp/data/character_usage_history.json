@@ -22699,7 +22699,7 @@
       ]
     },
     {
-      "updated_at": "2026-10-13T02:00:11.472Z",
+      "updated_at": "2026-10-13T09:21:47.791Z",
       "target_players": 200,
       "sampled_players": 200,
       "complete_target": true,
@@ -22708,18 +22708,18 @@
         {
           "unit_code": "u1556e-af",
           "rank": 1,
-          "occurrence_count": 235,
+          "occurrence_count": 236,
           "equipment": {
             "WEAPON": [
               {
                 "item_code": "eq_2608_wpn_19",
                 "rank": 1,
-                "occurrence_count": 78
+                "occurrence_count": 77
               },
               {
                 "item_code": "eq_2607_wpn_09",
                 "rank": 2,
-                "occurrence_count": 38
+                "occurrence_count": 39
               },
               {
                 "item_code": "eq_2408_wpn_18",
@@ -22734,7 +22734,7 @@
               {
                 "item_code": "eq_2604_wpn_07",
                 "rank": 5,
-                "occurrence_count": 15
+                "occurrence_count": 16
               },
               {
                 "item_code": "eq_2503_wpn_08",
@@ -22753,11 +22753,11 @@
               },
               {
                 "item_code": "eq_2409_wpn_08",
-                "rank": 9,
-                "occurrence_count": 7
+                "rank": 8,
+                "occurrence_count": 8
               },
               {
-                "item_code": "eq_2609_wpn_09",
+                "item_code": "eq_2310_wpn_07",
                 "rank": 10,
                 "occurrence_count": 3
               },
@@ -22777,14 +22777,9 @@
                 "occurrence_count": 3
               },
               {
-                "item_code": "eq_2310_wpn_07",
+                "item_code": "eq_2609_wpn_09",
                 "rank": 14,
                 "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_2209_wpn_07",
-                "rank": 15,
-                "occurrence_count": 1
               },
               {
                 "item_code": "eq_wpn_evt_057",
@@ -22796,7 +22791,7 @@
               {
                 "item_code": "eq_2604_amr_08",
                 "rank": 1,
-                "occurrence_count": 165
+                "occurrence_count": 166
               },
               {
                 "item_code": "eq_2412_amr_07",
@@ -22806,12 +22801,17 @@
               {
                 "item_code": "eq_2309_amr_18",
                 "rank": 3,
-                "occurrence_count": 9
+                "occurrence_count": 8
               },
               {
                 "item_code": "eq_2512_amr_17",
-                "rank": 4,
+                "rank": 3,
                 "occurrence_count": 8
+              },
+              {
+                "item_code": "eq_2412_amr_38",
+                "rank": 5,
+                "occurrence_count": 7
               },
               {
                 "item_code": "eq_2504_amr_28",
@@ -22820,18 +22820,18 @@
               },
               {
                 "item_code": "eq_2410_amr_28",
-                "rank": 6,
-                "occurrence_count": 6
-              },
-              {
-                "item_code": "eq_2412_amr_38",
-                "rank": 6,
+                "rank": 7,
                 "occurrence_count": 6
               },
               {
                 "item_code": "eq_amr_evt_29",
                 "rank": 8,
                 "occurrence_count": 5
+              },
+              {
+                "item_code": "eq_2204_amr_17",
+                "rank": 9,
+                "occurrence_count": 3
               },
               {
                 "item_code": "eq_2210_amr_07",
@@ -22844,13 +22844,8 @@
                 "occurrence_count": 3
               },
               {
-                "item_code": "eq_2204_amr_17",
-                "rank": 11,
-                "occurrence_count": 2
-              },
-              {
                 "item_code": "eq_2406_amr_07",
-                "rank": 11,
+                "rank": 12,
                 "occurrence_count": 2
               },
               {
@@ -22874,11 +22869,6 @@
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_amr_0046",
-                "rank": 13,
-                "occurrence_count": 1
-              },
-              {
                 "item_code": "eq_amr_evt_027",
                 "rank": 13,
                 "occurrence_count": 1
@@ -22898,7 +22888,7 @@
               {
                 "item_code": "eq_2512_acc_08",
                 "rank": 1,
-                "occurrence_count": 152
+                "occurrence_count": 154
               },
               {
                 "item_code": "eq_2412_acc_28",
@@ -22974,9 +22964,127 @@
           }
         },
         {
-          "unit_code": "u1618e-ka",
+          "unit_code": "u1535e-brown",
           "rank": 2,
-          "occurrence_count": 197,
+          "occurrence_count": 196,
+          "equipment": {
+            "WEAPON": [
+              {
+                "item_code": "eq_2507_wpn_08",
+                "rank": 1,
+                "occurrence_count": 151
+              },
+              {
+                "item_code": "eq_2212_wpn_07",
+                "rank": 2,
+                "occurrence_count": 37
+              },
+              {
+                "item_code": "eq_2403_wpn_08",
+                "rank": 3,
+                "occurrence_count": 4
+              },
+              {
+                "item_code": "eq_2512_wpn_38",
+                "rank": 4,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_wpn_est_09",
+                "rank": 4,
+                "occurrence_count": 2
+              }
+            ],
+            "ARMOR": [
+              {
+                "item_code": "eq_2607_amr_19",
+                "rank": 1,
+                "occurrence_count": 59
+              },
+              {
+                "item_code": "eq_amr_evt_138",
+                "rank": 2,
+                "occurrence_count": 53
+              },
+              {
+                "item_code": "eq_2510_amr_08",
+                "rank": 3,
+                "occurrence_count": 32
+              },
+              {
+                "item_code": "eq_2610_amr_09",
+                "rank": 4,
+                "occurrence_count": 21
+              },
+              {
+                "item_code": "eq_amr_evt_117",
+                "rank": 4,
+                "occurrence_count": 21
+              },
+              {
+                "item_code": "eq_2603_amr_18",
+                "rank": 6,
+                "occurrence_count": 7
+              },
+              {
+                "item_code": "eq_amr_evt_09",
+                "rank": 7,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2512_amr_07",
+                "rank": 8,
+                "occurrence_count": 1
+              }
+            ],
+            "ACC": [
+              {
+                "item_code": "eq_acc_evt_037",
+                "rank": 1,
+                "occurrence_count": 60
+              },
+              {
+                "item_code": "eq_2609_acc_29",
+                "rank": 2,
+                "occurrence_count": 44
+              },
+              {
+                "item_code": "eq_2606_acc_08",
+                "rank": 3,
+                "occurrence_count": 43
+              },
+              {
+                "item_code": "eq_acc_evt_08",
+                "rank": 4,
+                "occurrence_count": 38
+              },
+              {
+                "item_code": "eq_2401_acc_08",
+                "rank": 5,
+                "occurrence_count": 7
+              },
+              {
+                "item_code": "eq_2503_acc_08",
+                "rank": 6,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2602_acc_07",
+                "rank": 7,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_acc_est_0072",
+                "rank": 7,
+                "occurrence_count": 1
+              }
+            ]
+          }
+        },
+        {
+          "unit_code": "u1618e-ka",
+          "rank": 3,
+          "occurrence_count": 196,
           "equipment": {
             "WEAPON": [
               {
@@ -22987,7 +23095,7 @@
               {
                 "item_code": "eq_2212_wpn_07",
                 "rank": 2,
-                "occurrence_count": 12
+                "occurrence_count": 11
               },
               {
                 "item_code": "eq_2408_wpn_18",
@@ -23019,7 +23127,7 @@
               {
                 "item_code": "eq_amr_evt_117",
                 "rank": 2,
-                "occurrence_count": 32
+                "occurrence_count": 33
               },
               {
                 "item_code": "eq_2604_amr_08",
@@ -23042,28 +23150,23 @@
                 "occurrence_count": 2
               },
               {
-                "item_code": "eq_amr_0046",
-                "rank": 6,
-                "occurrence_count": 2
-              },
-              {
                 "item_code": "eq_amr_evt_09",
                 "rank": 6,
                 "occurrence_count": 2
               },
               {
                 "item_code": "eq_2510_amr_28",
-                "rank": 9,
+                "rank": 8,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_2606_amr_17",
-                "rank": 9,
+                "rank": 8,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_amr_evt_28",
-                "rank": 9,
+                "item_code": "eq_amr_0046",
+                "rank": 8,
                 "occurrence_count": 1
               }
             ],
@@ -23076,12 +23179,12 @@
               {
                 "item_code": "eq_2401_acc_08",
                 "rank": 2,
-                "occurrence_count": 49
+                "occurrence_count": 48
               },
               {
                 "item_code": "eq_acc_evt_037",
                 "rank": 3,
-                "occurrence_count": 13
+                "occurrence_count": 12
               },
               {
                 "item_code": "eq_acc_evt_08",
@@ -23112,143 +23215,10 @@
                 "item_code": "eq_2502_acc_17",
                 "rank": 8,
                 "occurrence_count": 2
-              }
-            ]
-          }
-        },
-        {
-          "unit_code": "u1535e-brown",
-          "rank": 3,
-          "occurrence_count": 196,
-          "equipment": {
-            "WEAPON": [
-              {
-                "item_code": "eq_2507_wpn_08",
-                "rank": 1,
-                "occurrence_count": 150
-              },
-              {
-                "item_code": "eq_2212_wpn_07",
-                "rank": 2,
-                "occurrence_count": 37
-              },
-              {
-                "item_code": "eq_2403_wpn_08",
-                "rank": 3,
-                "occurrence_count": 4
-              },
-              {
-                "item_code": "eq_2512_wpn_38",
-                "rank": 4,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_wpn_est_09",
-                "rank": 4,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_wpn_evt_007",
-                "rank": 6,
-                "occurrence_count": 1
-              }
-            ],
-            "ARMOR": [
-              {
-                "item_code": "eq_2607_amr_19",
-                "rank": 1,
-                "occurrence_count": 58
-              },
-              {
-                "item_code": "eq_amr_evt_138",
-                "rank": 2,
-                "occurrence_count": 53
-              },
-              {
-                "item_code": "eq_2510_amr_08",
-                "rank": 3,
-                "occurrence_count": 31
-              },
-              {
-                "item_code": "eq_2610_amr_09",
-                "rank": 4,
-                "occurrence_count": 21
-              },
-              {
-                "item_code": "eq_amr_evt_117",
-                "rank": 4,
-                "occurrence_count": 21
-              },
-              {
-                "item_code": "eq_2603_amr_18",
-                "rank": 6,
-                "occurrence_count": 7
-              },
-              {
-                "item_code": "eq_amr_evt_09",
-                "rank": 7,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_2512_amr_07",
-                "rank": 8,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_amr_0007",
-                "rank": 8,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_amr_0046",
-                "rank": 8,
-                "occurrence_count": 1
-              }
-            ],
-            "ACC": [
-              {
-                "item_code": "eq_acc_evt_037",
-                "rank": 1,
-                "occurrence_count": 60
-              },
-              {
-                "item_code": "eq_2609_acc_29",
-                "rank": 2,
-                "occurrence_count": 44
-              },
-              {
-                "item_code": "eq_2606_acc_08",
-                "rank": 3,
-                "occurrence_count": 43
-              },
-              {
-                "item_code": "eq_acc_evt_08",
-                "rank": 4,
-                "occurrence_count": 37
-              },
-              {
-                "item_code": "eq_2401_acc_08",
-                "rank": 5,
-                "occurrence_count": 7
-              },
-              {
-                "item_code": "eq_2503_acc_08",
-                "rank": 6,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_2602_acc_07",
-                "rank": 7,
-                "occurrence_count": 1
               },
               {
                 "item_code": "eq_acc_0106",
-                "rank": 7,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_acc_est_0072",
-                "rank": 7,
+                "rank": 10,
                 "occurrence_count": 1
               }
             ]
@@ -23263,17 +23233,17 @@
               {
                 "item_code": "eq_2212_wpn_07",
                 "rank": 1,
-                "occurrence_count": 52
+                "occurrence_count": 53
               },
               {
                 "item_code": "eq_2602_wpn_18",
-                "rank": 1,
+                "rank": 2,
                 "occurrence_count": 52
               },
               {
                 "item_code": "eq_2512_wpn_38",
                 "rank": 3,
-                "occurrence_count": 27
+                "occurrence_count": 28
               },
               {
                 "item_code": "eq_2604_wpn_17",
@@ -23297,25 +23267,20 @@
               },
               {
                 "item_code": "eq_wpn_evt_007",
-                "rank": 7,
-                "occurrence_count": 3
-              },
-              {
-                "item_code": "eq_wpn_evt_09",
-                "rank": 9,
+                "rank": 8,
                 "occurrence_count": 2
               },
               {
-                "item_code": "eq_wpn_evt_18",
-                "rank": 10,
-                "occurrence_count": 1
+                "item_code": "eq_wpn_evt_09",
+                "rank": 8,
+                "occurrence_count": 2
               }
             ],
             "ARMOR": [
               {
                 "item_code": "eq_2607_amr_19",
                 "rank": 1,
-                "occurrence_count": 84
+                "occurrence_count": 85
               },
               {
                 "item_code": "eq_2610_amr_29",
@@ -23330,7 +23295,7 @@
               {
                 "item_code": "eq_2603_amr_18",
                 "rank": 4,
-                "occurrence_count": 10
+                "occurrence_count": 9
               },
               {
                 "item_code": "eq_amr_evt_138",
@@ -23343,33 +23308,28 @@
                 "occurrence_count": 5
               },
               {
-                "item_code": "eq_2404_amr_08",
+                "item_code": "eq_amr_evt_09",
                 "rank": 7,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2404_amr_08",
+                "rank": 8,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_amr_0007",
-                "rank": 7,
+                "rank": 8,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_amr_evt_007",
-                "rank": 7,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_amr_evt_09",
-                "rank": 7,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_amr_evt_28",
-                "rank": 7,
+                "rank": 8,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_ch_amr_27",
-                "rank": 7,
+                "rank": 8,
                 "occurrence_count": 1
               }
             ],
@@ -23397,12 +23357,7 @@
               {
                 "item_code": "eq_2312_acc_28",
                 "rank": 5,
-                "occurrence_count": 6
-              },
-              {
-                "item_code": "eq_acc_0106",
-                "rank": 6,
-                "occurrence_count": 3
+                "occurrence_count": 7
               },
               {
                 "item_code": "eq_acc_evt_037",
@@ -23411,7 +23366,12 @@
               },
               {
                 "item_code": "eq_2508_acc_07",
-                "rank": 8,
+                "rank": 7,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_acc_0106",
+                "rank": 7,
                 "occurrence_count": 2
               },
               {
@@ -23431,7 +23391,7 @@
               {
                 "item_code": "eq_2608_wpn_29",
                 "rank": 1,
-                "occurrence_count": 77
+                "occurrence_count": 78
               },
               {
                 "item_code": "eq_2602_wpn_08",
@@ -23444,18 +23404,18 @@
                 "occurrence_count": 27
               },
               {
-                "item_code": "eq_2208_wpn_27",
-                "rank": 4,
-                "occurrence_count": 5
-              },
-              {
                 "item_code": "eq_2409_wpn_08",
                 "rank": 4,
                 "occurrence_count": 5
               },
               {
+                "item_code": "eq_2208_wpn_27",
+                "rank": 5,
+                "occurrence_count": 4
+              },
+              {
                 "item_code": "eq_2607_wpn_09",
-                "rank": 6,
+                "rank": 5,
                 "occurrence_count": 4
               },
               {
@@ -23468,7 +23428,7 @@
               {
                 "item_code": "eq_2512_amr_07",
                 "rank": 1,
-                "occurrence_count": 61
+                "occurrence_count": 63
               },
               {
                 "item_code": "eq_2506_amr_17",
@@ -23478,7 +23438,7 @@
               {
                 "item_code": "eq_2604_amr_18",
                 "rank": 3,
-                "occurrence_count": 19
+                "occurrence_count": 18
               },
               {
                 "item_code": "eq_2509_amr_18",
@@ -23514,11 +23474,6 @@
                 "item_code": "eq_2606_amr_17",
                 "rank": 8,
                 "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_amr_0046",
-                "rank": 8,
-                "occurrence_count": 1
               }
             ],
             "ACC": [
@@ -23534,8 +23489,8 @@
               },
               {
                 "item_code": "eq_2603_acc_28",
-                "rank": 3,
-                "occurrence_count": 35
+                "rank": 2,
+                "occurrence_count": 36
               },
               {
                 "item_code": "eq_2408_acc_07",
@@ -23548,18 +23503,18 @@
                 "occurrence_count": 5
               },
               {
-                "item_code": "eq_2412_acc_08",
+                "item_code": "eq_2406_acc_08",
                 "rank": 6,
-                "occurrence_count": 4
+                "occurrence_count": 3
               },
               {
-                "item_code": "eq_2406_acc_08",
-                "rank": 7,
+                "item_code": "eq_2412_acc_08",
+                "rank": 6,
                 "occurrence_count": 3
               },
               {
                 "item_code": "eq_2512_acc_38",
-                "rank": 7,
+                "rank": 6,
                 "occurrence_count": 3
               },
               {
@@ -23583,23 +23538,23 @@
         {
           "unit_code": "u1518e-ron",
           "rank": 6,
-          "occurrence_count": 140,
+          "occurrence_count": 141,
           "equipment": {
             "WEAPON": [
               {
                 "item_code": "eq_2602_wpn_28",
                 "rank": 1,
-                "occurrence_count": 57
+                "occurrence_count": 59
               },
               {
                 "item_code": "eq_2408_wpn_08",
                 "rank": 2,
-                "occurrence_count": 20
+                "occurrence_count": 21
               },
               {
                 "item_code": "eq_2607_wpn_09",
                 "rank": 3,
-                "occurrence_count": 19
+                "occurrence_count": 18
               },
               {
                 "item_code": "eq_2508_wpn_28",
@@ -23622,11 +23577,6 @@
                 "occurrence_count": 4
               },
               {
-                "item_code": "eq_2209_wpn_07",
-                "rank": 8,
-                "occurrence_count": 1
-              },
-              {
                 "item_code": "eq_2403_wpn_08",
                 "rank": 8,
                 "occurrence_count": 1
@@ -23639,14 +23589,14 @@
             ],
             "ARMOR": [
               {
-                "item_code": "eq_2610_amr_09",
+                "item_code": "eq_2504_amr_08",
                 "rank": 1,
                 "occurrence_count": 50
               },
               {
-                "item_code": "eq_2504_amr_08",
-                "rank": 2,
-                "occurrence_count": 49
+                "item_code": "eq_2610_amr_09",
+                "rank": 1,
+                "occurrence_count": 50
               },
               {
                 "item_code": "eq_2510_amr_08",
@@ -23656,7 +23606,7 @@
               {
                 "item_code": "eq_amr_est_007",
                 "rank": 4,
-                "occurrence_count": 6
+                "occurrence_count": 7
               },
               {
                 "item_code": "eq_2501_amr_08",
@@ -23667,11 +23617,6 @@
                 "item_code": "eq_2309_amr_18",
                 "rank": 6,
                 "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_amr_0046",
-                "rank": 7,
-                "occurrence_count": 1
               },
               {
                 "item_code": "eq_amr_est_0072",
@@ -23688,7 +23633,7 @@
               {
                 "item_code": "eq_2407_acc_08",
                 "rank": 1,
-                "occurrence_count": 133
+                "occurrence_count": 134
               },
               {
                 "item_code": "eq_2606_acc_08",
@@ -23732,17 +23677,17 @@
               {
                 "item_code": "eq_2202_wpn_07",
                 "rank": 4,
-                "occurrence_count": 10
+                "occurrence_count": 9
               },
               {
                 "item_code": "eq_2609_wpn_09",
-                "rank": 5,
+                "rank": 4,
                 "occurrence_count": 9
               },
               {
                 "item_code": "eq_2401_wpn_08",
                 "rank": 6,
-                "occurrence_count": 6
+                "occurrence_count": 8
               },
               {
                 "item_code": "eq_2409_wpn_08",
@@ -23768,18 +23713,13 @@
                 "item_code": "eq_2508_wpn_28",
                 "rank": 10,
                 "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_wpn_evt_118",
-                "rank": 10,
-                "occurrence_count": 1
               }
             ],
             "ARMOR": [
               {
                 "item_code": "eq_2604_amr_08",
                 "rank": 1,
-                "occurrence_count": 94
+                "occurrence_count": 95
               },
               {
                 "item_code": "eq_2412_amr_07",
@@ -23794,7 +23734,7 @@
               {
                 "item_code": "eq_2504_amr_28",
                 "rank": 4,
-                "occurrence_count": 5
+                "occurrence_count": 6
               },
               {
                 "item_code": "eq_2210_amr_07",
@@ -23817,28 +23757,23 @@
                 "occurrence_count": 2
               },
               {
-                "item_code": "eq_amr_0046",
-                "rank": 7,
-                "occurrence_count": 2
-              },
-              {
                 "item_code": "eq_2204_amr_17",
-                "rank": 10,
+                "rank": 9,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_2410_amr_18",
-                "rank": 10,
+                "rank": 9,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_amr_evt_057",
-                "rank": 10,
+                "rank": 9,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_ts_amr_17",
-                "rank": 10,
+                "rank": 9,
                 "occurrence_count": 1
               }
             ],
@@ -23934,22 +23869,22 @@
         {
           "unit_code": "u1539e-en",
           "rank": 8,
-          "occurrence_count": 99,
+          "occurrence_count": 98,
           "equipment": {
             "WEAPON": [
               {
                 "item_code": "eq_2607_wpn_09",
                 "rank": 1,
-                "occurrence_count": 50
+                "occurrence_count": 51
               },
               {
                 "item_code": "eq_2302_wpn_27",
                 "rank": 2,
-                "occurrence_count": 9
+                "occurrence_count": 8
               },
               {
                 "item_code": "eq_2410_wpn_07",
-                "rank": 3,
+                "rank": 2,
                 "occurrence_count": 8
               },
               {
@@ -23964,8 +23899,8 @@
               },
               {
                 "item_code": "eq_2502_wpn_18",
-                "rank": 6,
-                "occurrence_count": 5
+                "rank": 5,
+                "occurrence_count": 6
               },
               {
                 "item_code": "eq_2401_wpn_08",
@@ -23976,16 +23911,6 @@
                 "item_code": "eq_2404_wpn_17",
                 "rank": 8,
                 "occurrence_count": 3
-              },
-              {
-                "item_code": "eq_2202_wpn_17",
-                "rank": 9,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2310_wpn_17",
-                "rank": 9,
-                "occurrence_count": 1
               },
               {
                 "item_code": "eq_2504_wpn_07",
@@ -24017,7 +23942,7 @@
               {
                 "item_code": "eq_2510_amr_18",
                 "rank": 1,
-                "occurrence_count": 56
+                "occurrence_count": 57
               },
               {
                 "item_code": "eq_2309_amr_18",
@@ -24025,13 +23950,13 @@
                 "occurrence_count": 10
               },
               {
-                "item_code": "eq_2610_amr_29",
+                "item_code": "eq_2404_amr_08",
                 "rank": 3,
-                "occurrence_count": 8
+                "occurrence_count": 6
               },
               {
-                "item_code": "eq_2404_amr_08",
-                "rank": 4,
+                "item_code": "eq_2610_amr_29",
+                "rank": 3,
                 "occurrence_count": 6
               },
               {
@@ -24079,12 +24004,12 @@
               {
                 "item_code": "eq_2606_acc_18",
                 "rank": 1,
-                "occurrence_count": 44
+                "occurrence_count": 46
               },
               {
                 "item_code": "eq_2601_acc_08",
                 "rank": 2,
-                "occurrence_count": 15
+                "occurrence_count": 14
               },
               {
                 "item_code": "eq_2508_acc_07",
@@ -24092,28 +24017,28 @@
                 "occurrence_count": 7
               },
               {
-                "item_code": "eq_2608_acc_08",
-                "rank": 4,
-                "occurrence_count": 5
-              },
-              {
-                "item_code": "eq_acc_evt_138",
-                "rank": 4,
-                "occurrence_count": 5
-              },
-              {
                 "item_code": "eq_2306_acc_08",
-                "rank": 6,
+                "rank": 4,
                 "occurrence_count": 4
               },
               {
                 "item_code": "eq_2512_acc_28",
-                "rank": 6,
+                "rank": 4,
                 "occurrence_count": 4
               },
               {
                 "item_code": "eq_2603_acc_28",
-                "rank": 6,
+                "rank": 4,
+                "occurrence_count": 4
+              },
+              {
+                "item_code": "eq_2608_acc_08",
+                "rank": 4,
+                "occurrence_count": 4
+              },
+              {
+                "item_code": "eq_acc_evt_138",
+                "rank": 4,
                 "occurrence_count": 4
               },
               {
@@ -24157,7 +24082,7 @@
         {
           "unit_code": "u1550e-moon",
           "rank": 9,
-          "occurrence_count": 93,
+          "occurrence_count": 92,
           "equipment": {
             "WEAPON": [
               {
@@ -24177,8 +24102,8 @@
               },
               {
                 "item_code": "eq_wpn_evt_047",
-                "rank": 3,
-                "occurrence_count": 4
+                "rank": 4,
+                "occurrence_count": 3
               },
               {
                 "item_code": "eq_wpn_evt_138",
@@ -24205,7 +24130,7 @@
               {
                 "item_code": "eq_2604_amr_28",
                 "rank": 1,
-                "occurrence_count": 66
+                "occurrence_count": 67
               },
               {
                 "item_code": "eq_2609_amr_19",
@@ -24218,22 +24143,17 @@
                 "occurrence_count": 5
               },
               {
-                "item_code": "eq_amr_evt_118",
+                "item_code": "eq_amr_evt_047",
                 "rank": 4,
-                "occurrence_count": 3
+                "occurrence_count": 2
               },
               {
-                "item_code": "eq_amr_evt_047",
-                "rank": 5,
+                "item_code": "eq_amr_evt_118",
+                "rank": 4,
                 "occurrence_count": 2
               },
               {
                 "item_code": "eq_2608_amr_07",
-                "rank": 6,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_amr_0046",
                 "rank": 6,
                 "occurrence_count": 1
               }
@@ -24242,17 +24162,17 @@
               {
                 "item_code": "eq_2412_acc_18",
                 "rank": 1,
-                "occurrence_count": 29
+                "occurrence_count": 28
               },
               {
                 "item_code": "eq_2403_acc_08",
                 "rank": 2,
-                "occurrence_count": 20
+                "occurrence_count": 19
               },
               {
                 "item_code": "eq_2607_acc_29",
                 "rank": 3,
-                "occurrence_count": 14
+                "occurrence_count": 15
               },
               {
                 "item_code": "eq_acc_evt_18",
@@ -24260,14 +24180,14 @@
                 "occurrence_count": 12
               },
               {
-                "item_code": "eq_2512_acc_18",
+                "item_code": "eq_2309_acc_08",
                 "rank": 5,
-                "occurrence_count": 7
+                "occurrence_count": 6
               },
               {
-                "item_code": "eq_2309_acc_08",
-                "rank": 6,
-                "occurrence_count": 5
+                "item_code": "eq_2512_acc_18",
+                "rank": 5,
+                "occurrence_count": 6
               },
               {
                 "item_code": "eq_2607_acc_39",
@@ -24301,12 +24221,12 @@
               {
                 "item_code": "eq_2408_wpn_08",
                 "rank": 2,
-                "occurrence_count": 22
+                "occurrence_count": 23
               },
               {
                 "item_code": "eq_wpn_evt_19",
                 "rank": 3,
-                "occurrence_count": 12
+                "occurrence_count": 11
               },
               {
                 "item_code": "eq_2603_wpn_08",
@@ -24326,11 +24246,11 @@
               {
                 "item_code": "eq_2305_wpn_08",
                 "rank": 7,
-                "occurrence_count": 2
+                "occurrence_count": 3
               },
               {
                 "item_code": "eq_wpn_est_0072",
-                "rank": 7,
+                "rank": 8,
                 "occurrence_count": 2
               },
               {
@@ -24348,16 +24268,11 @@
               {
                 "item_code": "eq_amr_0046",
                 "rank": 1,
-                "occurrence_count": 83
-              },
-              {
-                "item_code": "eq_2610_amr_09",
-                "rank": 2,
-                "occurrence_count": 2
+                "occurrence_count": 85
               },
               {
                 "item_code": "eq_amr_0097",
-                "rank": 3,
+                "rank": 2,
                 "occurrence_count": 1
               }
             ],
@@ -24365,12 +24280,12 @@
               {
                 "item_code": "eq_acc_evt_18",
                 "rank": 1,
-                "occurrence_count": 59
+                "occurrence_count": 58
               },
               {
                 "item_code": "eq_2305_acc_18",
                 "rank": 2,
-                "occurrence_count": 21
+                "occurrence_count": 22
               },
               {
                 "item_code": "eq_2606_acc_08",
@@ -24398,27 +24313,27 @@
         {
           "unit_code": "u1635e-su",
           "rank": 11,
-          "occurrence_count": 85,
+          "occurrence_count": 84,
           "equipment": {
             "WEAPON": [
               {
                 "item_code": "eq_2401_wpn_08",
                 "rank": 1,
-                "occurrence_count": 45
+                "occurrence_count": 47
               },
               {
                 "item_code": "eq_2609_wpn_09",
                 "rank": 2,
-                "occurrence_count": 8
+                "occurrence_count": 7
               },
               {
                 "item_code": "eq_2409_wpn_08",
                 "rank": 3,
-                "occurrence_count": 7
+                "occurrence_count": 6
               },
               {
                 "item_code": "eq_2510_wpn_07",
-                "rank": 4,
+                "rank": 3,
                 "occurrence_count": 6
               },
               {
@@ -24447,11 +24362,6 @@
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_2310_wpn_17",
-                "rank": 9,
-                "occurrence_count": 1
-              },
-              {
                 "item_code": "eq_2410_wpn_07",
                 "rank": 9,
                 "occurrence_count": 1
@@ -24471,12 +24381,12 @@
               {
                 "item_code": "eq_2510_amr_18",
                 "rank": 1,
-                "occurrence_count": 25
+                "occurrence_count": 24
               },
               {
                 "item_code": "eq_2610_amr_29",
                 "rank": 1,
-                "occurrence_count": 25
+                "occurrence_count": 24
               },
               {
                 "item_code": "eq_2309_amr_18",
@@ -24494,14 +24404,14 @@
                 "occurrence_count": 3
               },
               {
-                "item_code": "eq_ft_amr_27",
+                "item_code": "eq_ch_amr_27",
                 "rank": 5,
                 "occurrence_count": 3
               },
               {
-                "item_code": "eq_ch_amr_27",
-                "rank": 7,
-                "occurrence_count": 2
+                "item_code": "eq_ft_amr_27",
+                "rank": 5,
+                "occurrence_count": 3
               },
               {
                 "item_code": "eq_2204_amr_27",
@@ -24528,7 +24438,7 @@
               {
                 "item_code": "eq_2606_acc_18",
                 "rank": 1,
-                "occurrence_count": 37
+                "occurrence_count": 34
               },
               {
                 "item_code": "eq_2601_acc_08",
@@ -24541,19 +24451,19 @@
                 "occurrence_count": 10
               },
               {
-                "item_code": "eq_2312_acc_28",
-                "rank": 4,
-                "occurrence_count": 4
-              },
-              {
                 "item_code": "eq_7s_acc_07",
                 "rank": 4,
+                "occurrence_count": 6
+              },
+              {
+                "item_code": "eq_2312_acc_28",
+                "rank": 5,
                 "occurrence_count": 4
               },
               {
                 "item_code": "eq_2603_acc_28",
-                "rank": 6,
-                "occurrence_count": 3
+                "rank": 5,
+                "occurrence_count": 4
               },
               {
                 "item_code": "eq_2306_acc_08",
@@ -24581,23 +24491,23 @@
                 "occurrence_count": 2
               },
               {
-                "item_code": "eq_2610_acc_07",
-                "rank": 7,
-                "occurrence_count": 2
-              },
-              {
                 "item_code": "eq_ff_acc_27",
                 "rank": 7,
                 "occurrence_count": 2
               },
               {
                 "item_code": "eq_2408_acc_07",
-                "rank": 14,
+                "rank": 13,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2610_acc_07",
+                "rank": 13,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_acc_evt_067",
-                "rank": 14,
+                "rank": 13,
                 "occurrence_count": 1
               }
             ]
@@ -24606,7 +24516,7 @@
         {
           "unit_code": "u1569e-cony",
           "rank": 12,
-          "occurrence_count": 77,
+          "occurrence_count": 79,
           "equipment": {
             "WEAPON": [
               {
@@ -24622,7 +24532,7 @@
               {
                 "item_code": "eq_2305_wpn_08",
                 "rank": 3,
-                "occurrence_count": 14
+                "occurrence_count": 16
               },
               {
                 "item_code": "eq_wpn_evt_138",
@@ -24683,8 +24593,8 @@
               },
               {
                 "item_code": "eq_amr_est_037",
-                "rank": 6,
-                "occurrence_count": 3
+                "rank": 4,
+                "occurrence_count": 5
               },
               {
                 "item_code": "eq_2503_amr_08",
@@ -24716,12 +24626,12 @@
               {
                 "item_code": "eq_2607_acc_29",
                 "rank": 1,
-                "occurrence_count": 24
+                "occurrence_count": 26
               },
               {
                 "item_code": "eq_2412_acc_18",
                 "rank": 2,
-                "occurrence_count": 22
+                "occurrence_count": 21
               },
               {
                 "item_code": "eq_2512_acc_18",
@@ -24749,14 +24659,14 @@
                 "occurrence_count": 2
               },
               {
-                "item_code": "eq_acc_evt_18",
+                "item_code": "eq_acc_evt_047",
                 "rank": 7,
                 "occurrence_count": 2
               },
               {
-                "item_code": "eq_acc_evt_047",
-                "rank": 9,
-                "occurrence_count": 1
+                "item_code": "eq_acc_evt_18",
+                "rank": 7,
+                "occurrence_count": 2
               }
             ]
           }
@@ -24768,19 +24678,19 @@
           "equipment": {
             "WEAPON": [
               {
-                "item_code": "eq_2603_wpn_08",
+                "item_code": "eq_2305_wpn_08",
                 "rank": 1,
-                "occurrence_count": 22
+                "occurrence_count": 21
               },
               {
-                "item_code": "eq_2305_wpn_08",
+                "item_code": "eq_2603_wpn_08",
                 "rank": 2,
                 "occurrence_count": 20
               },
               {
                 "item_code": "eq_2610_wpn_08",
                 "rank": 3,
-                "occurrence_count": 6
+                "occurrence_count": 7
               },
               {
                 "item_code": "eq_2409_wpn_08",
@@ -24812,61 +24722,61 @@
               {
                 "item_code": "eq_2609_amr_19",
                 "rank": 3,
-                "occurrence_count": 6
+                "occurrence_count": 5
               },
               {
                 "item_code": "eq_2504_amr_28",
                 "rank": 4,
-                "occurrence_count": 3
+                "occurrence_count": 4
               },
               {
                 "item_code": "eq_2210_amr_07",
                 "rank": 5,
-                "occurrence_count": 2
+                "occurrence_count": 3
               },
               {
                 "item_code": "eq_2404_amr_28",
-                "rank": 5,
+                "rank": 6,
                 "occurrence_count": 2
               },
               {
                 "item_code": "eq_2412_amr_07",
-                "rank": 5,
+                "rank": 6,
                 "occurrence_count": 2
               },
               {
                 "item_code": "eq_2510_amr_28",
-                "rank": 5,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_amr_0046",
-                "rank": 5,
+                "rank": 6,
                 "occurrence_count": 2
               },
               {
                 "item_code": "eq_amr_evt_047",
-                "rank": 5,
+                "rank": 6,
                 "occurrence_count": 2
               },
               {
                 "item_code": "eq_2401_amr_08",
-                "rank": 11,
+                "rank": 10,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_2406_amr_07",
-                "rank": 11,
+                "rank": 10,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_2503_amr_08",
-                "rank": 11,
+                "rank": 10,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_amr_0046",
+                "rank": 10,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_amr_evt_127",
-                "rank": 11,
+                "rank": 10,
                 "occurrence_count": 1
               }
             ],
@@ -24874,7 +24784,7 @@
               {
                 "item_code": "eq_2509_acc_08",
                 "rank": 1,
-                "occurrence_count": 15
+                "occurrence_count": 16
               },
               {
                 "item_code": "eq_acc_evt_18",
@@ -24889,37 +24799,32 @@
               {
                 "item_code": "eq_2309_acc_08",
                 "rank": 4,
-                "occurrence_count": 4
+                "occurrence_count": 3
               },
               {
                 "item_code": "eq_2409_acc_08",
-                "rank": 5,
+                "rank": 4,
                 "occurrence_count": 3
               },
               {
                 "item_code": "eq_2502_acc_17",
-                "rank": 5,
+                "rank": 4,
+                "occurrence_count": 3
+              },
+              {
+                "item_code": "eq_2607_acc_29",
+                "rank": 4,
                 "occurrence_count": 3
               },
               {
                 "item_code": "eq_2403_acc_08",
-                "rank": 7,
+                "rank": 8,
                 "occurrence_count": 2
               },
               {
                 "item_code": "eq_2406_acc_28",
-                "rank": 7,
+                "rank": 8,
                 "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_2607_acc_29",
-                "rank": 7,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_2206_acc_07",
-                "rank": 10,
-                "occurrence_count": 1
               },
               {
                 "item_code": "eq_2412_acc_28",
@@ -25037,7 +24942,7 @@
               {
                 "item_code": "eq_2601_acc_08",
                 "rank": 1,
-                "occurrence_count": 13
+                "occurrence_count": 14
               },
               {
                 "item_code": "eq_2606_acc_08",
@@ -25045,13 +24950,13 @@
                 "occurrence_count": 8
               },
               {
-                "item_code": "eq_2603_acc_28",
+                "item_code": "eq_2506_acc_08",
                 "rank": 3,
-                "occurrence_count": 6
+                "occurrence_count": 5
               },
               {
-                "item_code": "eq_2506_acc_08",
-                "rank": 4,
+                "item_code": "eq_2603_acc_28",
+                "rank": 3,
                 "occurrence_count": 5
               },
               {
@@ -25497,7 +25402,7 @@
         {
           "unit_code": "u1522e-po",
           "rank": 19,
-          "occurrence_count": 10,
+          "occurrence_count": 11,
           "equipment": {
             "WEAPON": [
               {
@@ -25519,6 +25424,11 @@
                 "item_code": "eq_2602_wpn_08",
                 "rank": 3,
                 "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2603_wpn_08",
+                "rank": 3,
+                "occurrence_count": 1
               }
             ],
             "ARMOR": [
@@ -25533,23 +25443,23 @@
                 "occurrence_count": 3
               },
               {
-                "item_code": "eq_2404_amr_18",
-                "rank": 3,
-                "occurrence_count": 1
-              },
-              {
                 "item_code": "eq_2506_amr_17",
                 "rank": 3,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2404_amr_18",
+                "rank": 4,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_2608_amr_07",
-                "rank": 3,
+                "rank": 4,
                 "occurrence_count": 1
               },
               {
                 "item_code": "eq_amr_evt_047",
-                "rank": 3,
+                "rank": 4,
                 "occurrence_count": 1
               }
             ],
@@ -25557,7 +25467,7 @@
               {
                 "item_code": "eq_2509_acc_08",
                 "rank": 1,
-                "occurrence_count": 5
+                "occurrence_count": 6
               },
               {
                 "item_code": "eq_2308_acc_17",
@@ -25671,89 +25581,6 @@
           }
         },
         {
-          "unit_code": "u1468e-james",
-          "rank": 20,
-          "occurrence_count": 9,
-          "equipment": {
-            "WEAPON": [
-              {
-                "item_code": "eq_2401_wpn_08",
-                "rank": 1,
-                "occurrence_count": 3
-              },
-              {
-                "item_code": "eq_2508_wpn_28",
-                "rank": 1,
-                "occurrence_count": 3
-              },
-              {
-                "item_code": "eq_2609_wpn_09",
-                "rank": 3,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_2408_wpn_08",
-                "rank": 4,
-                "occurrence_count": 1
-              }
-            ],
-            "ARMOR": [
-              {
-                "item_code": "eq_2504_amr_08",
-                "rank": 1,
-                "occurrence_count": 6
-              },
-              {
-                "item_code": "eq_2501_amr_08",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2510_amr_08",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2610_amr_09",
-                "rank": 2,
-                "occurrence_count": 1
-              }
-            ],
-            "ACC": [
-              {
-                "item_code": "eq_2407_acc_08",
-                "rank": 1,
-                "occurrence_count": 4
-              },
-              {
-                "item_code": "eq_2506_acc_08",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2601_acc_08",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2606_acc_08",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_acc_evt_067",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_acc_evt_138",
-                "rank": 2,
-                "occurrence_count": 1
-              }
-            ]
-          }
-        },
-        {
           "unit_code": "u1603e-sh",
           "rank": 20,
           "occurrence_count": 9,
@@ -25842,82 +25669,72 @@
           }
         },
         {
-          "unit_code": "u1472e-ma",
-          "rank": 23,
+          "unit_code": "u1468e-james",
+          "rank": 22,
           "occurrence_count": 7,
           "equipment": {
             "WEAPON": [
               {
-                "item_code": "eq_2410_wpn_07",
+                "item_code": "eq_2508_wpn_28",
                 "rank": 1,
+                "occurrence_count": 3
+              },
+              {
+                "item_code": "eq_2401_wpn_08",
+                "rank": 2,
                 "occurrence_count": 2
               },
               {
-                "item_code": "eq_2302_wpn_27",
-                "rank": 2,
+                "item_code": "eq_2408_wpn_08",
+                "rank": 3,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_2502_wpn_18",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2503_wpn_08",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2510_wpn_07",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2607_wpn_09",
-                "rank": 2,
+                "item_code": "eq_2609_wpn_09",
+                "rank": 3,
                 "occurrence_count": 1
               }
             ],
             "ARMOR": [
               {
-                "item_code": "eq_2309_amr_18",
+                "item_code": "eq_2504_amr_08",
                 "rank": 1,
-                "occurrence_count": 3
+                "occurrence_count": 5
               },
               {
-                "item_code": "eq_2610_amr_29",
+                "item_code": "eq_2510_amr_08",
                 "rank": 2,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_2306_amr_07",
-                "rank": 3,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_2412_amr_38",
-                "rank": 3,
+                "item_code": "eq_2610_amr_09",
+                "rank": 2,
                 "occurrence_count": 1
               }
             ],
             "ACC": [
               {
-                "item_code": "eq_2312_acc_28",
+                "item_code": "eq_2407_acc_08",
                 "rank": 1,
-                "occurrence_count": 4
+                "occurrence_count": 3
               },
               {
-                "item_code": "eq_2606_acc_18",
+                "item_code": "eq_2506_acc_08",
                 "rank": 2,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_7s_acc_07",
+                "item_code": "eq_2601_acc_08",
                 "rank": 2,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_ff_acc_27",
+                "item_code": "eq_acc_evt_067",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_acc_evt_138",
                 "rank": 2,
                 "occurrence_count": 1
               }
@@ -25926,7 +25743,7 @@
         },
         {
           "unit_code": "u1520e-de",
-          "rank": 23,
+          "rank": 22,
           "occurrence_count": 7,
           "equipment": {
             "WEAPON": [
@@ -25941,12 +25758,12 @@
                 "occurrence_count": 2
               },
               {
-                "item_code": "eq_2309_wpn_08",
+                "item_code": "eq_2504_wpn_07",
                 "rank": 3,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_2504_wpn_07",
+                "item_code": "eq_2608_wpn_19",
                 "rank": 3,
                 "occurrence_count": 1
               },
@@ -26003,8 +25820,227 @@
           }
         },
         {
+          "unit_code": "u1291e-moon",
+          "rank": 24,
+          "occurrence_count": 6,
+          "equipment": {
+            "WEAPON": [
+              {
+                "item_code": "eq_2508_wpn_28",
+                "rank": 1,
+                "occurrence_count": 4
+              },
+              {
+                "item_code": "eq_2305_wpn_08",
+                "rank": 2,
+                "occurrence_count": 2
+              }
+            ],
+            "ARMOR": [
+              {
+                "item_code": "eq_2503_amr_08",
+                "rank": 1,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2510_amr_08",
+                "rank": 1,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2609_amr_19",
+                "rank": 1,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_amr_evt_047",
+                "rank": 1,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_amr_evt_127",
+                "rank": 1,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_eva2_amr_26",
+                "rank": 1,
+                "occurrence_count": 1
+              }
+            ],
+            "ACC": [
+              {
+                "item_code": "eq_acc_evt_047",
+                "rank": 1,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2309_acc_08",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2606_acc_08",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2607_acc_39",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_acc_evt_18",
+                "rank": 2,
+                "occurrence_count": 1
+              }
+            ]
+          }
+        },
+        {
+          "unit_code": "u1472e-ma",
+          "rank": 24,
+          "occurrence_count": 6,
+          "equipment": {
+            "WEAPON": [
+              {
+                "item_code": "eq_2410_wpn_07",
+                "rank": 1,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2302_wpn_27",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2502_wpn_18",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2510_wpn_07",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2607_wpn_09",
+                "rank": 2,
+                "occurrence_count": 1
+              }
+            ],
+            "ARMOR": [
+              {
+                "item_code": "eq_2309_amr_18",
+                "rank": 1,
+                "occurrence_count": 3
+              },
+              {
+                "item_code": "eq_2610_amr_29",
+                "rank": 2,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2306_amr_07",
+                "rank": 3,
+                "occurrence_count": 1
+              }
+            ],
+            "ACC": [
+              {
+                "item_code": "eq_2312_acc_28",
+                "rank": 1,
+                "occurrence_count": 4
+              },
+              {
+                "item_code": "eq_2606_acc_18",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_ff_acc_27",
+                "rank": 2,
+                "occurrence_count": 1
+              }
+            ]
+          }
+        },
+        {
+          "unit_code": "u1505e-so",
+          "rank": 24,
+          "occurrence_count": 6,
+          "equipment": {
+            "WEAPON": [
+              {
+                "item_code": "eq_2409_wpn_08",
+                "rank": 1,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2208_wpn_27",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2401_wpn_08",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2402_wpn_08",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2503_wpn_08",
+                "rank": 2,
+                "occurrence_count": 1
+              }
+            ],
+            "ARMOR": [
+              {
+                "item_code": "eq_2309_amr_18",
+                "rank": 1,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2506_amr_17",
+                "rank": 1,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2404_amr_18",
+                "rank": 3,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2606_amr_17",
+                "rank": 3,
+                "occurrence_count": 1
+              }
+            ],
+            "ACC": [
+              {
+                "item_code": "eq_2408_acc_07",
+                "rank": 1,
+                "occurrence_count": 3
+              },
+              {
+                "item_code": "eq_2506_acc_18",
+                "rank": 2,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2601_acc_08",
+                "rank": 3,
+                "occurrence_count": 1
+              }
+            ]
+          }
+        },
+        {
           "unit_code": "u1616e-brown",
-          "rank": 25,
+          "rank": 24,
           "occurrence_count": 6,
           "equipment": {
             "WEAPON": [
@@ -26052,24 +26088,19 @@
         },
         {
           "unit_code": "u3006e-cony",
-          "rank": 25,
+          "rank": 24,
           "occurrence_count": 6,
           "equipment": {
             "WEAPON": [
               {
                 "item_code": "eq_2305_wpn_08",
                 "rank": 1,
-                "occurrence_count": 4
-              },
-              {
-                "item_code": "eq_2301_wpn_07",
-                "rank": 2,
-                "occurrence_count": 1
+                "occurrence_count": 3
               },
               {
                 "item_code": "eq_2603_wpn_08",
-                "rank": 2,
-                "occurrence_count": 1
+                "rank": 1,
+                "occurrence_count": 3
               }
             ],
             "ARMOR": [
@@ -26089,7 +26120,7 @@
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_amr_evt_08",
+                "item_code": "eq_amr_evt_118",
                 "rank": 2,
                 "occurrence_count": 1
               }
@@ -26114,96 +26145,28 @@
           }
         },
         {
-          "unit_code": "u1291e-moon",
-          "rank": 27,
+          "unit_code": "u1370e-boss",
+          "rank": 29,
           "occurrence_count": 5,
           "equipment": {
             "WEAPON": [
-              {
-                "item_code": "eq_2508_wpn_28",
-                "rank": 1,
-                "occurrence_count": 3
-              },
-              {
-                "item_code": "eq_2305_wpn_08",
-                "rank": 2,
-                "occurrence_count": 2
-              }
-            ],
-            "ARMOR": [
-              {
-                "item_code": "eq_2503_amr_08",
-                "rank": 1,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2609_amr_19",
-                "rank": 1,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_amr_evt_047",
-                "rank": 1,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_amr_evt_127",
-                "rank": 1,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_eva2_amr_26",
-                "rank": 1,
-                "occurrence_count": 1
-              }
-            ],
-            "ACC": [
-              {
-                "item_code": "eq_acc_evt_047",
-                "rank": 1,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_2309_acc_08",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2606_acc_08",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2607_acc_39",
-                "rank": 2,
-                "occurrence_count": 1
-              }
-            ]
-          }
-        },
-        {
-          "unit_code": "u1505e-so",
-          "rank": 27,
-          "occurrence_count": 5,
-          "equipment": {
-            "WEAPON": [
-              {
-                "item_code": "eq_2409_wpn_08",
-                "rank": 1,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_2208_wpn_27",
-                "rank": 2,
-                "occurrence_count": 1
-              },
               {
                 "item_code": "eq_2401_wpn_08",
+                "rank": 1,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2409_wpn_08",
                 "rank": 2,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_2402_wpn_08",
+                "item_code": "eq_2608_wpn_09",
+                "rank": 2,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2609_wpn_09",
                 "rank": 2,
                 "occurrence_count": 1
               }
@@ -26215,93 +26178,35 @@
                 "occurrence_count": 2
               },
               {
-                "item_code": "eq_2404_amr_18",
+                "item_code": "eq_2410_amr_18",
                 "rank": 2,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_2506_amr_17",
+                "item_code": "eq_2501_amr_08",
                 "rank": 2,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_2606_amr_17",
-                "rank": 2,
-                "occurrence_count": 1
-              }
-            ],
-            "ACC": [
-              {
-                "item_code": "eq_2408_acc_07",
-                "rank": 1,
-                "occurrence_count": 3
-              },
-              {
-                "item_code": "eq_2506_acc_18",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2601_acc_08",
-                "rank": 2,
-                "occurrence_count": 1
-              }
-            ]
-          }
-        },
-        {
-          "unit_code": "u1517h-ron",
-          "rank": 27,
-          "occurrence_count": 5,
-          "equipment": {
-            "WEAPON": [
-              {
-                "item_code": "eq_2508_wpn_28",
-                "rank": 1,
-                "occurrence_count": 3
-              },
-              {
-                "item_code": "eq_2401_wpn_08",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2408_wpn_08",
-                "rank": 2,
-                "occurrence_count": 1
-              }
-            ],
-            "ARMOR": [
-              {
-                "item_code": "eq_2504_amr_08",
-                "rank": 1,
-                "occurrence_count": 3
-              },
-              {
-                "item_code": "eq_2610_amr_09",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_amr_evt_057",
+                "item_code": "eq_amr_est_0372",
                 "rank": 2,
                 "occurrence_count": 1
               }
             ],
             "ACC": [
               {
-                "item_code": "eq_acc_evt_067",
+                "item_code": "eq_2412_acc_18",
                 "rank": 1,
-                "occurrence_count": 3
+                "occurrence_count": 2
               },
               {
-                "item_code": "eq_2407_acc_08",
-                "rank": 2,
-                "occurrence_count": 1
+                "item_code": "eq_2512_acc_18",
+                "rank": 1,
+                "occurrence_count": 2
               },
               {
-                "item_code": "eq_acc_evt_138",
-                "rank": 2,
+                "item_code": "eq_acc_est_0372",
+                "rank": 3,
                 "occurrence_count": 1
               }
             ]
@@ -26309,7 +26214,7 @@
         },
         {
           "unit_code": "u1584e-moon",
-          "rank": 27,
+          "rank": 29,
           "occurrence_count": 5,
           "equipment": {
             "WEAPON": [
@@ -26371,62 +26276,57 @@
           }
         },
         {
-          "unit_code": "u1370e-boss",
+          "unit_code": "u1517h-ron",
           "rank": 31,
           "occurrence_count": 4,
           "equipment": {
             "WEAPON": [
               {
-                "item_code": "eq_2401_wpn_08",
+                "item_code": "eq_2508_wpn_28",
                 "rank": 1,
                 "occurrence_count": 2
               },
               {
-                "item_code": "eq_2608_wpn_09",
+                "item_code": "eq_2401_wpn_08",
                 "rank": 2,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_2609_wpn_09",
+                "item_code": "eq_2408_wpn_08",
                 "rank": 2,
                 "occurrence_count": 1
               }
             ],
             "ARMOR": [
               {
-                "item_code": "eq_2309_amr_18",
+                "item_code": "eq_2504_amr_08",
                 "rank": 1,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2610_amr_09",
+                "rank": 2,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_2410_amr_18",
-                "rank": 1,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2501_amr_08",
-                "rank": 1,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_amr_est_0372",
-                "rank": 1,
+                "item_code": "eq_amr_evt_057",
+                "rank": 2,
                 "occurrence_count": 1
               }
             ],
             "ACC": [
               {
-                "item_code": "eq_2512_acc_18",
+                "item_code": "eq_acc_evt_067",
                 "rank": 1,
                 "occurrence_count": 2
               },
               {
-                "item_code": "eq_2412_acc_18",
+                "item_code": "eq_2407_acc_08",
                 "rank": 2,
                 "occurrence_count": 1
               },
               {
-                "item_code": "eq_acc_est_0372",
+                "item_code": "eq_acc_evt_138",
                 "rank": 2,
                 "occurrence_count": 1
               }
@@ -26492,61 +26392,8 @@
           }
         },
         {
-          "unit_code": "u1329e-moon",
-          "rank": 33,
-          "occurrence_count": 4,
-          "equipment": {
-            "WEAPON": [
-              {
-                "item_code": "eq_2401_wpn_08",
-                "rank": 1,
-                "occurrence_count": 3
-              },
-              {
-                "item_code": "eq_2607_wpn_09",
-                "rank": 2,
-                "occurrence_count": 1
-              }
-            ],
-            "ARMOR": [
-              {
-                "item_code": "eq_2410_amr_18",
-                "rank": 1,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_2309_amr_18",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2604_amr_28",
-                "rank": 2,
-                "occurrence_count": 1
-              }
-            ],
-            "ACC": [
-              {
-                "item_code": "eq_2601_acc_08",
-                "rank": 1,
-                "occurrence_count": 2
-              },
-              {
-                "item_code": "eq_2412_acc_18",
-                "rank": 2,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_acc_est_08",
-                "rank": 2,
-                "occurrence_count": 1
-              }
-            ]
-          }
-        },
-        {
           "unit_code": "u1260e-brown",
-          "rank": 34,
+          "rank": 33,
           "occurrence_count": 3,
           "equipment": {
             "WEAPON": [
@@ -26589,7 +26436,7 @@
         },
         {
           "unit_code": "u1355e-aq",
-          "rank": 34,
+          "rank": 33,
           "occurrence_count": 3,
           "equipment": {
             "WEAPON": [
@@ -26642,7 +26489,7 @@
         },
         {
           "unit_code": "u1357e-mg",
-          "rank": 34,
+          "rank": 33,
           "occurrence_count": 3,
           "equipment": {
             "WEAPON": [
@@ -26700,7 +26547,7 @@
         },
         {
           "unit_code": "u1552e-lf",
-          "rank": 34,
+          "rank": 33,
           "occurrence_count": 3,
           "equipment": {
             "WEAPON": [
@@ -26747,8 +26594,66 @@
           }
         },
         {
+          "unit_code": "u1632h-le",
+          "rank": 33,
+          "occurrence_count": 3,
+          "equipment": {
+            "WEAPON": [
+              {
+                "item_code": "eq_2502_wpn_28",
+                "rank": 1,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2603_wpn_08",
+                "rank": 1,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2610_wpn_08",
+                "rank": 1,
+                "occurrence_count": 1
+              }
+            ],
+            "ARMOR": [
+              {
+                "item_code": "eq_2412_amr_07",
+                "rank": 1,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2506_amr_17",
+                "rank": 1,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_amr_evt_047",
+                "rank": 1,
+                "occurrence_count": 1
+              }
+            ],
+            "ACC": [
+              {
+                "item_code": "eq_2403_acc_08",
+                "rank": 1,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_2606_acc_28",
+                "rank": 1,
+                "occurrence_count": 1
+              },
+              {
+                "item_code": "eq_acc_evt_047",
+                "rank": 1,
+                "occurrence_count": 1
+              }
+            ]
+          }
+        },
+        {
           "unit_code": "u1634h-su",
-          "rank": 34,
+          "rank": 33,
           "occurrence_count": 3,
           "equipment": {
             "WEAPON": [
@@ -26800,8 +26705,51 @@
           }
         },
         {
-          "unit_code": "u1181u-sally",
+          "unit_code": "u1329e-moon",
           "rank": 39,
+          "occurrence_count": 3,
+          "equipment": {
+            "WEAPON": [
+              {
+                "item_code": "eq_2401_wpn_08",
+                "rank": 1,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2607_wpn_09",
+                "rank": 2,
+                "occurrence_count": 1
+              }
+            ],
+            "ARMOR": [
+              {
+                "item_code": "eq_2410_amr_18",
+                "rank": 1,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_2604_amr_28",
+                "rank": 2,
+                "occurrence_count": 1
+              }
+            ],
+            "ACC": [
+              {
+                "item_code": "eq_2601_acc_08",
+                "rank": 1,
+                "occurrence_count": 2
+              },
+              {
+                "item_code": "eq_acc_est_08",
+                "rank": 2,
+                "occurrence_count": 1
+              }
+            ]
+          }
+        },
+        {
+          "unit_code": "u1181u-sally",
+          "rank": 40,
           "occurrence_count": 2,
           "equipment": {
             "WEAPON": [
@@ -26844,7 +26792,7 @@
         },
         {
           "unit_code": "u1215h-ron",
-          "rank": 39,
+          "rank": 40,
           "occurrence_count": 2,
           "equipment": {
             "WEAPON": [
@@ -26887,7 +26835,7 @@
         },
         {
           "unit_code": "u1408e-iy",
-          "rank": 39,
+          "rank": 40,
           "occurrence_count": 2,
           "equipment": {
             "WEAPON": [
@@ -26922,49 +26870,6 @@
               },
               {
                 "item_code": "eq_2403_acc_08",
-                "rank": 1,
-                "occurrence_count": 1
-              }
-            ]
-          }
-        },
-        {
-          "unit_code": "u1632h-le",
-          "rank": 39,
-          "occurrence_count": 2,
-          "equipment": {
-            "WEAPON": [
-              {
-                "item_code": "eq_2502_wpn_28",
-                "rank": 1,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2610_wpn_08",
-                "rank": 1,
-                "occurrence_count": 1
-              }
-            ],
-            "ARMOR": [
-              {
-                "item_code": "eq_2412_amr_07",
-                "rank": 1,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2506_amr_17",
-                "rank": 1,
-                "occurrence_count": 1
-              }
-            ],
-            "ACC": [
-              {
-                "item_code": "eq_2403_acc_08",
-                "rank": 1,
-                "occurrence_count": 1
-              },
-              {
-                "item_code": "eq_2606_acc_28",
                 "rank": 1,
                 "occurrence_count": 1
               }
@@ -27110,7 +27015,7 @@
           "equipment": {
             "WEAPON": [
               {
-                "item_code": "eq_2409_wpn_08",
+                "item_code": "eq_wpn_evt_057",
                 "rank": 1,
                 "occurrence_count": 1
               }
@@ -27229,7 +27134,7 @@
             ],
             "ARMOR": [
               {
-                "item_code": "eq_amr_evt_117",
+                "item_code": "eq_amr_0007",
                 "rank": 1,
                 "occurrence_count": 1
               }
